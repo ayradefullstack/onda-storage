@@ -355,8 +355,6 @@ class CountrySeeder extends Seeder
             Country::updateOrCreate(
                 ['alpha2' => $alpha2],
                 [
-                    'id' => (int)$item['id'],
-                    'ulid' => $item['ulid'] ?? null,
                     'name' => $item['name'],
                     'native_name' => $nativeName,
                     'arabic_name' => $arabicName,

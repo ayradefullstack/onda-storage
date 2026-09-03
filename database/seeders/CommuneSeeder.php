@@ -6,6 +6,7 @@ use App\Models\Commune;
 use App\Models\Wilaya;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 class CommuneSeeder extends Seeder
 {
@@ -51,6 +52,7 @@ class CommuneSeeder extends Seeder
             }
 
             $batch[] = [
+                'uuid' => (string) Str::uuid7(),
                 'wilaya_id' => $wilaya->id,
                 'post_code' => $postCode,
                 'name_fr' => $nameFr ?: $nameAr,

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\HasUuidColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @property int $id
- * @property string|null $ulid
+ * @property string $uuid
  * @property string $name
  * @property string|null $native_name
  * @property string|null $arabic_name
@@ -31,11 +32,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Country extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasUuidColumn;
 
     protected $fillable = [
         'id',
-        'ulid',
+        'uuid',
         'name',
         'native_name',
         'arabic_name',

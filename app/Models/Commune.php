@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
+use App\Concerns\HasUuidColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @property int $id
+ * @property string $uuid
  * @property int $wilaya_id
  * @property string|null $post_code
  * @property string $name_ar
@@ -20,9 +23,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Commune extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuidColumn, SoftDeletes;
 
     protected $fillable = [
+        'uuid',
         'wilaya_id',
         'post_code',
         'name_ar',

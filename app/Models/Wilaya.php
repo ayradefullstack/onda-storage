@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
+use App\Concerns\HasUuidColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @property int $id
+  * @property string $uuid
  * @property int|null $country_id
  * @property string $code
  * @property string $name_ar
@@ -21,9 +24,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Wilaya extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuidColumn, SoftDeletes;
 
     protected $fillable = [
+        'uuid',
         'country_id',
         'code',
         'name_ar',

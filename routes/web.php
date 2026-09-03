@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\UploadController;
+use App\Http\Controllers\VaultDoctorController;
 use App\Http\Middleware\SetLocale;
 use App\Models\Wilaya;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +32,33 @@ Route::middleware(['auth', 'verified', 'role:author'])->group(function () {
 Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::inertia('dashboard', 'admin/Dashboard')->name('dashboard');
 });
+
+// JSON endpoints inside the Inertia session — not an API, no Sanctum/tokens.
+// Deliberately NOT locale-prefixed (see CLAUDE.md's ONDA Storage section):
+// the browser calls these by absolute path regardless of active locale.
+Route::middleware(['auth', 'verified', 'role:author'])->prefix('uploads')->name('uploads.')->group(function () {
+    Route::post('/', [UploadController::class, 'init'])
+        ->middleware('throttle:10,1')
+        ->name('init');
+
+    Route::get('/{session:uuid}', [UploadController::class, 'status'])
+        ->name('status');
+
+    // 1200 requests/min comfortably covers a 5 GB file at 8 MiB chunks
+    // (~640 chunks) plus retries and up to 3 concurrent chunks per file.
+    Route::post('/{session:uuid}/chunk/{index}', [UploadController::class, 'chunk'])
+        ->whereNumber('index')
+        ->middleware('throttle:1200,1')
+        ->name('chunk');
+
+    Route::post('/{session:uuid}/complete', [UploadController::class, 'complete'])
+        ->name('complete');
+
+    Route::delete('/{session:uuid}', [UploadController::class, 'abort'])
+        ->name('abort');
+});
+
+Route::get('/_vault-doctor', VaultDoctorController::class)->name('vault-doctor');
 
 if (app()->environment('local')) {
     Route::get('/mail/preview', function () {

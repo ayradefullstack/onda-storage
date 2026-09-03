@@ -8,7 +8,7 @@ use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
+    // use WithoutModelEvents;
 
     /**
      * Seed the application's database.
@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             WilayaSeeder::class,
             CommuneSeeder::class,
             RoleAndUserSeeder::class,
+            VaultDemoSeeder::class,
         ]);
 
         $testUser = User::firstOrCreate(
