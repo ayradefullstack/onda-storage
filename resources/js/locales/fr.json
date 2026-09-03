@@ -15,7 +15,7 @@
     "nav.skipToContent": "Passer au contenu",
     "nav.userMenu": "Menu du compte",
     "nav.signOut": "Se déconnecter",
-    
+
     "announcement.text": "Campagne Déclaration 2026 : Le dépôt numérique des œuvres est désormais ouvert.",
     "announcement.badge": "Communiqué",
     "announcement.hotline": "Assistance Auteurs : 021 74 12 34",
@@ -91,7 +91,7 @@
     "news.heading": "Actualités & Bulletins Juridiques",
     "news.subheading": "Restez informé des dernières décisions réglementaires, sessions de répartition et annonces officielles de l'Office.",
     "news.readMore": "Lire le communiqué",
-    
+
     "news.item1.category": "Répartition des Droits",
     "news.item1.date": "Août 2026",
     "news.item1.title": "Lancement de la Session de Répartition Générale des Droits d'Auteur",
@@ -328,5 +328,88 @@
     "sidebar.nav.agencies": "Agences & Délégations",
     "sidebar.nav.support": "Assistance Technique",
     "sidebar.hotline.title": "Assistance Auteurs",
-    "sidebar.hotline.number": "021 74 12 34"
+    "sidebar.hotline.number": "021 74 12 34",
+
+    "media.status.uploading": "Téléversement",
+    "media.status.assembling": "Assemblage",
+    "media.status.scanning": "Analyse",
+    "media.status.processing": "Traitement",
+    "media.status.ready": "Prêt",
+    "media.status.failed": "Échec",
+    "media.status.quarantined": "Mis en quarantaine",
+    "media.quarantineExplain": "Ce fichier a été signalé par l'analyse de sécurité et est en cours de vérification — ce n'est pas une erreur de votre part.",
+    "media.failedExplain": "Le traitement de ce fichier a échoué. Notre équipe a été notifiée ; il n'est pas nécessaire de le redéposer pour le moment.",
+
+    "upload.status.queued": "En attente",
+    "upload.status.initializing": "Démarrage…",
+    "upload.status.uploading": "Téléversement",
+    "upload.status.paused": "En pause",
+    "upload.status.completing": "Finalisation…",
+    "upload.status.completed": "Téléversé",
+    "upload.status.failed": "Échec",
+    "upload.status.expired": "Session expirée",
+    "upload.status.quota_exceeded": "Quota dépassé",
+
+    "upload.actions.pause": "Pause",
+    "upload.actions.resume": "Reprendre",
+    "upload.actions.cancel": "Annuler",
+
+    "upload.eta": "{time} restant",
+
+    "upload.error.crcMismatch": "Erreur de somme de contrôle — réessayer",
+    "upload.error.crcMismatchWithChunk": "Le fragment {index} a échoué la vérification — réessayer",
+    "upload.error.network": "Erreur réseau — réessayer",
+    "upload.error.networkWithChunk": "Le fragment {index} a échoué — réessayer",
+    "upload.error.workerError": "Impossible de préparer ce fichier pour l'envoi — réessayer",
+    "upload.error.workerErrorWithChunk": "Le fragment {index} n'a pas pu être préparé — réessayer",
+    "upload.error.serverError": "Le serveur a refusé cet envoi — réessayer",
+    "upload.error.serverErrorWithChunk": "Le serveur a refusé le fragment {index} — réessayer",
+    "upload.error.missingChunks": "Certaines parties de ce fichier ne sont pas arrivées au serveur — réessayer",
+    "upload.error.unknown": "Une erreur est survenue — réessayer",
+    "upload.error.unknownWithChunk": "Le fragment {index} a échoué pour une raison inconnue — réessayer",
+    "upload.error.expired": "Cette session de téléversement a expiré avant la fin. Recommencez pour obtenir une nouvelle session.",
+    "upload.error.quotaExceeded": "Cet envoi dépasserait votre quota de stockage.",
+    "upload.error.quotaExceededWithRemaining": "Cet envoi dépasserait votre quota de stockage — {remaining} restants.",
+
+    "upload.reject.extension": "« {filename} » n'est pas un type de fichier accepté.",
+    "upload.reject.size": "« {filename} » est trop volumineux (5 Go maximum).",
+
+    "upload.dropzone.title": "Glissez des fichiers ici, ou parcourez",
+    "upload.dropzone.hint": "Jusqu'à {size} — {extensions}",
+    "upload.dropzone.browse": "Parcourir les fichiers",
+
+    "upload.resume.title": "Reprendre vos téléversements",
+    "upload.resume.description": "Ces envois étaient en cours avant votre dernière visite. Sélectionnez à nouveau le même fichier pour continuer où vous en étiez — votre navigateur ne peut pas le rouvrir automatiquement.",
+    "upload.resume.selectFile": "Sélectionner le fichier",
+    "upload.resume.sizeMismatch": "La taille de ce fichier ne correspond pas à l'envoi en cours — veuillez sélectionner exactement le même fichier.",
+
+    "upload.aggregate.inProgress": "{count} fichier(s) en cours d'envoi",
+    "upload.aggregate.title": "Téléversements",
+    "upload.aggregate.empty": "Aucun envoi pour le moment",
+
+    "works.index.title": "Œuvres",
+    "works.index.subtitle": "Vos œuvres déposées et leurs fichiers",
+    "works.index.newWork": "Nouvelle œuvre",
+    "works.index.empty": "Vous n'avez encore créé aucune œuvre.",
+    "works.index.fileCount": "{count} fichier(s)",
+
+    "works.status.draft": "Brouillon",
+    "works.status.submitted": "Soumise",
+    "works.status.under_review": "En cours d'examen",
+    "works.status.registered": "Enregistrée",
+    "works.status.rejected": "Rejetée",
+
+    "works.create.title": "Nouvelle œuvre",
+    "works.create.subtitle": "Créez une œuvre, puis déposez ses fichiers",
+    "works.create.titleLabel": "Titre",
+    "works.create.titlePlaceholder": "Ex : Symphonie de l'Aurès",
+    "works.create.descriptionLabel": "Description",
+    "works.create.descriptionPlaceholder": "Décrivez brièvement l'œuvre…",
+    "works.create.submit": "Créer l'œuvre",
+    "works.create.submitting": "Création…",
+
+    "works.show.addFiles": "Ajouter des fichiers",
+    "works.show.filesTitle": "Fichiers",
+    "works.show.noFiles": "Aucun fichier déposé pour le moment.",
+    "works.show.variantCount": "{count} variante(s)"
 }

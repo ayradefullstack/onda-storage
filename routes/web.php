@@ -3,6 +3,7 @@
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\VaultDoctorController;
+use App\Http\Controllers\WorkController;
 use App\Http\Middleware\SetLocale;
 use App\Models\Wilaya;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +28,15 @@ Route::get('/api/wilayas/{wilaya}/communes', function (Wilaya $wilaya) {
 
 Route::middleware(['auth', 'verified', 'role:author'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+});
+
+// P4 works pages. Not locale-prefixed, like /dashboard — the authenticated
+// app area's locale comes from the `locale` cookie (see SetLocale).
+Route::middleware(['auth', 'verified', 'role:author'])->prefix('works')->name('works.')->group(function () {
+    Route::get('/', [WorkController::class, 'index'])->name('index');
+    Route::get('/create', [WorkController::class, 'create'])->name('create');
+    Route::post('/', [WorkController::class, 'store'])->name('store');
+    Route::get('/{work:uuid}', [WorkController::class, 'show'])->name('show');
 });
 
 Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {

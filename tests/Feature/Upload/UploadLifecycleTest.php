@@ -91,10 +91,15 @@ test('a full 3-chunk lifecycle round-trips the exact source bytes', function () 
     $complete = $this->postJson("/uploads/{$uuid}/complete");
     $complete->assertCreated();
 
+    // P5's chain is now wired up (App\Jobs\ProcessMediaFile exists), and
+    // QUEUE_CONNECTION=sync in tests runs it synchronously inside the
+    // complete() call above — so by this point the file has already been
+    // hashed and marked ready, not left at 'scanning' with a null hash the
+    // way it was before P5 existed.
     $mediaFile = MediaFile::where('uuid', $complete->json('uuid'))->firstOrFail();
-    expect($mediaFile->status)->toBe('scanning')
+    expect($mediaFile->status)->toBe('ready')
         ->and($mediaFile->size_bytes)->toBe(74)
-        ->and($mediaFile->sha256_plain)->toBeNull();
+        ->and($mediaFile->sha256_plain)->toBe(hash('sha256', $plaintext));
 
     expect(decryptMediaFile($mediaFile))->toBe($plaintext);
 

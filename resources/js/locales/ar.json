@@ -15,7 +15,7 @@
     "nav.skipToContent": "تخطَّ إلى المحتوى",
     "nav.userMenu": "قائمة الحساب",
     "nav.signOut": "تسجيل الخروج",
-    
+
     "announcement.text": "حملة تصريح 2026: فتح منصة الإيداع الرقمي والتصريح بالمصنفات لجميع المؤلفين.",
     "announcement.badge": "إعلان رسمي",
     "announcement.hotline": "خط مساعدة المؤلفين: 021 74 12 34",
@@ -91,7 +91,7 @@
     "news.heading": "الأخبار والبلاغات القانونية",
     "news.subheading": "تابع آخر المستجدات، دورات توزيع المستحقات، والإعلانات الإدارية والتنظيمية للديوان.",
     "news.readMore": "قراءة البيان كاملاً",
-    
+
     "news.item1.category": "توزيع الحقوق",
     "news.item1.date": "أوت 2026",
     "news.item1.title": "انطلاق دورة التوزيع العامة لحقوق المؤلفين والحقوق المجاورة",
@@ -328,5 +328,88 @@
     "sidebar.nav.agencies": "الفروع والوكالات",
     "sidebar.nav.support": "المساعدة والدعم الفني",
     "sidebar.hotline.title": "خط مساعدة المؤلفين",
-    "sidebar.hotline.number": "021 74 12 34"
+    "sidebar.hotline.number": "021 74 12 34",
+
+    "media.status.uploading": "جارٍ الرفع",
+    "media.status.assembling": "التجميع",
+    "media.status.scanning": "الفحص",
+    "media.status.processing": "المعالجة",
+    "media.status.ready": "جاهز",
+    "media.status.failed": "فشل",
+    "media.status.quarantined": "موضوع في الحجر",
+    "media.quarantineExplain": "تم وضع علامة على هذا الملف من قبل فحص الأمان وهو قيد المراجعة — هذا ليس خطأً من جانبكم.",
+    "media.failedExplain": "فشلت معالجة هذا الملف. تم إخطار فريقنا؛ لا حاجة لإعادة الرفع الآن.",
+
+    "upload.status.queued": "في الانتظار",
+    "upload.status.initializing": "جارٍ البدء…",
+    "upload.status.uploading": "جارٍ الرفع",
+    "upload.status.paused": "متوقف مؤقتًا",
+    "upload.status.completing": "جارٍ الإنهاء…",
+    "upload.status.completed": "تم الرفع",
+    "upload.status.failed": "فشل",
+    "upload.status.expired": "انتهت صلاحية الجلسة",
+    "upload.status.quota_exceeded": "تم تجاوز الحصة",
+
+    "upload.actions.pause": "إيقاف مؤقت",
+    "upload.actions.resume": "استئناف",
+    "upload.actions.cancel": "إلغاء",
+
+    "upload.eta": "الوقت المتبقي: {time}",
+
+    "upload.error.crcMismatch": "خطأ في التحقق من السلامة — أعد المحاولة",
+    "upload.error.crcMismatchWithChunk": "فشل الجزء {index} في التحقق من السلامة — أعد المحاولة",
+    "upload.error.network": "خطأ في الشبكة — أعد المحاولة",
+    "upload.error.networkWithChunk": "فشل الجزء {index} — أعد المحاولة",
+    "upload.error.workerError": "تعذر تحضير هذا الملف للرفع — أعد المحاولة",
+    "upload.error.workerErrorWithChunk": "تعذر تحضير الجزء {index} — أعد المحاولة",
+    "upload.error.serverError": "رفض الخادم هذا الرفع — أعد المحاولة",
+    "upload.error.serverErrorWithChunk": "رفض الخادم الجزء {index} — أعد المحاولة",
+    "upload.error.missingChunks": "لم تصل بعض أجزاء هذا الملف إلى الخادم — أعد المحاولة",
+    "upload.error.unknown": "حدث خطأ ما — أعد المحاولة",
+    "upload.error.unknownWithChunk": "فشل الجزء {index} لسبب غير معروف — أعد المحاولة",
+    "upload.error.expired": "انتهت صلاحية جلسة الرفع قبل اكتمالها. ابدأ من جديد للحصول على جلسة جديدة.",
+    "upload.error.quotaExceeded": "سيؤدي هذا الرفع إلى تجاوز حصة التخزين الخاصة بك.",
+    "upload.error.quotaExceededWithRemaining": "سيؤدي هذا الرفع إلى تجاوز حصة التخزين الخاصة بك — المتبقي {remaining}.",
+
+    "upload.reject.extension": "\"{filename}\" ليس نوع ملف مقبولاً.",
+    "upload.reject.size": "\"{filename}\" كبير جدًا (الحد الأقصى 5 جيجابايت).",
+
+    "upload.dropzone.title": "اسحب الملفات هنا، أو تصفح",
+    "upload.dropzone.hint": "حتى {size} — {extensions}",
+    "upload.dropzone.browse": "تصفح الملفات",
+
+    "upload.resume.title": "استئناف عمليات الرفع",
+    "upload.resume.description": "كانت عمليات الرفع هذه جارية قبل زيارتك الأخيرة. اختر الملف نفسه مرة أخرى للمتابعة من حيث توقفت — لا يمكن لمتصفحك إعادة فتحه تلقائيًا.",
+    "upload.resume.selectFile": "اختر الملف",
+    "upload.resume.sizeMismatch": "حجم هذا الملف لا يطابق الرفع الجاري — يرجى اختيار الملف نفسه بالضبط.",
+
+    "upload.aggregate.inProgress": "{count} ملف قيد الرفع",
+    "upload.aggregate.title": "عمليات الرفع",
+    "upload.aggregate.empty": "لا توجد عمليات رفع بعد",
+
+    "works.index.title": "الأعمال",
+    "works.index.subtitle": "أعمالكم المودعة وملفاتها",
+    "works.index.newWork": "عمل جديد",
+    "works.index.empty": "لم تُنشئوا أي عمل بعد.",
+    "works.index.fileCount": "{count} ملف",
+
+    "works.status.draft": "مسودة",
+    "works.status.submitted": "تم التقديم",
+    "works.status.under_review": "قيد المراجعة",
+    "works.status.registered": "مسجَّل",
+    "works.status.rejected": "مرفوض",
+
+    "works.create.title": "عمل جديد",
+    "works.create.subtitle": "أنشئ عملاً، ثم ارفع ملفاته",
+    "works.create.titleLabel": "العنوان",
+    "works.create.titlePlaceholder": "مثال: سيمفونية الأوراس",
+    "works.create.descriptionLabel": "الوصف",
+    "works.create.descriptionPlaceholder": "صف العمل بإيجاز…",
+    "works.create.submit": "إنشاء العمل",
+    "works.create.submitting": "جارٍ الإنشاء…",
+
+    "works.show.addFiles": "إضافة ملفات",
+    "works.show.filesTitle": "الملفات",
+    "works.show.noFiles": "لم يتم رفع أي ملف بعد.",
+    "works.show.variantCount": "{count} نسخة"
 }

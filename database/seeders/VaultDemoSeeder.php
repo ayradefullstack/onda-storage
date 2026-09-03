@@ -17,10 +17,13 @@ class VaultDemoSeeder extends Seeder
      * Seed demo authors, an admin, and a few works with quotas.
      * No media files — nothing can be uploaded until a later phase.
      *
-     * DatabaseSeeder uses WithoutModelEvents, which suppresses model events
-     * (including HasUuidColumn's `creating` hook) for every seeder it calls.
-     * `uuid` is therefore assigned explicitly here rather than left to the
-     * trait.
+     * `uuid` is assigned explicitly below rather than left to
+     * `HasUuidColumn`'s `creating` hook. That used to be load-bearing —
+     * `DatabaseSeeder` ran every seeder under `WithoutModelEvents`, which
+     * suppresses model events including that hook — but `WithoutModelEvents`
+     * is no longer used there (P3-FIX commented it out), so the hook fires
+     * normally now. The explicit assignment is harmless and kept for
+     * clarity, but nothing here still depends on it.
      */
     public function run(): void
     {

@@ -15,7 +15,7 @@
     "nav.skipToContent": "Skip to content",
     "nav.userMenu": "Account Menu",
     "nav.signOut": "Sign Out",
-    
+
     "announcement.text": "2026 Declaration Campaign: Digital deposit of works is now open to all creators.",
     "announcement.badge": "Official Notice",
     "announcement.hotline": "Authors Support Hotline: 021 74 12 34",
@@ -91,7 +91,7 @@
     "news.heading": "News & Regulatory Bulletins",
     "news.subheading": "Stay updated on recent regulatory decisions, royalty distribution sessions, and official announcements.",
     "news.readMore": "Read full announcement",
-    
+
     "news.item1.category": "Royalty Distribution",
     "news.item1.date": "August 2026",
     "news.item1.title": "Launch of General Royalty Distribution Session for Authors & Performers",
@@ -328,5 +328,88 @@
     "sidebar.nav.agencies": "Agencies & Delegations",
     "sidebar.nav.support": "Technical Support",
     "sidebar.hotline.title": "Author Hotline",
-    "sidebar.hotline.number": "021 74 12 34"
+    "sidebar.hotline.number": "021 74 12 34",
+
+    "media.status.uploading": "Uploading",
+    "media.status.assembling": "Assembling",
+    "media.status.scanning": "Scanning",
+    "media.status.processing": "Processing",
+    "media.status.ready": "Ready",
+    "media.status.failed": "Failed",
+    "media.status.quarantined": "Quarantined",
+    "media.quarantineExplain": "This file was flagged by the security scan and is under review — this is not something you did wrong.",
+    "media.failedExplain": "Processing this file failed. Our team has been notified; you don't need to re-upload yet.",
+
+    "upload.status.queued": "Queued",
+    "upload.status.initializing": "Starting…",
+    "upload.status.uploading": "Uploading",
+    "upload.status.paused": "Paused",
+    "upload.status.completing": "Finishing…",
+    "upload.status.completed": "Uploaded",
+    "upload.status.failed": "Failed",
+    "upload.status.expired": "Session expired",
+    "upload.status.quota_exceeded": "Quota exceeded",
+
+    "upload.actions.pause": "Pause",
+    "upload.actions.resume": "Resume",
+    "upload.actions.cancel": "Cancel",
+
+    "upload.eta": "{time} remaining",
+
+    "upload.error.crcMismatch": "Checksum mismatch — retry",
+    "upload.error.crcMismatchWithChunk": "Chunk {index} failed a checksum check — retry",
+    "upload.error.network": "Network error — retry",
+    "upload.error.networkWithChunk": "Chunk {index} failed — retry",
+    "upload.error.workerError": "Could not prepare this file for upload — retry",
+    "upload.error.workerErrorWithChunk": "Chunk {index} could not be prepared — retry",
+    "upload.error.serverError": "The server rejected this upload — retry",
+    "upload.error.serverErrorWithChunk": "Chunk {index} was rejected by the server — retry",
+    "upload.error.missingChunks": "Some parts of this file did not reach the server — retry",
+    "upload.error.unknown": "Something went wrong — retry",
+    "upload.error.unknownWithChunk": "Chunk {index} failed for an unknown reason — retry",
+    "upload.error.expired": "This upload session expired before it finished. Start it again to get a fresh session.",
+    "upload.error.quotaExceeded": "This upload would exceed your storage quota.",
+    "upload.error.quotaExceededWithRemaining": "This upload would exceed your storage quota — {remaining} remaining.",
+
+    "upload.reject.extension": "\"{filename}\" is not an accepted file type.",
+    "upload.reject.size": "\"{filename}\" is too large (5 GB maximum).",
+
+    "upload.dropzone.title": "Drag files here, or browse",
+    "upload.dropzone.hint": "Up to {size} — {extensions}",
+    "upload.dropzone.browse": "Browse files",
+
+    "upload.resume.title": "Resume your uploads",
+    "upload.resume.description": "These uploads were in progress before your last visit. Select the same file again to continue where you left off — your browser cannot reopen it automatically.",
+    "upload.resume.selectFile": "Select file",
+    "upload.resume.sizeMismatch": "That file's size doesn't match the upload in progress — please select the exact same file.",
+
+    "upload.aggregate.inProgress": "{count} file(s) uploading",
+    "upload.aggregate.title": "Uploads",
+    "upload.aggregate.empty": "No uploads yet",
+
+    "works.index.title": "Works",
+    "works.index.subtitle": "Your deposited works and their files",
+    "works.index.newWork": "New work",
+    "works.index.empty": "You haven't created any works yet.",
+    "works.index.fileCount": "{count} file(s)",
+
+    "works.status.draft": "Draft",
+    "works.status.submitted": "Submitted",
+    "works.status.under_review": "Under review",
+    "works.status.registered": "Registered",
+    "works.status.rejected": "Rejected",
+
+    "works.create.title": "New work",
+    "works.create.subtitle": "Create a work, then upload its files",
+    "works.create.titleLabel": "Title",
+    "works.create.titlePlaceholder": "e.g. Aurès Symphony",
+    "works.create.descriptionLabel": "Description",
+    "works.create.descriptionPlaceholder": "Briefly describe the work…",
+    "works.create.submit": "Create work",
+    "works.create.submitting": "Creating…",
+
+    "works.show.addFiles": "Add files",
+    "works.show.filesTitle": "Files",
+    "works.show.noFiles": "No files uploaded yet.",
+    "works.show.variantCount": "{count} variant(s)"
 }
