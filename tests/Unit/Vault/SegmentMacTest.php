@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domain\Vault\Crypto\SegmentMac;
 use App\Domain\Vault\Exceptions\MacVerificationFailed;
+use Illuminate\Support\Str;
 
 /**
  * @return array{mac: SegmentMac, macKey: string, fileUuid: string, ciphertextPath: string, macPath: string, ciphertextHandle: resource, macHandle: resource}
@@ -12,7 +13,7 @@ function makeSegmentFixture(int $segmentSize, int $segmentCount): array
 {
     $mac = new SegmentMac($segmentSize);
     $macKey = random_bytes(32);
-    $fileUuid = (string) Illuminate\Support\Str::uuid7();
+    $fileUuid = (string) Str::uuid7();
 
     $ciphertextPath = tempnam(sys_get_temp_dir(), 'vault_ct_');
     $macPath = tempnam(sys_get_temp_dir(), 'vault_mac_');

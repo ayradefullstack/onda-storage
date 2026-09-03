@@ -2,16 +2,15 @@
 
 declare(strict_types=1);
 
-use App\Domain\Vault\Contracts\ChunkTracker;
 use App\Domain\Vault\Crypto\CtrCipher;
 use App\Domain\Vault\Crypto\KeyManager;
 use App\Domain\Vault\Crypto\SegmentMac;
+use App\Domain\Vault\Exceptions\IncompleteUpload;
 use App\Domain\Vault\Value\ByteRange;
 use App\Domain\Vault\Value\StoredObject;
 use App\Domain\Vault\Value\UploadIntent;
 use App\Infrastructure\Tracker\DatabaseChunkTracker;
 use App\Infrastructure\Vault\EncryptedLocalVault;
-use App\Models\User;
 use App\Models\Work;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -137,7 +136,7 @@ test('finalize refuses to run while the tracker mask is incomplete', function ()
     // Chunk 1 never arrives.
 
     expect(fn () => $vault->finalize($session->fresh()))
-        ->toThrow(App\Domain\Vault\Exceptions\IncompleteUpload::class);
+        ->toThrow(IncompleteUpload::class);
 
     // Clean up the still-incoming temp file.
     @unlink(Storage::disk('incoming')->path($session->temp_path));

@@ -14,30 +14,30 @@
         monospace;
 
     /* ONDA Primary Brand Scale — Royal Blue (#1B669D) */
-    --color-onda-blue-50: #F0F7FC;
-    --color-onda-blue-100: #D9ECF7;
-    --color-onda-blue-200: #B5DCF0;
-    --color-onda-blue-300: #82C2E4;
-    --color-onda-blue-400: #4BA4D5;
-    --color-onda-blue-500: #2587C0;
-    --color-onda-blue-600: #1B669D;
-    --color-onda-blue-700: #16517D;
+    --color-onda-blue-50: #f0f7fc;
+    --color-onda-blue-100: #d9ecf7;
+    --color-onda-blue-200: #b5dcf0;
+    --color-onda-blue-300: #82c2e4;
+    --color-onda-blue-400: #4ba4d5;
+    --color-onda-blue-500: #2587c0;
+    --color-onda-blue-600: #1b669d;
+    --color-onda-blue-700: #16517d;
     --color-onda-blue-800: #154467;
-    --color-onda-blue-900: #163A55;
-    --color-onda-blue-950: #0E2538;
+    --color-onda-blue-900: #163a55;
+    --color-onda-blue-950: #0e2538;
 
     /* ONDA Secondary Brand Scale — Emerald Teal (#1C9976) */
-    --color-onda-teal-50: #EEFBF7;
-    --color-onda-teal-100: #D5F6EB;
-    --color-onda-teal-200: #B0EEDB;
-    --color-onda-teal-300: #7DE1C5;
-    --color-onda-teal-400: #45CEAA;
-    --color-onda-teal-500: #25B48D;
-    --color-onda-teal-600: #1C9976;
-    --color-onda-teal-700: #187A5F;
-    --color-onda-teal-800: #17614D;
+    --color-onda-teal-50: #eefbf7;
+    --color-onda-teal-100: #d5f6eb;
+    --color-onda-teal-200: #b0eedb;
+    --color-onda-teal-300: #7de1c5;
+    --color-onda-teal-400: #45ceaa;
+    --color-onda-teal-500: #25b48d;
+    --color-onda-teal-600: #1c9976;
+    --color-onda-teal-700: #187a5f;
+    --color-onda-teal-800: #17614d;
     --color-onda-teal-900: #165041;
-    --color-onda-teal-950: #082D24;
+    --color-onda-teal-950: #082d24;
 
     /* ONDA brand ramp backward compatibility */
     --color-seal: #1b669d;
@@ -46,7 +46,9 @@
     --color-signal: #1c9976;
 
     /* Elevation & Shadows */
-    --shadow-onda-card: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 0 0 1px rgba(226, 232, 240, 0.8);
+    --shadow-onda-card:
+        0 4px 20px -2px rgba(15, 23, 42, 0.06),
+        0 0 0 1px rgba(226, 232, 240, 0.8);
     --shadow-onda-glow-blue: 0 0 35px -5px rgba(27, 102, 157, 0.35);
     --shadow-onda-glow-teal: 0 0 35px -5px rgba(28, 153, 118, 0.35);
 
@@ -219,7 +221,7 @@
 
 /* Premium Animated Border & Focus System for Inputs & Selects */
 .input-premium {
-    @apply transition-all duration-300 ease-out rounded-xl border border-input bg-background shadow-xs;
+    @apply rounded-xl border border-input bg-background shadow-xs transition-all duration-300 ease-out;
 }
 
 .input-premium:hover:not(:disabled) {
@@ -231,9 +233,11 @@
 .input-premium:focus,
 .input-premium:focus-visible,
 .input-premium:focus-within {
-    border-color: #1B669D !important;
+    border-color: #1b669d !important;
     outline: none !important;
-    box-shadow: 0 0 0 4px rgba(27, 102, 157, 0.18), 0 0 20px -2px rgba(27, 102, 157, 0.3) !important;
+    box-shadow:
+        0 0 0 4px rgba(27, 102, 157, 0.18),
+        0 0 20px -2px rgba(27, 102, 157, 0.3) !important;
     transform: translateY(-1px);
 }
 
@@ -246,11 +250,13 @@
 .dark .input-premium:focus-visible,
 .dark .input-premium:focus-within {
     border-color: #8cbbe0 !important;
-    box-shadow: 0 0 0 4px rgba(140, 187, 224, 0.22), 0 0 22px -2px rgba(140, 187, 224, 0.35) !important;
+    box-shadow:
+        0 0 0 4px rgba(140, 187, 224, 0.22),
+        0 0 22px -2px rgba(140, 187, 224, 0.35) !important;
 }
 
 .input-premium-teal {
-    @apply transition-all duration-300 ease-out rounded-xl border border-input bg-background shadow-xs;
+    @apply rounded-xl border border-input bg-background shadow-xs transition-all duration-300 ease-out;
 }
 
 .input-premium-teal:hover:not(:disabled) {
@@ -262,9 +268,11 @@
 .input-premium-teal:focus,
 .input-premium-teal:focus-visible,
 .input-premium-teal:focus-within {
-    border-color: #1C9976 !important;
+    border-color: #1c9976 !important;
     outline: none !important;
-    box-shadow: 0 0 0 4px rgba(28, 153, 118, 0.18), 0 0 20px -2px rgba(28, 153, 118, 0.3) !important;
+    box-shadow:
+        0 0 0 4px rgba(28, 153, 118, 0.18),
+        0 0 20px -2px rgba(28, 153, 118, 0.3) !important;
     transform: translateY(-1px);
 }
 
@@ -276,7 +284,8 @@
 .dark .input-premium-teal:focus,
 .dark .input-premium-teal:focus-visible,
 .dark .input-premium-teal:focus-within {
-    border-color: #45CEAA !important;
-    box-shadow: 0 0 0 4px rgba(69, 206, 170, 0.22), 0 0 22px -2px rgba(69, 206, 170, 0.35) !important;
+    border-color: #45ceaa !important;
+    box-shadow:
+        0 0 0 4px rgba(69, 206, 170, 0.22),
+        0 0 22px -2px rgba(69, 206, 170, 0.35) !important;
 }
-

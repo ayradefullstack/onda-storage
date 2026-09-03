@@ -1,18 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { 
-    Menu, 
-    Phone, 
-    Sparkles, 
-    FileText, 
-    Building2, 
-    Mail, 
-    MapPin, 
-    ShieldCheck, 
-    ExternalLink, 
-    Search,
-    ChevronRight
-} from '@lucide/vue';
+import { Menu, Phone, Sparkles, Mail, MapPin, ShieldCheck } from '@lucide/vue';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import FullscreenPreloader from '@/components/public/FullscreenPreloader.vue';
@@ -46,31 +34,38 @@ const mobileMenuOpen = ref(false);
 
     <a
         href="#main-content"
-        class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:start-4 focus:z-50 focus:rounded-md focus:bg-onda-blue-600 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
+        class="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-onda-blue-600 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white"
     >
         {{ t('nav.skipToContent') }}
     </a>
 
-    <div class="flex min-h-screen flex-col bg-background text-foreground selection:bg-onda-blue-600 selection:text-white">
-        
+    <div
+        class="flex min-h-screen flex-col bg-background text-foreground selection:bg-onda-blue-600 selection:text-white"
+    >
         <!-- 1. TOP INSTITUTIONAL ANNOUNCEMENT BAR -->
-        <aside class="relative z-50 border-b border-onda-blue-900/30 bg-gradient-to-r from-onda-blue-900 via-onda-blue-800 to-onda-teal-900 text-white text-xs py-2 px-4 sm:px-6 lg:px-8">
-            <div class="mx-auto flex max-w-7xl items-center justify-between gap-4">
+        <aside
+            class="relative z-50 border-b border-onda-blue-900/30 bg-gradient-to-r from-onda-blue-900 via-onda-blue-800 to-onda-teal-900 px-4 py-2 text-xs text-white sm:px-6 lg:px-8"
+        >
+            <div
+                class="mx-auto flex max-w-7xl items-center justify-between gap-4"
+            >
                 <!-- Announcement Notice -->
-                <div class="flex items-center gap-2 overflow-hidden truncate">
-                    <span class="inline-flex items-center rounded-full bg-onda-teal-500/25 px-2.5 py-0.5 text-[11px] font-semibold text-onda-teal-200 border border-onda-teal-400/30 shrink-0">
+                <div class="flex items-center gap-2 truncate overflow-hidden">
+                    <span
+                        class="inline-flex shrink-0 items-center rounded-full border border-onda-teal-400/30 bg-onda-teal-500/25 px-2.5 py-0.5 text-[11px] font-semibold text-onda-teal-200"
+                    >
                         {{ t('announcement.badge') }}
                     </span>
-                    <span class="truncate text-slate-200 text-xs">
+                    <span class="truncate text-xs text-slate-200">
                         {{ t('announcement.text') }}
                     </span>
                 </div>
 
                 <!-- Right Utility Bar: Hotline & Quick Lang -->
-                <div class="hidden items-center gap-6 md:flex shrink-0">
-                    <a 
-                        href="tel:+21321741234" 
-                        class="flex items-center gap-1.5 text-xs text-onda-blue-100 hover:text-white transition-colors"
+                <div class="hidden shrink-0 items-center gap-6 md:flex">
+                    <a
+                        href="tel:+21321741234"
+                        class="flex items-center gap-1.5 text-xs text-onda-blue-100 transition-colors hover:text-white"
                         title="Assistance Téléphonique"
                     >
                         <Phone class="size-3.5 text-onda-teal-400" />
@@ -81,15 +76,20 @@ const mobileMenuOpen = ref(false);
         </aside>
 
         <!-- 2. STICKY MAIN NAVBAR -->
-        <header class="sticky top-0 z-40 border-b border-border/80 bg-background/85 backdrop-blur-md transition-colors">
-            <div class="mx-auto flex h-18 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-                
+        <header
+            class="sticky top-0 z-40 border-b border-border/80 bg-background/85 backdrop-blur-md transition-colors"
+        >
+            <div
+                class="mx-auto flex h-18 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8"
+            >
                 <!-- Brand Logo -->
                 <Link
                     :href="home({ locale })"
-                    class="flex items-center gap-3 group transition-transform duration-200 hover:scale-[1.01]"
+                    class="group flex items-center gap-3 transition-transform duration-200 hover:scale-[1.01]"
                 >
-                    <OrgLogo class="h-9 w-auto sm:h-11 object-contain drop-shadow-sm" />
+                    <OrgLogo
+                        class="h-9 w-auto object-contain drop-shadow-sm sm:h-11"
+                    />
                 </Link>
 
                 <!-- Navigation Links -->
@@ -138,16 +138,18 @@ const mobileMenuOpen = ref(false);
                     <LanguageSwitcher />
                     <ThemeToggle />
 
-                    <div class="h-5 w-px bg-border mx-1" />
+                    <div class="mx-1 h-5 w-px bg-border" />
 
                     <!-- User Account / Auth Buttons -->
                     <template v-if="page.props.auth?.user">
                         <DropdownMenu>
                             <DropdownMenuTrigger
-                                class="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3.5 py-2 text-sm font-semibold hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none transition-colors"
+                                class="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3.5 py-2 text-sm font-semibold transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                                 :aria-label="t('nav.userMenu')"
                             >
-                                <span class="size-2 rounded-full bg-onda-teal-500" />
+                                <span
+                                    class="size-2 rounded-full bg-onda-teal-500"
+                                />
                                 <span>{{ page.props.auth.user.name }}</span>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" class="w-48">
@@ -176,7 +178,7 @@ const mobileMenuOpen = ref(false);
                         >
                             {{ t('nav.signIn') }}
                         </Link>
-                        
+
                         <!-- E-Portail CTA Button (ONDA Teal) -->
                         <Link
                             :href="register()"
@@ -205,7 +207,9 @@ const mobileMenuOpen = ref(false);
                             class="flex w-4/5 flex-col gap-6 sm:max-w-xs"
                         >
                             <SheetHeader>
-                                <SheetTitle class="text-start flex items-center gap-2">
+                                <SheetTitle
+                                    class="flex items-center gap-2 text-start"
+                                >
                                     <OrgLogo class="h-8 w-auto" />
                                 </SheetTitle>
                             </SheetHeader>
@@ -256,7 +260,9 @@ const mobileMenuOpen = ref(false);
                                 </SheetClose>
                             </nav>
 
-                            <div class="mt-auto flex flex-col gap-2.5 pt-6 border-t border-border">
+                            <div
+                                class="mt-auto flex flex-col gap-2.5 border-t border-border pt-6"
+                            >
                                 <template v-if="page.props.auth?.user">
                                     <SheetClose as-child>
                                         <Link
@@ -297,7 +303,6 @@ const mobileMenuOpen = ref(false);
                         </SheetContent>
                     </Sheet>
                 </div>
-
             </div>
         </header>
 
@@ -307,19 +312,25 @@ const mobileMenuOpen = ref(false);
         </main>
 
         <!-- 4. INSTITUTIONAL TRILINGUAL FOOTER -->
-        <footer id="contact" class="border-t border-border bg-slate-900 text-slate-300 dark:bg-slate-950">
+        <footer
+            id="contact"
+            class="border-t border-border bg-slate-900 text-slate-300 dark:bg-slate-950"
+        >
             <div class="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
                 <div class="grid grid-cols-1 gap-12 lg:grid-cols-12">
-                    
                     <!-- Column 1: Institutional Overview -->
                     <div class="space-y-4 lg:col-span-4">
                         <div class="flex items-center gap-3">
                             <OrgLogo class="h-10 w-auto brightness-0 invert" />
                         </div>
-                        <p class="text-xs text-slate-400 leading-relaxed max-w-sm">
+                        <p
+                            class="max-w-sm text-xs leading-relaxed text-slate-400"
+                        >
                             {{ t('footer.aboutText') }}
                         </p>
-                        <div class="inline-flex items-center gap-2 rounded-xl bg-slate-800/80 border border-slate-700 px-3 py-1.5 text-xs text-onda-teal-400">
+                        <div
+                            class="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-xs text-onda-teal-400"
+                        >
                             <ShieldCheck class="size-4" />
                             <span>{{ t('hero.trust3') }}</span>
                         </div>
@@ -327,27 +338,41 @@ const mobileMenuOpen = ref(false);
 
                     <!-- Column 2: Quick Links -->
                     <div class="space-y-3 lg:col-span-2">
-                        <h4 class="text-xs font-bold uppercase tracking-wider text-white">
+                        <h4
+                            class="text-xs font-bold tracking-wider text-white uppercase"
+                        >
                             {{ t('footer.quickLinks') }}
                         </h4>
                         <ul class="space-y-2 text-xs">
                             <li>
-                                <a href="#services" class="hover:text-onda-blue-400 transition-colors">
+                                <a
+                                    href="#services"
+                                    class="transition-colors hover:text-onda-blue-400"
+                                >
                                     {{ t('nav.services') }}
                                 </a>
                             </li>
                             <li>
-                                <a href="#repertoire" class="hover:text-onda-blue-400 transition-colors">
+                                <a
+                                    href="#repertoire"
+                                    class="transition-colors hover:text-onda-blue-400"
+                                >
                                     {{ t('nav.repertoire') }}
                                 </a>
                             </li>
                             <li>
-                                <a href="#actualites" class="hover:text-onda-blue-400 transition-colors">
+                                <a
+                                    href="#actualites"
+                                    class="transition-colors hover:text-onda-blue-400"
+                                >
                                     {{ t('news.heading') }}
                                 </a>
                             </li>
                             <li>
-                                <Link :href="register()" class="hover:text-onda-teal-400 transition-colors">
+                                <Link
+                                    :href="register()"
+                                    class="transition-colors hover:text-onda-teal-400"
+                                >
                                     {{ t('nav.eportal') }}
                                 </Link>
                             </li>
@@ -356,7 +381,9 @@ const mobileMenuOpen = ref(false);
 
                     <!-- Column 3: Legal & Regulatory -->
                     <div class="space-y-3 lg:col-span-3">
-                        <h4 class="text-xs font-bold uppercase tracking-wider text-white">
+                        <h4
+                            class="text-xs font-bold tracking-wider text-white uppercase"
+                        >
                             {{ t('footer.legal') }}
                         </h4>
                         <ul class="space-y-2 text-xs text-slate-400">
@@ -368,40 +395,58 @@ const mobileMenuOpen = ref(false);
 
                     <!-- Column 4: Contact & Agences -->
                     <div class="space-y-3 lg:col-span-3">
-                        <h4 class="text-xs font-bold uppercase tracking-wider text-white">
+                        <h4
+                            class="text-xs font-bold tracking-wider text-white uppercase"
+                        >
                             {{ t('footer.contactUs') }}
                         </h4>
                         <div class="space-y-2.5 text-xs text-slate-400">
                             <div class="flex items-start gap-2">
-                                <MapPin class="size-4 text-onda-blue-400 shrink-0 mt-0.5" />
+                                <MapPin
+                                    class="mt-0.5 size-4 shrink-0 text-onda-blue-400"
+                                />
                                 <span>{{ t('footer.address') }}</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <Phone class="size-4 text-onda-teal-400 shrink-0" />
-                                <a href="tel:+21321741234" class="hover:text-white transition-colors font-mono">
+                                <Phone
+                                    class="size-4 shrink-0 text-onda-teal-400"
+                                />
+                                <a
+                                    href="tel:+21321741234"
+                                    class="font-mono transition-colors hover:text-white"
+                                >
                                     +213 (0) 21 74 12 34
                                 </a>
                             </div>
                             <div class="flex items-center gap-2">
-                                <Mail class="size-4 text-onda-blue-400 shrink-0" />
-                                <a href="mailto:contact@onda.dz" class="hover:text-white transition-colors font-mono">
+                                <Mail
+                                    class="size-4 shrink-0 text-onda-blue-400"
+                                />
+                                <a
+                                    href="mailto:contact@onda.dz"
+                                    class="font-mono transition-colors hover:text-white"
+                                >
                                     contact@onda.dz
                                 </a>
                             </div>
                         </div>
                     </div>
-
                 </div>
 
                 <!-- Footer Bottom Divider & Legal Mentions -->
-                <div class="mt-12 pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+                <div
+                    class="mt-12 flex flex-col items-center justify-between gap-4 border-t border-slate-800 pt-8 text-xs text-slate-500 sm:flex-row"
+                >
                     <p>{{ t('footer.storageNotice') }}</p>
                     <p class="font-mono text-[11px]">
-                        {{ t('footer.copyright', { year: new Date().getFullYear() }) }}
+                        {{
+                            t('footer.copyright', {
+                                year: new Date().getFullYear(),
+                            })
+                        }}
                     </p>
                 </div>
             </div>
         </footer>
-
     </div>
 </template>

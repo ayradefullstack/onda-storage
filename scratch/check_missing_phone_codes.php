@@ -1,6 +1,6 @@
 <?php
 
-$jsonPath = __DIR__ . '/../public/assets/seeders/countries.json';
+$jsonPath = __DIR__.'/../public/assets/seeders/countries.json';
 $raw = json_decode(file_get_contents($jsonPath), true);
 $data = [];
 
@@ -22,8 +22,8 @@ foreach ($data as $c) {
     }
 }
 
-echo "Total countries in JSON: " . count($data) . "\n";
-echo "Countries missing phone_code: " . count($missingPhone) . "\n\n";
+echo 'Total countries in JSON: '.count($data)."\n";
+echo 'Countries missing phone_code: '.count($missingPhone)."\n\n";
 
 foreach ($missingPhone as $item) {
     echo "ID: {$item['id']} | Code: {$item['alpha2']} | Name: {$item['name']}\n";

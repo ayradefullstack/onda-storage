@@ -34,7 +34,7 @@ defineExpose({
             @click="showPassword = !showPassword"
             :class="
                 cn(
-                    'absolute inset-y-0 end-0 flex items-center rounded-e-md px-3 text-muted-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none cursor-pointer',
+                    'absolute inset-y-0 end-0 flex cursor-pointer items-center rounded-e-md px-3 text-muted-foreground hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none',
                 )
             "
             :aria-label="showPassword ? 'Hide password' : 'Show password'"

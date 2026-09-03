@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\MediaFile;
 use App\Models\User;
 use App\Models\Work;
 use Illuminate\Database\QueryException;
@@ -57,13 +58,13 @@ dataset('uuid_enforced_tables', [
     }],
     'media_variants' => ['media_variants', function () {
         $work = Work::factory()->create();
-        $mediaFile = \App\Models\MediaFile::factory()->create(['work_id' => $work->id]);
+        $mediaFile = MediaFile::factory()->create(['work_id' => $work->id]);
 
         return ['media_file_id' => $mediaFile->id, 'kind' => 'thumbnail', 'path' => 'x', 'size_bytes' => 1];
     }],
     'file_access_logs' => ['file_access_logs', function () {
         $work = Work::factory()->create();
-        $mediaFile = \App\Models\MediaFile::factory()->create(['work_id' => $work->id]);
+        $mediaFile = MediaFile::factory()->create(['work_id' => $work->id]);
 
         return ['media_file_id' => $mediaFile->id, 'action' => 'stream', 'ip' => '127.0.0.1', 'row_hash' => str_repeat('a', 64)];
     }],

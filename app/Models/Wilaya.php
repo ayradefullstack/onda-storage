@@ -9,18 +9,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
-  * @property string $uuid
+ * @property string $uuid
  * @property int|null $country_id
  * @property string $code
  * @property string $name_ar
  * @property string $name_fr
  * @property bool $is_active
  * @property bool $is_visible
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class Wilaya extends Model
 {

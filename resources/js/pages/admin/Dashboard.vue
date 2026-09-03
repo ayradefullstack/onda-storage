@@ -23,8 +23,10 @@ const user = computed(() => page.props.auth.user);
 
     <div class="mx-auto w-full max-w-5xl space-y-6 p-4 md:p-6">
         <div>
-            <h1 class="text-2xl font-semibold tracking-tight">Admin Dashboard</h1>
-            <p class="text-muted-foreground mt-1 text-sm">
+            <h1 class="text-2xl font-semibold tracking-tight">
+                Admin Dashboard
+            </h1>
+            <p class="mt-1 text-sm text-muted-foreground">
                 Signed in as {{ user?.name }} ({{ user?.email }})
             </p>
         </div>

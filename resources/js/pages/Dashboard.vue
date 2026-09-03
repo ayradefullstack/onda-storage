@@ -2,7 +2,6 @@
 import { Head } from '@inertiajs/vue3';
 import { useEventListener } from '@vueuse/core';
 import { ref } from 'vue';
-import { useI18n } from 'vue-i18n';
 import CertificateModal from '@/components/dashboard/CertificateModal.vue';
 import DashboardHero from '@/components/dashboard/DashboardHero.vue';
 import DashboardQuickActions from '@/components/dashboard/DashboardQuickActions.vue';
@@ -14,8 +13,8 @@ import NewDepositModal from '@/components/dashboard/NewDepositModal.vue';
 import { useDashboardModal } from '@/composables/useDashboardModal';
 import { dashboard } from '@/routes';
 
-const { t } = useI18n();
-const { isDepositOpen, initialDepositCategory, openDeposit, closeDeposit } = useDashboardModal();
+const { isDepositOpen, initialDepositCategory, openDeposit } =
+    useDashboardModal();
 
 defineOptions({
     layout: {
@@ -43,12 +42,13 @@ const handleSelectCategory = (category: string) => {
 const handleOpenStatement = () => {
     // Smooth scroll down to Royalties breakdown
     const el = document.getElementById('royalties-section');
+
     if (el) {
         el.scrollIntoView({ behavior: 'smooth' });
     }
 };
 
-const handleDepositCreated = (newWorkData: any) => {
+const handleDepositCreated = () => {
     // Show instant toast or reactive update
 };
 
@@ -64,7 +64,7 @@ useEventListener('keydown', (e: KeyboardEvent) => {
 <template>
     <Head title="Tableau de bord — Espace Auteur ONDA" />
 
-    <div class="flex-1 space-y-6 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+    <div class="mx-auto w-full max-w-7xl flex-1 space-y-6 p-4 sm:p-6 lg:p-8">
         <!-- 1. Hero Identity & Member Tier Header -->
         <DashboardHero
             @open-deposit="openDeposit('music')"
@@ -75,9 +75,7 @@ useEventListener('keydown', (e: KeyboardEvent) => {
         <DashboardStats />
 
         <!-- 3. Quick Multi-Domain Deposit Launchpad -->
-        <DashboardQuickActions
-            @select-category="handleSelectCategory"
-        />
+        <DashboardQuickActions @select-category="handleSelectCategory" />
 
         <!-- 4. Works & Declarations Registry Table -->
         <DashboardWorksTable

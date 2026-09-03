@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
-import { Mail, Lock, ArrowRight } from '@lucide/vue';
+import { ArrowRight } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import InputError from '@/components/InputError.vue';
 import PasskeyVerify from '@/components/PasskeyVerify.vue';
@@ -28,10 +28,12 @@ defineProps<{
 
     <!-- Card Header -->
     <div class="mb-8 space-y-2 text-center lg:text-start">
-        <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+        <h1
+            class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
+        >
             {{ t('auth.loginTitle') }}
         </h1>
-        <p class="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+        <p class="text-xs leading-relaxed text-muted-foreground sm:text-sm">
             {{ t('auth.loginDesc') }}
         </p>
     </div>
@@ -45,7 +47,7 @@ defineProps<{
     </div>
 
     <!-- Passkey Biometric Sign In -->
-    <PasskeyVerify 
+    <PasskeyVerify
         :label="t('auth.passkeyPrompt')"
         :loading-label="t('auth.authenticating')"
         :separator="t('auth.orEmail')"
@@ -61,7 +63,10 @@ defineProps<{
         <div class="space-y-4">
             <!-- Email Field -->
             <div class="space-y-1.5 text-start">
-                <Label for="email" class="text-xs font-semibold text-foreground">
+                <Label
+                    for="email"
+                    class="text-xs font-semibold text-foreground"
+                >
                     {{ t('auth.email') }}
                 </Label>
                 <div class="relative">
@@ -75,7 +80,7 @@ defineProps<{
                         dir="ltr"
                         autocomplete="email"
                         placeholder="author@onda.dz"
-                        class="input-premium h-11 ps-4 pe-4 text-sm text-left"
+                        class="input-premium h-11 ps-4 pe-4 text-left text-sm"
                     />
                 </div>
                 <InputError :message="errors.email" />
@@ -84,7 +89,10 @@ defineProps<{
             <!-- Password Field -->
             <div class="space-y-1.5 text-start">
                 <div class="flex items-center justify-between">
-                    <Label for="password" class="text-xs font-semibold text-foreground">
+                    <Label
+                        for="password"
+                        class="text-xs font-semibold text-foreground"
+                    >
                         {{ t('auth.password') }}
                     </Label>
                     <TextLink
@@ -110,7 +118,10 @@ defineProps<{
 
             <!-- Remember Me -->
             <div class="flex items-center justify-between pt-1">
-                <label for="remember" class="flex items-center gap-2.5 text-xs text-muted-foreground cursor-pointer select-none">
+                <label
+                    for="remember"
+                    class="flex cursor-pointer items-center gap-2.5 text-xs text-muted-foreground select-none"
+                >
                     <Checkbox id="remember" name="remember" :tabindex="3" />
                     <span>{{ t('auth.rememberMe') }}</span>
                 </label>
@@ -119,7 +130,7 @@ defineProps<{
             <!-- Submit Button (ONDA Royal Blue) -->
             <Button
                 type="submit"
-                class="mt-3 h-12 w-full rounded-xl bg-gradient-to-r from-onda-blue-600 to-onda-blue-700 hover:from-onda-blue-700 hover:to-onda-blue-800 text-sm font-semibold text-white shadow-lg shadow-onda-blue-600/25 transition-all hover:shadow-onda-blue-600/40 hover:-translate-y-0.5 active:translate-y-0 dark:from-onda-blue-500 dark:to-onda-blue-600 dark:hover:from-onda-blue-400 dark:hover:to-onda-blue-500 cursor-pointer"
+                class="mt-3 h-12 w-full cursor-pointer rounded-xl bg-gradient-to-r from-onda-blue-600 to-onda-blue-700 text-sm font-semibold text-white shadow-lg shadow-onda-blue-600/25 transition-all hover:-translate-y-0.5 hover:from-onda-blue-700 hover:to-onda-blue-800 hover:shadow-onda-blue-600/40 active:translate-y-0 dark:from-onda-blue-500 dark:to-onda-blue-600 dark:hover:from-onda-blue-400 dark:hover:to-onda-blue-500"
                 :tabindex="4"
                 :disabled="processing"
                 data-test="login-button"
@@ -133,10 +144,12 @@ defineProps<{
         </div>
 
         <!-- Register Link -->
-        <div class="mt-4 border-t border-border pt-5 text-center text-xs text-muted-foreground">
+        <div
+            class="mt-4 border-t border-border pt-5 text-center text-xs text-muted-foreground"
+        >
             <span>{{ t('auth.noAccount') }}&nbsp;</span>
-            <TextLink 
-                :href="register()" 
+            <TextLink
+                :href="register()"
                 class="font-semibold text-onda-teal-600 hover:text-onda-teal-700 dark:text-onda-teal-400"
                 :tabindex="6"
             >

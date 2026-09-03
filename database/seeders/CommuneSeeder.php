@@ -17,16 +17,18 @@ class CommuneSeeder extends Seeder
     {
         $jsonPath = public_path('assets/seeders/algeria_cities.json');
 
-        if (!File::exists($jsonPath)) {
+        if (! File::exists($jsonPath)) {
             $this->command->error("JSON file not found at: {$jsonPath}");
+
             return;
         }
 
         $jsonContent = File::get($jsonPath);
         $cities = json_decode($jsonContent, true);
 
-        if (!is_array($cities)) {
+        if (! is_array($cities)) {
             $this->command->error("Invalid JSON content in: {$jsonPath}");
+
             return;
         }
 
@@ -36,16 +38,16 @@ class CommuneSeeder extends Seeder
         $now = now();
 
         foreach ($cities as $city) {
-            $wilayaCode = sprintf('%02d', (int)($city['wilaya_code'] ?? 0));
+            $wilayaCode = sprintf('%02d', (int) ($city['wilaya_code'] ?? 0));
             $wilaya = $wilayas->get($wilayaCode);
 
-            if (!$wilaya) {
+            if (! $wilaya) {
                 continue;
             }
 
             $nameFr = trim($city['commune_name_fr'] ?? '');
             $nameAr = trim($city['commune_name'] ?? '');
-            $postCode = isset($city['code_commune']) ? (string)$city['code_commune'] : null;
+            $postCode = isset($city['code_commune']) ? (string) $city['code_commune'] : null;
 
             if (empty($nameFr) && empty($nameAr)) {
                 continue;
@@ -69,7 +71,7 @@ class CommuneSeeder extends Seeder
             }
         }
 
-        if (!empty($batch)) {
+        if (! empty($batch)) {
             Commune::insert($batch);
         }
     }

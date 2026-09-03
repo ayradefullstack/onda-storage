@@ -15,8 +15,9 @@ class CountrySeeder extends Seeder
     {
         $jsonPath = public_path('assets/seeders/countries.json');
 
-        if (!File::exists($jsonPath)) {
+        if (! File::exists($jsonPath)) {
             $this->command->error("Countries JSON file not found at: {$jsonPath}");
+
             return;
         }
 
@@ -31,7 +32,8 @@ class CountrySeeder extends Seeder
         }
 
         if (empty($countriesData)) {
-            $this->command->error("No country records found in JSON file.");
+            $this->command->error('No country records found in JSON file.');
+
             return;
         }
 
@@ -365,7 +367,7 @@ class CountrySeeder extends Seeder
                     'numeric_code' => $item['numeric_code'] ?? null,
                     'currency_code' => $item['currency_code'] ?? null,
                     'phone_code' => $phoneCode,
-                    'flag_url' => !empty($item['flag_url']) ? $item['flag_url'] : 'https://flagcdn.com/' . strtolower($alpha2) . '.svg',
+                    'flag_url' => ! empty($item['flag_url']) ? $item['flag_url'] : 'https://flagcdn.com/'.strtolower($alpha2).'.svg',
                     'is_active' => true,
                     'is_visible' => true,
                 ]

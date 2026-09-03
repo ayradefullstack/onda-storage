@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Domain\Quota\QuotaPolicy;
 use App\Models\StorageQuota;
 use App\Models\UploadSession;
 use App\Models\User;
 use App\Models\Work;
+use Illuminate\Testing\TestResponse;
 use Spatie\Permission\Models\Role;
 
 function completeTestAuthor(): User
@@ -26,7 +28,7 @@ beforeEach(function () {
  * and returns the `complete` response. Chunk size is fixed at 32 (set in
  * beforeEach above).
  */
-function completeAnUploadOfSize(User $user, Work $work, int $sizeBytes): Illuminate\Testing\TestResponse
+function completeAnUploadOfSize(User $user, Work $work, int $sizeBytes): TestResponse
 {
     $init = test()->actingAs($user)->postJson('/uploads', [
         'work_id' => $work->id,
@@ -153,7 +155,7 @@ test('completing an upload for a user with no quota row creates one from the def
 
     $quota = StorageQuota::where('user_id', $user->id)->firstOrFail();
     expect($quota->used_bytes)->toBe(64)
-        ->and($quota->limit_bytes)->toBe(App\Domain\Quota\QuotaPolicy::DEFAULT_LIMIT_BYTES);
+        ->and($quota->limit_bytes)->toBe(QuotaPolicy::DEFAULT_LIMIT_BYTES);
 });
 
 test('a failed complete (missing chunks) does not change used_bytes', function () {

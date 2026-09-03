@@ -9,6 +9,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -54,14 +55,16 @@ use Spatie\Permission\Traits\HasRoles;
     'commune_id',
     'city',
     'phone',
-    'password'
+    'password',
 ])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
-    use HasRoles, SoftDeletes, HasUuidColumn;
+
+    use HasRoles, HasUuidColumn, SoftDeletes;
+
     /**
      * Get the attributes that should be cast.
      *
@@ -76,17 +79,17 @@ class User extends Authenticatable implements PasskeyUser
         ];
     }
 
-    public function country(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function country(): BelongsTo
     {
         return $this->belongsTo(Country::class);
     }
 
-    public function wilaya(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function wilaya(): BelongsTo
     {
         return $this->belongsTo(Wilaya::class);
     }
 
-    public function commune(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function commune(): BelongsTo
     {
         return $this->belongsTo(Commune::class);
     }
