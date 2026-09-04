@@ -4,10 +4,20 @@ declare(strict_types=1);
 
 use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Value\StoredObject;
+use App\Jobs\CleanupTemp;
+use App\Jobs\ComputeContentHash;
+use App\Jobs\DecryptToTemp;
+use App\Jobs\DeduplicateFile;
+use App\Jobs\ExtractMetadata;
+use App\Jobs\GenerateVariants;
+use App\Jobs\ProcessMediaFile;
+use App\Jobs\RecordDeposit;
+use App\Jobs\ScanForMalware;
 use App\Models\MediaFile;
 use App\Models\UploadSession;
 use App\Models\User;
 use App\Models\Work;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Role;
 
@@ -60,6 +70,20 @@ function decryptMediaFile(MediaFile $mediaFile): string
 }
 
 test('a full 3-chunk lifecycle round-trips the exact source bytes', function () {
+    // Guards P3-FIX's central decision: complete() does no heavy work — it
+    // hands off to the P5 chain and returns immediately, leaving the file
+    // at 'scanning' with sha256_plain still null. QUEUE_CONNECTION=sync in
+    // tests would otherwise run the whole chain inline inside complete(),
+    // which made an earlier version of this test assert 'ready' and a real
+    // hash — i.e. it asserted complete() had done the hashing itself. That
+    // passed even when the hashing genuinely happened inside complete(),
+    // so it could not have caught a regression that reintroduced a
+    // synchronous hash_file() into CompleteUpload. Bus::fake() intercepts
+    // ProcessMediaFile::dispatch() before its handle() ever runs, so the
+    // chain is captured, not executed — restoring the ability to catch
+    // that regression. Do not "fix" this back to asserting 'ready'.
+    Bus::fake();
+
     useSmallChunks();
     $user = authorUser();
     $work = Work::factory()->create(['author_id' => $user->id]);
@@ -91,15 +115,27 @@ test('a full 3-chunk lifecycle round-trips the exact source bytes', function () 
     $complete = $this->postJson("/uploads/{$uuid}/complete");
     $complete->assertCreated();
 
-    // P5's chain is now wired up (App\Jobs\ProcessMediaFile exists), and
-    // QUEUE_CONNECTION=sync in tests runs it synchronously inside the
-    // complete() call above — so by this point the file has already been
-    // hashed and marked ready, not left at 'scanning' with a null hash the
-    // way it was before P5 existed.
     $mediaFile = MediaFile::where('uuid', $complete->json('uuid'))->firstOrFail();
-    expect($mediaFile->status)->toBe('ready')
+    expect($mediaFile->status)->toBe('scanning')
         ->and($mediaFile->size_bytes)->toBe(74)
-        ->and($mediaFile->sha256_plain)->toBe(hash('sha256', $plaintext));
+        ->and($mediaFile->sha256_plain)->toBeNull();
+
+    Bus::assertDispatched(ProcessMediaFile::class, fn (ProcessMediaFile $job): bool => $job->mediaFileUuid === $mediaFile->uuid);
+
+    // Pins the chain's composition and order — chainJobs() is the same
+    // public static method VaultReprocessCommand uses, so this is the one
+    // source of truth for "what P5 actually runs", not a hand-copied list.
+    $chainClasses = array_map(fn (object $job): string => $job::class, ProcessMediaFile::chainJobs($mediaFile->uuid));
+    expect($chainClasses)->toBe([
+        DecryptToTemp::class,
+        ComputeContentHash::class,
+        DeduplicateFile::class,
+        ScanForMalware::class,
+        ExtractMetadata::class,
+        GenerateVariants::class,
+        RecordDeposit::class,
+        CleanupTemp::class,
+    ]);
 
     expect(decryptMediaFile($mediaFile))->toBe($plaintext);
 

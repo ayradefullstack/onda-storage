@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
  * @property int $media_file_id
  * @property string $kind
  * @property string $path
+ * @property string $nonce
  * @property int $size_bytes
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at

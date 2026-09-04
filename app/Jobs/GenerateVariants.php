@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Domain\Deposit\PipelineWorkspace;
-use App\Domain\Deposit\Value\VariantEncryption;
 use App\Domain\Vault\Crypto\CtrCipher;
 use App\Domain\Vault\Crypto\HkdfKeys;
 use App\Domain\Vault\Crypto\KeyManager;
@@ -28,9 +27,11 @@ use Throwable;
  * ghostscript) is installed or requested this phase; skipped like any
  * other unavailable tool, per the same "log and skip, not fatal" rule.
  *
- * `media_variants` has no `nonce` column (frozen) — see
- * `VariantEncryption`'s docblock for how each variant still gets its own,
- * non-reused nonce without one.
+ * Each variant gets its own fresh random nonce (`media_variants.nonce`),
+ * never derived from or reused across the file's own nonce or an earlier
+ * generation of the same variant — `vault:reprocess` regenerates variants
+ * under the same DEK, and reusing a (key, nonce) pair over different
+ * plaintext is exactly the AES-256-CTR keystream reuse CLAUDE.md prohibits.
  */
 final class GenerateVariants extends PipelineJob
 {
@@ -81,7 +82,7 @@ final class GenerateVariants extends PipelineJob
     {
         $dek = app(KeyManager::class)->unwrap($mediaFile->dek_wrapped);
         $encKey = HkdfKeys::encryptionKey($dek);
-        $nonce = VariantEncryption::nonceFor($mediaFile->nonce, $kind);
+        $nonce = random_bytes(8);
 
         // Variant files are small (a single frame, a short clip, a
         // waveform image) — safe to hold fully in memory, unlike the
@@ -106,6 +107,7 @@ final class GenerateVariants extends PipelineJob
         $variant->media_file_id = $mediaFile->id;
         $variant->kind = $kind;
         $variant->path = $relativePath;
+        $variant->nonce = bin2hex($nonce);
         $variant->size_bytes = strlen($ciphertext);
         $variant->save();
     }

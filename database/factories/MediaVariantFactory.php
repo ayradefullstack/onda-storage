@@ -24,6 +24,7 @@ class MediaVariantFactory extends Factory
             'media_file_id' => MediaFile::factory(),
             'kind' => fake()->randomElement(['poster', 'preview', 'waveform', 'thumbnail']),
             'path' => 'variants/'.fake()->uuid().'.jpg',
+            'nonce' => bin2hex(random_bytes(8)),
             'size_bytes' => fake()->numberBetween(1024, 512 * 1024),
         ];
     }
