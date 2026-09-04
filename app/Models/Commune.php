@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Concerns\HasUuidColumn;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -24,6 +25,7 @@ use Illuminate\Support\Carbon;
  */
 class Commune extends Model
 {
+    /** @use HasFactory<Factory<Commune>> */
     use HasFactory, HasUuidColumn, SoftDeletes;
 
     protected $fillable = [
@@ -44,16 +46,27 @@ class Commune extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Wilaya, $this>
+     */
     public function wilaya(): BelongsTo
     {
         return $this->belongsTo(Wilaya::class);
     }
 
+    /**
+     * @param  Builder<Commune>  $query
+     * @return Builder<Commune>
+     */
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
     }
 
+    /**
+     * @param  Builder<Commune>  $query
+     * @return Builder<Commune>
+     */
     public function scopeVisible(Builder $query): Builder
     {
         return $query->where('is_visible', true);

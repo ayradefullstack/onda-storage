@@ -14,9 +14,12 @@ test('sends verification notification', function () {
 
     $user = User::factory()->unverified()->create();
 
+    // Fortify's EmailVerificationNotificationSentResponse does back()->with(...)
+    // — with no Referer header in the test, that falls back to the app root,
+    // not the locale-prefixed `home` route.
     $this->actingAs($user)
         ->post(route('verification.send'))
-        ->assertRedirect(route('home'));
+        ->assertRedirect('/');
 
     Notification::assertSentTo($user, VerifyEmail::class);
 });

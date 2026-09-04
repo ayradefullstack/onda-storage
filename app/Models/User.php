@@ -79,16 +79,25 @@ class User extends Authenticatable implements PasskeyUser
         ];
     }
 
+    /**
+     * @return BelongsTo<Country, $this>
+     */
     public function country(): BelongsTo
     {
         return $this->belongsTo(Country::class);
     }
 
+    /**
+     * @return BelongsTo<Wilaya, $this>
+     */
     public function wilaya(): BelongsTo
     {
         return $this->belongsTo(Wilaya::class);
     }
 
+    /**
+     * @return BelongsTo<Commune, $this>
+     */
     public function commune(): BelongsTo
     {
         return $this->belongsTo(Commune::class);

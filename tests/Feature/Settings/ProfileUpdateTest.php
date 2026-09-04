@@ -59,12 +59,18 @@ test('user can delete their account', function () {
             'password' => 'password',
         ]);
 
+    // ProfileController::destroy() does `return redirect('/')` explicitly
+    // — literal root, not the locale-prefixed `home` route.
     $response
         ->assertSessionHasNoErrors()
-        ->assertRedirect(route('home'));
+        ->assertRedirect('/');
 
     $this->assertGuest();
-    expect($user->fresh())->toBeNull();
+
+    // User has SoftDeletes (CLAUDE.md: "Soft deletes on works, media_files,
+    // users ONLY") — delete() sets deleted_at rather than removing the row,
+    // so fresh() (which bypasses the SoftDeletingScope) still finds it.
+    expect($user->fresh()->trashed())->toBeTrue();
 });
 
 test('correct password must be provided to delete account', function () {

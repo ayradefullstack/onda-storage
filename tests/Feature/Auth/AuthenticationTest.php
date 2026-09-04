@@ -58,7 +58,11 @@ test('users can logout', function () {
 
     $response = $this->actingAs($user)->post(route('logout'));
 
-    $response->assertRedirect(route('home'));
+    // Fortify's LogoutResponse redirects to Fortify::redirects('logout', '/')
+    // — literal root, not the locale-prefixed `home` route — and nothing in
+    // this app overrides that default (config/fortify.php has no
+    // 'redirects' key).
+    $response->assertRedirect('/');
 
     $this->assertGuest();
 });

@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 
 /**
  * @extends Factory<User>
@@ -56,5 +57,17 @@ class UserFactory extends Factory
             'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code-1'])),
             'two_factor_confirmed_at' => now(),
         ]);
+    }
+
+    /**
+     * Assign the given role to the model after creation, creating the role
+     * if it doesn't already exist.
+     */
+    public function withRole(string $role): static
+    {
+        return $this->afterCreating(function (User $user) use ($role): void {
+            Role::findOrCreate($role);
+            $user->assignRole($role);
+        });
     }
 }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Concerns\HasUuidColumn;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -33,6 +34,7 @@ use Illuminate\Support\Carbon;
  */
 class Country extends Model
 {
+    /** @use HasFactory<Factory<Country>> */
     use HasFactory, HasUuidColumn, SoftDeletes;
 
     protected $fillable = [
@@ -89,21 +91,36 @@ class Country extends Model
         return $this->name;
     }
 
+    /**
+     * @return HasMany<Wilaya, $this>
+     */
     public function wilayas(): HasMany
     {
         return $this->hasMany(Wilaya::class);
     }
 
+    /**
+     * @param  Builder<Country>  $query
+     * @return Builder<Country>
+     */
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
     }
 
+    /**
+     * @param  Builder<Country>  $query
+     * @return Builder<Country>
+     */
     public function scopeVisible(Builder $query): Builder
     {
         return $query->where('is_visible', true);
     }
 
+    /**
+     * @param  Builder<Country>  $query
+     * @return Builder<Country>
+     */
     public function scopeDz(Builder $query)
     {
         return $query->where('alpha2', 'DZ');
