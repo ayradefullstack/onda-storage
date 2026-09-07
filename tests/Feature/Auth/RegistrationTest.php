@@ -46,5 +46,9 @@ test('new users can register', function () {
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect(route('dashboard', absolute: false));
+    // CreateNewUser now assigns the `author` role on self-registration
+    // (see its own doc comment for why) — without that, `role:author` on
+    // author.dashboard would 403 the very user this redirect just sent
+    // there.
+    $response->assertRedirect(route('author.dashboard', absolute: false));
 });

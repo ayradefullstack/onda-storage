@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import { useI18n } from 'vue-i18n';
-import WorkController from '@/actions/App/Http/Controllers/WorkController';
+import WorkController from '@/actions/App/Http/Controllers/Author/WorkController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import { Menu, Phone, Sparkles, Mail, MapPin, ShieldCheck } from '@lucide/vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import FullscreenPreloader from '@/components/public/FullscreenPreloader.vue';
 import LanguageSwitcher from '@/components/public/LanguageSwitcher.vue';
@@ -21,11 +21,22 @@ import {
     SheetTitle,
     SheetTrigger,
 } from '@/components/ui/sheet';
-import { dashboard, home, login, logout, register } from '@/routes';
+import { home, login, logout, register } from '@/routes';
+import { dashboard as adminDashboard } from '@/routes/admin';
+import { dashboard as authorDashboard } from '@/routes/author';
 
 const { t, locale } = useI18n();
 const page = usePage();
 const mobileMenuOpen = ref(false);
+
+// A public, logged-in visitor's one "Dashboard" link needs to land on
+// whichever area their role actually grants — see the same admin-over-author
+// default in LoginResponse::redirectPath() for a user holding both.
+const dashboard = computed(() =>
+    page.props.auth?.roles?.includes('admin')
+        ? adminDashboard
+        : authorDashboard,
+);
 </script>
 
 <template>

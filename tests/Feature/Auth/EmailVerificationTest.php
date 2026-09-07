@@ -34,7 +34,11 @@ test('email can be verified', function () {
     Event::assertDispatched(Verified::class);
 
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
-    $response->assertRedirect(route('dashboard', absolute: false).'?verified=1');
+    // Fortify's VerifyEmailResponse redirects to
+    // Fortify::redirects('email-verification'), which falls back straight
+    // to config('fortify.home') — it never goes through the role-aware
+    // LoginResponse, so this is '/' regardless of role (see fortify.php).
+    $response->assertRedirect('/?verified=1');
 });
 
 test('email is not verified with invalid hash', function () {
@@ -79,7 +83,8 @@ test('verified user is redirected to dashboard from verification prompt', functi
     $response = $this->actingAs($user)->get(route('verification.notice'));
 
     Event::assertNotDispatched(Verified::class);
-    $response->assertRedirect(route('dashboard', absolute: false));
+    // Same RedirectAsIntended → config('fortify.home') path as above.
+    $response->assertRedirect('/');
 });
 
 test('already verified user visiting verification link is redirected without firing event again', function () {
@@ -94,7 +99,7 @@ test('already verified user visiting verification link is redirected without fir
     );
 
     $this->actingAs($user)->get($verificationUrl)
-        ->assertRedirect(route('dashboard', absolute: false).'?verified=1');
+        ->assertRedirect('/?verified=1');
 
     Event::assertNotDispatched(Verified::class);
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();

@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Author;
 
 use App\Actions\Upload\AbortUpload;
 use App\Actions\Upload\CompleteUpload;
 use App\Actions\Upload\InitUpload;
 use App\Actions\Upload\StoreChunk;
 use App\Domain\Vault\Contracts\ChunkTracker;
+use App\Http\Controllers\Controller;
 use App\Http\Requests\CompleteUploadRequest;
 use App\Http\Requests\InitUploadRequest;
 use App\Models\UploadSession;

@@ -35,11 +35,19 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
+                // Admin and author are both `web`-guard Users distinguished
+                // only by Spatie role (see config/auth.php) — the sidebar
+                // and user menu need the role list to decide which nav
+                // sections to show and, for a user holding both, that they
+                // see both rather than an arbitrary single choice.
+                'roles' => $user?->getRoleNames()->all() ?? [],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'locale' => app()->getLocale(),

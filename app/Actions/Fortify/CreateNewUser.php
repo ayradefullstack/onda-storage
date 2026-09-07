@@ -8,6 +8,7 @@ use App\Models\Country;
 use App\Models\User;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
+use Spatie\Permission\Models\Role;
 
 class CreateNewUser implements CreatesNewUsers
 {
@@ -47,7 +48,7 @@ class CreateNewUser implements CreatesNewUsers
             $fullName = trim(($input['first_name_ar'] ?? '').' '.($input['last_name_ar'] ?? ''));
         }
 
-        return User::create([
+        $user = User::create([
             'first_name' => $input['first_name'] ?? null,
             'last_name' => $input['last_name'] ?? null,
             'first_name_ar' => $input['first_name_ar'] ?? null,
@@ -61,5 +62,16 @@ class CreateNewUser implements CreatesNewUsers
             'email' => $input['email'],
             'password' => $input['password'],
         ]);
+
+        // Self-registration is the author sign-up flow — admins are
+        // manually provisioned (see the role-split notes), never created
+        // here. Without this, a fresh registrant holds no role at all and
+        // `role:author` middleware 403s them the moment `LoginResponse`
+        // sends them to their dashboard. `findOrCreate` rather than a bare
+        // role name: this action must not depend on RoleAndUserSeeder
+        // having already run (e.g. a fresh test database).
+        $user->assignRole(Role::findOrCreate('author'));
+
+        return $user;
     }
 }

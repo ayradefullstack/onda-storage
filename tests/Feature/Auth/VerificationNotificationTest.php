@@ -29,9 +29,12 @@ test('does not send verification notification if email is verified', function ()
 
     $user = User::factory()->create();
 
+    // Fortify's RedirectAsIntended falls back to config('fortify.home')
+    // here too — not the role-aware LoginResponse — so this is '/' for
+    // every role (see EmailVerificationTest.php for the same mechanism).
     $this->actingAs($user)
         ->post(route('verification.send'))
-        ->assertRedirect(route('dashboard', absolute: false));
+        ->assertRedirect('/');
 
     Notification::assertNothingSent();
 });

@@ -29,7 +29,7 @@ yarn-error.log
 /.zed
 /.claude
 /CLAUDE.md
-/graphify-out
+graphify-out
 /.playwright-cli
 /.playwright
 /bash.exe.stackdump

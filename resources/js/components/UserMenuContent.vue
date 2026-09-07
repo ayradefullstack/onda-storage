@@ -16,11 +16,14 @@ type Props = {
     user: User;
 };
 
+defineProps<Props>();
+
+// Admin and author are both `web`-guard Users now (see config/auth.php) —
+// there is no separate guard, so Settings and logout are the exact same
+// route for both. This menu no longer branches on anything.
 const handleLogout = () => {
     router.flushAll();
 };
-
-defineProps<Props>();
 </script>
 
 <template>

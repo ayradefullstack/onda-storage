@@ -3,9 +3,7 @@
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\Media\StreamController;
 use App\Http\Controllers\Media\StreamLinkController;
-use App\Http\Controllers\UploadController;
 use App\Http\Controllers\VaultDoctorController;
-use App\Http\Controllers\WorkController;
 use App\Http\Middleware\SetLocale;
 use App\Models\Wilaya;
 use Illuminate\Support\Facades\Route;
@@ -28,54 +26,26 @@ Route::get('/api/wilayas/{wilaya}/communes', function (Wilaya $wilaya) {
     );
 })->name('api.wilayas.communes');
 
-Route::middleware(['auth', 'verified', 'role:author'])->group(function () {
-    Route::inertia('dashboard', 'Dashboard')->name('dashboard');
-});
-
-// P4 works pages. Not locale-prefixed, like /dashboard — the authenticated
-// app area's locale comes from the `locale` cookie (see SetLocale).
-Route::middleware(['auth', 'verified', 'role:author'])->prefix('works')->name('works.')->group(function () {
-    Route::get('/', [WorkController::class, 'index'])->name('index');
-    Route::get('/create', [WorkController::class, 'create'])->name('create');
-    Route::post('/', [WorkController::class, 'store'])->name('store');
-    Route::get('/{work:uuid}', [WorkController::class, 'show'])->name('show');
-});
-
-Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::inertia('dashboard', 'admin/Dashboard')->name('dashboard');
-});
-
-// JSON endpoints inside the Inertia session — not an API, no Sanctum/tokens.
-// Deliberately NOT locale-prefixed (see CLAUDE.md's ONDA Storage section):
-// the browser calls these by absolute path regardless of active locale.
-Route::middleware(['auth', 'verified', 'role:author'])->prefix('uploads')->name('uploads.')->group(function () {
-    Route::post('/', [UploadController::class, 'init'])
-        ->middleware('throttle:10,1')
-        ->name('init');
-
-    Route::get('/{session:uuid}', [UploadController::class, 'status'])
-        ->name('status');
-
-    // 1200 requests/min comfortably covers a 5 GB file at 8 MiB chunks
-    // (~640 chunks) plus retries and up to 3 concurrent chunks per file.
-    Route::post('/{session:uuid}/chunk/{index}', [UploadController::class, 'chunk'])
-        ->whereNumber('index')
-        ->middleware('throttle:1200,1')
-        ->name('chunk');
-
-    Route::post('/{session:uuid}/complete', [UploadController::class, 'complete'])
-        ->name('complete');
-
-    Route::delete('/{session:uuid}', [UploadController::class, 'abort'])
-        ->name('abort');
+// Reached by an authenticated user holding neither the `author` nor the
+// `admin` role — see LoginResponse::redirectPath()'s doc comment for why
+// this exists and when it's expected to be hit. Not locale-prefixed, like
+// every other authenticated-area route (see CLAUDE.md).
+Route::middleware(['auth'])->group(function () {
+    Route::inertia('account-pending', 'auth/AccountPending')->name('account.pending');
 });
 
 // P6 (scoped): the preview/stream read path only — see CLAUDE.md's phase
 // log for what's deliberately deferred (full downloads, admin watermarked
-// previews, production delivery). `media.link` issues a fresh 15-minute
-// signed URL on demand; `media.stream` is what that URL points at, and
-// carries its own `signed` check on top of the normal auth/role gate
-// (see StreamController's doc comment for why all four layers are needed).
+// previews, production delivery). Neither role-owned — an admin and an
+// author both read files here, so this lives in neither routes/admin.php
+// nor routes/author.php. `role:author` today is a known, temporary gap:
+// the admin review console (not yet built) will need its own access here,
+// which is deliberately out of scope for this refactor — widening it now
+// would be a behaviour change, not a file move. `media.link` issues a
+// fresh 15-minute signed URL on demand; `media.stream` is what that URL
+// points at, and carries its own `signed` check on top of the normal
+// auth/role gate (see StreamController's doc comment for why all four
+// layers are needed).
 Route::middleware(['auth', 'verified', 'role:author'])->group(function () {
     Route::get('/media/{mediaFile:uuid}/link', StreamLinkController::class)
         ->name('media.link');
@@ -119,3 +89,5 @@ if (app()->environment('local')) {
 }
 
 require __DIR__.'/settings.php';
+require __DIR__.'/admin.php';
+require __DIR__.'/author.php';

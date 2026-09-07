@@ -26,7 +26,7 @@ test('works index renders the author\'s works', function () {
     $this->actingAs($user)
         ->get(route('works.index'))
         ->assertInertia(fn (Assert $page) => $page
-            ->component('works/Index')
+            ->component('author/works/Index')
             ->has('works', 1)
             ->where('works.0.title', 'Aurès Symphony')
             ->where('works.0.media_files_count', 1),
@@ -41,7 +41,7 @@ test('works index only lists the authenticated author\'s own works', function ()
     $this->actingAs($user)
         ->get(route('works.index'))
         ->assertInertia(fn (Assert $page) => $page
-            ->component('works/Index')
+            ->component('author/works/Index')
             ->has('works', 0),
         );
 });
@@ -51,7 +51,7 @@ test('the create page renders', function () {
 
     $this->actingAs($user)
         ->get(route('works.create'))
-        ->assertInertia(fn (Assert $page) => $page->component('works/Create'));
+        ->assertInertia(fn (Assert $page) => $page->component('author/works/Create'));
 });
 
 test('storing a work creates it for the authenticated author and redirects to show', function () {
@@ -89,7 +89,7 @@ test('the show page renders the work and its media files for the owner', functio
     $this->actingAs($user)
         ->get(route('works.show', $work))
         ->assertInertia(fn (Assert $page) => $page
-            ->component('works/Show')
+            ->component('author/works/Show')
             ->where('work.uuid', $work->uuid)
             ->has('mediaFiles', 1)
             ->where('mediaFiles.0.uuid', $mediaFile->uuid)
@@ -109,7 +109,7 @@ test('another author cannot view someone else\'s work', function () {
 
 test('the works routes are registered without a {locale} segment', function () {
     $worksRoutes = collect(Route::getRoutes())->filter(
-        fn ($route) => str_starts_with($route->uri(), 'works'),
+        fn ($route) => str_starts_with($route->uri(), 'author/works'),
     );
 
     expect($worksRoutes)->not->toBeEmpty();

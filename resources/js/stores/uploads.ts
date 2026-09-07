@@ -429,6 +429,11 @@ async function uploadChunkWithRetry(
 
     if (sliceResult.type === 'error') {
         chunk.status = 'failed';
+        // Must be set before throwing: `slot()`'s catch-all only fills in
+        // the generic 'unknown' code when `fileState.status` is still
+        // 'uploading', so leaving it there would let that catch-all
+        // clobber this specific 'workerError' code with 'unknown'.
+        fileState.status = 'failed';
         setError(fileState, 'workerError', chunk.index);
         logUploadFailure(
             'chunk',

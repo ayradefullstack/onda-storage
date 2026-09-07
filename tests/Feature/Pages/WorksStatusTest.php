@@ -85,7 +85,7 @@ test('after the real pipeline reaches ready, works.show reports it verified — 
     $this->actingAs($user)
         ->get(route('works.show', $work))
         ->assertInertia(fn (Assert $page) => $page
-            ->component('works/Show')
+            ->component('author/works/Show')
             ->where('mediaFiles.0.status', 'ready')
             ->where('mediaFiles.0.sha256_plain', hash_file('sha256', base_path('tests/fixtures/sample.mp4')))
             ->where('mediaFiles.0.duration_sec', 2)
@@ -116,7 +116,7 @@ test('a file the pipeline fails is reported as failed, not silently as ready', f
     $this->actingAs($user)
         ->get(route('works.show', $work))
         ->assertInertia(fn (Assert $page) => $page
-            ->component('works/Show')
+            ->component('author/works/Show')
             ->where('mediaFiles.0.status', 'failed')
             ->where('mediaFiles.0.sha256_plain', null),
         );
@@ -144,7 +144,7 @@ test('a file the scanner flags is reported as quarantined, not silently as ready
     $this->actingAs($user)
         ->get(route('works.show', $work))
         ->assertInertia(fn (Assert $page) => $page
-            ->component('works/Show')
+            ->component('author/works/Show')
             ->where('mediaFiles.0.status', 'quarantined'),
         );
 
@@ -161,7 +161,7 @@ test('a file still in the pipeline is reported honestly as scanning, not as done
     $this->actingAs($user)
         ->get(route('works.show', $work))
         ->assertInertia(fn (Assert $page) => $page
-            ->component('works/Show')
+            ->component('author/works/Show')
             ->where('mediaFiles.0.status', 'scanning')
             ->where('mediaFiles.0.sha256_plain', null),
         );

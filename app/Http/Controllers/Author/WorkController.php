@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Author;
 
 use App\Domain\Quota\QuotaPolicy;
+use App\Http\Controllers\Controller;
 use App\Models\StorageQuota;
 use App\Models\Work;
 use Illuminate\Http\RedirectResponse;
@@ -29,14 +30,14 @@ final class WorkController extends Controller
             ->latest()
             ->get(['id', 'uuid', 'title', 'status', 'created_at']);
 
-        return Inertia::render('works/Index', [
+        return Inertia::render('author/works/Index', [
             'works' => $works,
         ]);
     }
 
     public function create(): Response
     {
-        return Inertia::render('works/Create');
+        return Inertia::render('author/works/Create');
     }
 
     public function store(Request $request): RedirectResponse
@@ -68,7 +69,7 @@ final class WorkController extends Controller
 
         $quota = StorageQuota::where('user_id', $request->user()->id)->first();
 
-        return Inertia::render('works/Show', [
+        return Inertia::render('author/works/Show', [
             // 'id' (the numeric FK) is included deliberately — the P3
             // InitUpload endpoint takes work_id as an integer, and this is
             // a page prop, not a URL, so it doesn't touch the

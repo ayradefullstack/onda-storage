@@ -11,7 +11,7 @@ import DashboardWorksTable from '@/components/dashboard/DashboardWorksTable.vue'
 import type { Work } from '@/components/dashboard/DashboardWorksTable.vue';
 import NewDepositModal from '@/components/dashboard/NewDepositModal.vue';
 import { useDashboardModal } from '@/composables/useDashboardModal';
-import { dashboard } from '@/routes';
+import { dashboard } from '@/routes/author';
 
 const { isDepositOpen, initialDepositCategory, openDeposit } =
     useDashboardModal();

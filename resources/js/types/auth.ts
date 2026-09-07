@@ -12,6 +12,8 @@ export type User = {
 
 export type Auth = {
     user: User;
+    /** Spatie role names for the authenticated user — see HandleInertiaRequests. */
+    roles: string[];
 };
 
 export type Passkey = {
