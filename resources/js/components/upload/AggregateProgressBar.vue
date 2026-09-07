@@ -10,7 +10,8 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import QueueItem from '@/components/upload/QueueItem.vue';
+import DepositCard from '@/components/upload/DepositCard.vue';
+import type { UploadEntry } from '@/components/upload/depositJourney';
 import ResumeBanner from '@/components/upload/ResumeBanner.vue';
 import { useUploadQueue } from '@/composables/useUploadQueue';
 
@@ -44,6 +45,10 @@ const aggregatePercent = computed(() => {
 
     return totalSize > 0 ? Math.round((totalUploaded / totalSize) * 100) : 0;
 });
+
+function toEntry(file: (typeof files.value)[number]): UploadEntry {
+    return { kind: 'upload', file };
+}
 
 function onReselect(id: string, file: File): void {
     const result = resumeWithReselectedFile(id, file);
@@ -96,17 +101,17 @@ function onReselect(id: string, file: File): void {
             <div class="space-y-3 px-4 pb-6">
                 <ResumeBanner :files="pendingResumes" @reselect="onReselect" />
 
-                <QueueItem
-                    v-for="file in files"
+                <DepositCard
+                    v-for="file in activeFiles"
                     :key="file.id"
-                    :file="file"
+                    :entry="toEntry(file)"
                     @pause="pauseFile"
                     @resume="resumeFile"
                     @cancel="cancelFile"
                 />
 
                 <Button
-                    v-if="files.length === 0"
+                    v-if="activeFiles.length === 0"
                     variant="ghost"
                     disabled
                     class="w-full"

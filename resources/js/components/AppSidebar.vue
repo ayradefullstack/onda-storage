@@ -4,6 +4,7 @@ import {
     Award,
     Building2,
     Coins,
+    Files,
     FilePlus2,
     FolderKanban,
     Headphones,
@@ -26,6 +27,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as worksIndex } from '@/routes/works';
 
 const { t, locale } = useI18n();
 
@@ -56,6 +58,12 @@ const mainNavItems = computed(() => [
         title: t('sidebar.nav.royalties'),
         href: dashboard(),
         icon: Coins,
+        active: false,
+    },
+    {
+        title: t('sidebar.nav.works'),
+        href: worksIndex(),
+        icon: Files,
         active: false,
     },
     {

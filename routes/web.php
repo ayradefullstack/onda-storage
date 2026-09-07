@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\Media\StreamController;
+use App\Http\Controllers\Media\StreamLinkController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\VaultDoctorController;
 use App\Http\Controllers\WorkController;
@@ -66,6 +68,21 @@ Route::middleware(['auth', 'verified', 'role:author'])->prefix('uploads')->name(
 
     Route::delete('/{session:uuid}', [UploadController::class, 'abort'])
         ->name('abort');
+});
+
+// P6 (scoped): the preview/stream read path only — see CLAUDE.md's phase
+// log for what's deliberately deferred (full downloads, admin watermarked
+// previews, production delivery). `media.link` issues a fresh 15-minute
+// signed URL on demand; `media.stream` is what that URL points at, and
+// carries its own `signed` check on top of the normal auth/role gate
+// (see StreamController's doc comment for why all four layers are needed).
+Route::middleware(['auth', 'verified', 'role:author'])->group(function () {
+    Route::get('/media/{mediaFile:uuid}/link', StreamLinkController::class)
+        ->name('media.link');
+
+    Route::get('/media/{mediaFile:uuid}/stream', StreamController::class)
+        ->middleware('signed')
+        ->name('media.stream');
 });
 
 Route::get('/_vault-doctor', VaultDoctorController::class)->name('vault-doctor');

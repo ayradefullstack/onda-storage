@@ -26,6 +26,7 @@ export type UploadErrorCode =
     | 'serverError'
     | 'missingChunks'
     | 'workerError'
+    | 'authExpired'
     | 'unknown';
 
 export type ChunkStatus =

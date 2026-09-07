@@ -3,6 +3,11 @@
  * `App\Actions\Upload\StoreChunk` verifies the `X-Chunk-CRC32` header
  * against via PHP's `hash('crc32b', $bytes)`. No library: this is a
  * ~15-line table-based implementation, not worth a dependency.
+ *
+ * `workers/chunker.worker.ts` duplicates this rather than importing it —
+ * that file must have zero module imports so it can be loaded cross-origin
+ * in dev via `fetch` + `Blob` (see the comment there). This copy exists so
+ * the algorithm stays unit-testable without instantiating a real Worker.
  */
 
 let table: Uint32Array | null = null;

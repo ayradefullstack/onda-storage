@@ -17,6 +17,7 @@
  * change, not a redesign.
  */
 import { computed, reactive } from 'vue';
+import { generateClientId } from '@/lib/id';
 import {
     abortUploadSession,
     completeUpload,
@@ -26,6 +27,16 @@ import {
     uploadChunk,
 } from '@/lib/uploadClient';
 import { extensionOf, validateFile } from '@/lib/uploadValidation';
+// `?worker&inline` (not `new Worker(new URL(...), { type: 'module' })`):
+// this app's outer HTML is served by Laravel, not by Vite itself, so in dev
+// the page's own origin and the Vite dev server's asset origin differ —
+// browsers refuse to construct a Worker from a cross-origin script URL
+// (unlike a plain `<script type=module>` import, which Vite's permissive
+// dev-server CORS headers do allow). `&inline` bundles the worker's source
+// into this module and constructs it from a `blob:` URL at runtime — always
+// same-origin, in both dev and the production build, so this isn't a
+// dev-only workaround. If a CSP is ever added, `worker-src` must permit
+// `blob:` (not `data:`) or this breaks again.
 import type {
     ChunkUploadResponse,
     InitUploadResponse,
@@ -37,6 +48,7 @@ import type {
     WorkerResponse,
     WorkerSliceRequest,
 } from '@/types/upload';
+import ChunkerWorker from '../workers/chunker.worker.ts?worker&inline';
 
 const SESSION_STORAGE_KEY = 'onda.uploads.v1';
 const CHUNK_CONCURRENCY_PER_FILE = 3;
@@ -67,17 +79,71 @@ const progressSamples = new Map<string, ProgressSample>();
 
 // --- chunk slicing (one Worker per chunk, terminated after use) --------
 
-function sliceAndHash(
+/**
+ * `?worker&inline` genuinely inlines the worker as a base64 blob at build
+ * time — production uses it unchanged, and it works. In dev, though, Vite
+ * still constructs the Worker directly against the dev-server URL despite
+ * the `&inline` flag; since the app's origin and the dev server's origin
+ * differ (e.g. `onda-storage.test` vs `http://[::1]:5173`), the browser
+ * refuses to construct a Worker from that cross-origin URL at all — this
+ * is a hard restriction on Worker construction specifically, not a CORS
+ * problem a permissive header can fix (confirmed via the actual browser
+ * exception: `SecurityError: Failed to construct 'Worker': Script at
+ * '...' cannot be accessed from origin '...'`). Every chunk failed
+ * silently with `errorCode: 'unknown'` because of this — chunk 0 never
+ * even reached the network.
+ *
+ * The workaround: fetch the worker's dev-transformed source ourselves
+ * (a plain cross-origin `fetch` is fine — only Worker *construction* is
+ * restricted) and construct the Worker from a `Blob` we create, which is
+ * always same-origin to the current page regardless of where its content
+ * came from. This only works because the worker file has zero imports to
+ * resolve (see its own top comment) — the fetched text is already
+ * self-contained. The blob URL is cached and reused for every chunk of
+ * every file; only the first chunk pays the extra fetch.
+ */
+let devWorkerBlobUrl: Promise<string> | null = null;
+
+async function resolveDevWorkerBlobUrl(): Promise<string> {
+    devWorkerBlobUrl ??= (async () => {
+        const workerModuleUrl = new URL(
+            '../workers/chunker.worker.ts',
+            import.meta.url,
+        );
+        const response = await fetch(workerModuleUrl);
+
+        if (!response.ok) {
+            throw new Error(
+                `Could not load the upload worker (HTTP ${response.status}).`,
+            );
+        }
+
+        const source = await response.text();
+
+        return URL.createObjectURL(
+            new Blob([source], { type: 'text/javascript' }),
+        );
+    })();
+
+    return devWorkerBlobUrl;
+}
+
+async function createChunkerWorker(): Promise<Worker> {
+    if (import.meta.env.PROD) {
+        return new ChunkerWorker();
+    }
+
+    return new Worker(await resolveDevWorkerBlobUrl(), { type: 'module' });
+}
+
+async function sliceAndHash(
     fileId: string,
     index: number,
     blob: Blob,
 ): Promise<WorkerResponse> {
-    return new Promise((resolve, reject) => {
-        const worker = new Worker(
-            new URL('../workers/chunker.worker.ts', import.meta.url),
-            { type: 'module' },
-        );
+    const worker = await createChunkerWorker();
 
+    return new Promise((resolve, reject) => {
         worker.addEventListener(
             'message',
             (event: MessageEvent<WorkerResponse>) => {
@@ -172,11 +238,42 @@ function setError(
     fileState.errorChunkIndex = chunkIndex;
 }
 
-function markExpired(fileState: UploadFileState): void {
+function markExpired(
+    fileState: UploadFileState,
+    reason: 'sessionExpired' | 'authExpired' = 'sessionExpired',
+): void {
     fileState.status = 'expired';
-    fileState.errorCode = null;
+    fileState.errorCode = reason === 'authExpired' ? 'authExpired' : null;
     fileState.errorChunkIndex = null;
     clearPersisted(fileState.id);
+}
+
+/**
+ * The one place an upload failure's real cause is guaranteed to reach a
+ * developer. `UploadErrorCode` is a fixed, translatable enum shown to the
+ * user — it was never meant to (and can't) carry a stack trace, so
+ * discarding the underlying error after mapping it left a `'unknown'`
+ * result with nothing behind it to debug (this masked a real bug for two
+ * manual test cycles: a cross-origin dev-server Worker construction
+ * failure that killed every chunk before any network request was made).
+ */
+function logUploadFailure(
+    stage: 'init' | 'chunk' | 'complete',
+    fileState: UploadFileState,
+    error: unknown,
+    chunkIndex: number | null = null,
+): void {
+    const detail =
+        error instanceof UploadHttpError
+            ? `httpStatus=${error.status}`
+            : error instanceof Error
+              ? `name=${error.name} message=${error.message}`
+              : `value=${String(error)}`;
+
+    console.error(
+        `[upload] ${stage} failed session=${fileState.sessionUuid ?? 'none'} file=${fileState.filename}${chunkIndex === null ? '' : ` chunk=${chunkIndex}`} ${detail}`,
+        error instanceof Error ? error.stack : error,
+    );
 }
 
 function markQuotaExceeded(fileState: UploadFileState, body: unknown): void {
@@ -333,6 +430,12 @@ async function uploadChunkWithRetry(
     if (sliceResult.type === 'error') {
         chunk.status = 'failed';
         setError(fileState, 'workerError', chunk.index);
+        logUploadFailure(
+            'chunk',
+            fileState,
+            new Error(sliceResult.message),
+            chunk.index,
+        );
 
         throw new Error(sliceResult.message);
     }
@@ -369,6 +472,7 @@ async function uploadChunkWithRetry(
                 if (error.status === 410) {
                     chunk.status = 'failed';
                     markExpired(fileState);
+                    logUploadFailure('chunk', fileState, error, chunk.index);
 
                     throw error;
                 }
@@ -376,6 +480,20 @@ async function uploadChunkWithRetry(
                 if (error.status === 413) {
                     chunk.status = 'failed';
                     markQuotaExceeded(fileState, error.body);
+                    logUploadFailure('chunk', fileState, error, chunk.index);
+
+                    throw error;
+                }
+
+                // 419: the browser session (login), not the upload session,
+                // expired — a different problem from 410 with a different
+                // fix (log in again, not just reselect the file), so it
+                // gets its own errorCode even though both land on the same
+                // 'expired' file status.
+                if (error.status === 419) {
+                    chunk.status = 'failed';
+                    markExpired(fileState, 'authExpired');
+                    logUploadFailure('chunk', fileState, error, chunk.index);
 
                     throw error;
                 }
@@ -396,6 +514,7 @@ async function uploadChunkWithRetry(
                         ? 'crcMismatch'
                         : 'network';
                 setError(fileState, code, chunk.index);
+                logUploadFailure('chunk', fileState, error, chunk.index);
 
                 throw error;
             }
@@ -422,10 +541,18 @@ async function finalizeFile(
         fileState.mediaFileUuid = response.uuid;
         clearPersisted(fileState.id);
     } catch (error) {
+        if (error instanceof UploadHttpError && error.status === 419) {
+            markExpired(fileState, 'authExpired');
+            logUploadFailure('complete', fileState, error);
+
+            return;
+        }
+
         fileState.status = 'failed';
 
         if (error instanceof UploadHttpError && error.status === 409) {
             setError(fileState, 'missingChunks');
+            logUploadFailure('complete', fileState, error);
 
             return;
         }
@@ -434,6 +561,7 @@ async function finalizeFile(
             fileState,
             error instanceof UploadHttpError ? 'serverError' : 'network',
         );
+        logUploadFailure('complete', fileState, error);
     }
 }
 
@@ -460,7 +588,30 @@ async function runFileUploadLoop(fileState: UploadFileState): Promise<void> {
 
             try {
                 await uploadChunkWithRetry(fileState, next, controller.signal);
-            } catch {
+            } catch (error) {
+                // uploadChunkWithRetry already sets status/errorCode for
+                // every failure it anticipates (max retry attempts, 410,
+                // 413, a worker-reported slice error). This is the
+                // catch-all for everything else — e.g. sliceAndHash's
+                // `new Worker(...)` throwing before any of that logic runs
+                // (the actual cause of a real bug this masked: a
+                // cross-origin dev-server Worker construction failure left
+                // the file frozen at 'uploading' forever with no error
+                // shown). A deliberate pause/cancel also lands here as an
+                // AbortError — that's not a failure, so it's excluded.
+                if (
+                    error instanceof DOMException &&
+                    error.name === 'AbortError'
+                ) {
+                    return;
+                }
+
+                if (fileState.status === 'uploading') {
+                    fileState.status = 'failed';
+                    setError(fileState, 'unknown', next.index);
+                    logUploadFailure('chunk', fileState, error, next.index);
+                }
+
                 return;
             }
         }
@@ -519,6 +670,8 @@ async function startFile(fileState: UploadFileState): Promise<void> {
     } catch (error) {
         if (error instanceof UploadHttpError && error.status === 413) {
             markQuotaExceeded(fileState, error.body);
+        } else if (error instanceof UploadHttpError && error.status === 419) {
+            markExpired(fileState, 'authExpired');
         } else {
             fileState.status = 'failed';
             setError(
@@ -527,6 +680,7 @@ async function startFile(fileState: UploadFileState): Promise<void> {
             );
         }
 
+        logUploadFailure('init', fileState, error);
         pumpQueue();
     }
 }
@@ -577,7 +731,8 @@ function enqueueFile(
         return { ok: false, reason: validation.reason };
     }
 
-    const id = crypto.randomUUID();
+    const id = generateClientId();
+
     const fileState: UploadFileState = {
         id,
         workId,

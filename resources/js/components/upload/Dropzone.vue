@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { UploadCloudIcon } from '@lucide/vue';
+import { LockIcon, ShieldCheckIcon, UploadCloudIcon } from '@lucide/vue';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Button } from '@/components/ui/button';
 import { useUploadQueue } from '@/composables/useUploadQueue';
-import { formatBytes } from '@/lib/format';
+import type { FileRejection } from '@/composables/useUploadQueue';
+import { formatBytes, truncateFilenameMiddle } from '@/lib/format';
 import {
     allowedExtensionList,
     MAX_FILE_SIZE_BYTES,
@@ -20,19 +21,14 @@ const { selectFiles } = useUploadQueue();
 const isDragging = ref(false);
 const dragDepth = ref(0);
 const fileInput = ref<HTMLInputElement | null>(null);
-const rejectionMessages = ref<string[]>([]);
+const rejections = ref<FileRejection[]>([]);
 
 function handleFiles(fileList: FileList | null): void {
     if (!fileList || fileList.length === 0) {
         return;
     }
 
-    const rejections = selectFiles(fileList, props.workId);
-    rejectionMessages.value = rejections.map((rejection) =>
-        rejection.reason === 'extension'
-            ? t('upload.reject.extension', { filename: rejection.filename })
-            : t('upload.reject.size', { filename: rejection.filename }),
-    );
+    rejections.value = selectFiles(fileList, props.workId);
 }
 
 function onDragEnter(): void {
@@ -80,14 +76,22 @@ function onInputChange(event: Event): void {
                 <p class="text-sm font-medium">
                     {{ t('upload.dropzone.title') }}
                 </p>
-                <p class="text-xs text-muted-foreground">
-                    {{
-                        t('upload.dropzone.hint', {
-                            size: formatBytes(MAX_FILE_SIZE_BYTES, locale),
-                            extensions: allowedExtensionList().join(', '),
-                        })
-                    }}
-                </p>
+                <i18n-t
+                    keypath="upload.dropzone.hint"
+                    tag="p"
+                    class="text-xs text-muted-foreground"
+                >
+                    <template #size
+                        ><bdi dir="ltr">{{
+                            formatBytes(MAX_FILE_SIZE_BYTES, locale)
+                        }}</bdi></template
+                    >
+                    <template #extensions
+                        ><bdi dir="ltr">{{
+                            allowedExtensionList().join(', ')
+                        }}</bdi></template
+                    >
+                </i18n-t>
             </div>
             <Button type="button" variant="outline" size="sm" @click="onBrowse">
                 {{ t('upload.dropzone.browse') }}
@@ -101,14 +105,55 @@ function onInputChange(event: Event): void {
             />
         </div>
 
-        <ul v-if="rejectionMessages.length > 0" class="mt-2 space-y-1">
+        <ul v-if="rejections.length > 0" class="mt-2 space-y-1">
             <li
-                v-for="(message, index) in rejectionMessages"
+                v-for="(rejection, index) in rejections"
                 :key="index"
                 class="text-xs text-destructive"
             >
-                {{ message }}
+                <i18n-t
+                    v-if="rejection.reason === 'extension'"
+                    keypath="upload.reject.extension"
+                >
+                    <template #filename
+                        ><bdi>{{
+                            truncateFilenameMiddle(rejection.filename)
+                        }}</bdi></template
+                    >
+                    <template #extensions
+                        ><bdi dir="ltr">{{
+                            allowedExtensionList().join(', ')
+                        }}</bdi></template
+                    >
+                </i18n-t>
+                <i18n-t v-else keypath="upload.reject.size">
+                    <template #filename
+                        ><bdi>{{
+                            truncateFilenameMiddle(rejection.filename)
+                        }}</bdi></template
+                    >
+                    <template #size
+                        ><bdi dir="ltr">{{
+                            formatBytes(MAX_FILE_SIZE_BYTES, locale)
+                        }}</bdi></template
+                    >
+                </i18n-t>
             </li>
         </ul>
+
+        <div class="mt-3 space-y-1 text-xs text-muted-foreground">
+            <p class="flex items-center gap-1.5">
+                <LockIcon class="size-3.5 shrink-0" />
+                {{ t('upload.trust.encrypted') }}
+            </p>
+            <p class="flex items-center gap-1.5">
+                <ShieldCheckIcon class="size-3.5 shrink-0" />
+                {{ t('upload.trust.fingerprint') }}
+            </p>
+            <p class="flex items-center gap-1.5">
+                <ShieldCheckIcon class="size-3.5 shrink-0" />
+                {{ t('upload.trust.audit') }}
+            </p>
+        </div>
     </div>
 </template>

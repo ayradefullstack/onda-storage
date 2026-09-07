@@ -322,6 +322,7 @@
     "sidebar.nav.repertoire": "Mon Répertoire",
     "sidebar.nav.deposits": "Dépôts & Déclarations",
     "sidebar.nav.royalties": "Droits & Répartitions",
+    "sidebar.nav.works": "Œuvres",
     "sidebar.nav.certificates": "Attestations Officielles",
     "sidebar.nav.services": "Services & Cadre Légal",
     "sidebar.nav.tariffs": "Tarifs & Législation",
@@ -331,14 +332,14 @@
     "sidebar.hotline.number": "021 74 12 34",
 
     "media.status.uploading": "Téléversement",
-    "media.status.assembling": "Assemblage",
-    "media.status.scanning": "Analyse",
-    "media.status.processing": "Traitement",
-    "media.status.ready": "Prêt",
+    "media.status.assembling": "Finalisation",
+    "media.status.scanning": "Vérification",
+    "media.status.processing": "Préparation",
+    "media.status.ready": "Déposé",
     "media.status.failed": "Échec",
-    "media.status.quarantined": "Mis en quarantaine",
-    "media.quarantineExplain": "Ce fichier a été signalé par l'analyse de sécurité et est en cours de vérification — ce n'est pas une erreur de votre part.",
-    "media.failedExplain": "Le traitement de ce fichier a échoué. Notre équipe a été notifiée ; il n'est pas nécessaire de le redéposer pour le moment.",
+    "media.status.quarantined": "En attente d'examen",
+    "media.quarantineWithRef": "Ce fichier a été signalé par une vérification de sécurité automatique et est en cours d'examen par notre équipe — ce n'est pas une erreur de votre part. Référence {ref}. Assistance auteurs : {hotline}.",
+    "media.failedWithRef": "Une erreur est survenue lors de la préparation de ce dépôt — inutile de le redéposer pour l'instant. Si vous contactez le support, indiquez la référence {ref}.",
 
     "upload.status.queued": "En attente",
     "upload.status.initializing": "Démarrage…",
@@ -352,31 +353,39 @@
 
     "upload.actions.pause": "Pause",
     "upload.actions.resume": "Reprendre",
+    "upload.actions.retry": "Réessayer",
     "upload.actions.cancel": "Annuler",
 
     "upload.eta": "{time} restant",
 
     "upload.error.crcMismatch": "Erreur de somme de contrôle — réessayer",
-    "upload.error.crcMismatchWithChunk": "Le fragment {index} a échoué la vérification — réessayer",
+    "upload.error.crcMismatchWithChunk": "La partie {index} a échoué la vérification — réessayer",
     "upload.error.network": "Erreur réseau — réessayer",
-    "upload.error.networkWithChunk": "Le fragment {index} a échoué — réessayer",
+    "upload.error.networkWithChunk": "La partie {index} a échoué — réessayer",
     "upload.error.workerError": "Impossible de préparer ce fichier pour l'envoi — réessayer",
-    "upload.error.workerErrorWithChunk": "Le fragment {index} n'a pas pu être préparé — réessayer",
+    "upload.error.workerErrorWithChunk": "La partie {index} n'a pas pu être préparée — réessayer",
     "upload.error.serverError": "Le serveur a refusé cet envoi — réessayer",
-    "upload.error.serverErrorWithChunk": "Le serveur a refusé le fragment {index} — réessayer",
+    "upload.error.serverErrorWithChunk": "Le serveur a refusé la partie {index} — réessayer",
     "upload.error.missingChunks": "Certaines parties de ce fichier ne sont pas arrivées au serveur — réessayer",
     "upload.error.unknown": "Une erreur est survenue — réessayer",
-    "upload.error.unknownWithChunk": "Le fragment {index} a échoué pour une raison inconnue — réessayer",
-    "upload.error.expired": "Cette session de téléversement a expiré avant la fin. Recommencez pour obtenir une nouvelle session.",
-    "upload.error.quotaExceeded": "Cet envoi dépasserait votre quota de stockage.",
-    "upload.error.quotaExceededWithRemaining": "Cet envoi dépasserait votre quota de stockage — {remaining} restants.",
+    "upload.error.unknownWithChunk": "La partie {index} a échoué pour une raison inconnue — réessayer",
+    "upload.error.expired": "Cette session de téléversement a expiré — rien n'a été perdu. Resélectionnez le fichier pour démarrer une nouvelle session.",
+    "upload.error.authExpired": "Vous avez été déconnecté(e) — rien n'a été perdu. Reconnectez-vous, puis resélectionnez le fichier pour reprendre.",
+    "upload.error.quotaExceeded": "Ce dépôt dépasserait votre quota de stockage. Appelez l'assistance auteurs ({hotline}) pour obtenir de l'aide.",
+    "upload.error.quotaExceededWithRemaining": "Ce dépôt nécessite plus d'espace que vous n'en avez — {remaining} restants. Appelez l'assistance auteurs ({hotline}) pour en demander davantage.",
 
-    "upload.reject.extension": "« {filename} » n'est pas un type de fichier accepté.",
-    "upload.reject.size": "« {filename} » est trop volumineux (5 Go maximum).",
+    "upload.reject.extension": "« {filename} » n'est pas un type accepté. Formats acceptés : {extensions}.",
+    "upload.reject.size": "« {filename} » est trop volumineux — la limite est {size}.",
 
-    "upload.dropzone.title": "Glissez des fichiers ici, ou parcourez",
+    "upload.dropzone.title": "Glissez des fichiers ici, ou parcourez — l'envoi démarre aussitôt",
     "upload.dropzone.hint": "Jusqu'à {size} — {extensions}",
     "upload.dropzone.browse": "Parcourir les fichiers",
+
+    "upload.trust.encrypted": "Chiffré avant d'être écrit sur le disque.",
+    "upload.trust.fingerprint": "Une empreinte cryptographique prouve ce qui a été déposé, et quand.",
+    "upload.trust.audit": "Chaque dépôt est enregistré dans un journal d'audit une fois prêt.",
+
+    "upload.persistence.line": "Se poursuit en arrière-plan — naviguez librement ailleurs sur le site. Fermer cet onglet le met en pause ; resélectionnez le même fichier ici pour reprendre.",
 
     "upload.resume.title": "Reprendre vos téléversements",
     "upload.resume.description": "Ces envois étaient en cours avant votre dernière visite. Sélectionnez à nouveau le même fichier pour continuer où vous en étiez — votre navigateur ne peut pas le rouvrir automatiquement.",
@@ -386,6 +395,11 @@
     "upload.aggregate.inProgress": "{count} fichier(s) en cours d'envoi",
     "upload.aggregate.title": "Téléversements",
     "upload.aggregate.empty": "Aucun envoi pour le moment",
+
+    "upload.cancel.confirmTitle": "Annuler cet envoi ?",
+    "upload.cancel.confirmBody": "{sent} déjà envoyés seront perdus — action irréversible.",
+    "upload.cancel.keepGoing": "Continuer l'envoi",
+    "upload.cancel.confirmAction": "Abandonner et annuler",
 
     "works.index.title": "Œuvres",
     "works.index.subtitle": "Vos œuvres déposées et leurs fichiers",
@@ -410,6 +424,24 @@
 
     "works.show.addFiles": "Ajouter des fichiers",
     "works.show.filesTitle": "Fichiers",
-    "works.show.noFiles": "Aucun fichier déposé pour le moment.",
-    "works.show.variantCount": "{count} variante(s)"
+    "works.show.noFiles": "Aucun dépôt pour le moment. Déposez un fichier ci-dessus pour commencer — {extensions}, jusqu'à {size}. Chaque fichier est chiffré avant d'être écrit sur le disque, doté d'une empreinte, puis vérifié avant d'être marqué comme déposé.",
+    "works.show.variantCount": "{count} variante(s)",
+
+    "works.show.quota": "{used} sur {limit} utilisés — {remaining} restants",
+    "works.show.quotaForFile": "Nécessite {size} — {remaining} resteront après ce dépôt",
+
+    "works.show.fingerprint": "Empreinte",
+    "works.show.copyFingerprint": "Copier",
+    "works.show.fingerprintCopied": "Copié",
+    "works.show.depositedOn": "Déposé le {date}",
+    "works.show.auditNotice": "Enregistré dans le journal d'audit du dépôt.",
+    "works.show.view": "Voir",
+
+    "media.preview.error": "Impossible de charger cet aperçu — réessayez dans un instant.",
+    "media.preview.unsupported": "L'aperçu n'est pas encore disponible pour ce type de fichier.",
+
+    "works.show.stage.queued": "En attente — démarrera automatiquement.",
+    "works.show.stage.finishing": "Finalisation — presque terminé.",
+    "works.show.stage.checking": "Vérification du fichier avant son dépôt.",
+    "works.show.stage.preparing": "Préparation de votre dépôt."
 }

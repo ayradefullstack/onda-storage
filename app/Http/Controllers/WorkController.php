@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Domain\Quota\QuotaPolicy;
+use App\Models\StorageQuota;
 use App\Models\Work;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -64,12 +66,21 @@ final class WorkController extends Controller
     {
         Gate::forUser($request->user())->authorize('view', $work);
 
+        $quota = StorageQuota::where('user_id', $request->user()->id)->first();
+
         return Inertia::render('works/Show', [
             // 'id' (the numeric FK) is included deliberately — the P3
             // InitUpload endpoint takes work_id as an integer, and this is
             // a page prop, not a URL, so it doesn't touch the
             // never-expose-sequential-ids-in-URLs rule.
             'work' => $work->only(['id', 'uuid', 'title', 'description', 'status', 'created_at']),
+            // Read-only: lets the upload UI show remaining quota before a
+            // file consumes it. No row yet means the same "unlimited until
+            // the default allocation" convention QuotaPolicy already uses.
+            'quota' => [
+                'used_bytes' => $quota->used_bytes ?? 0,
+                'limit_bytes' => $quota->limit_bytes ?? QuotaPolicy::DEFAULT_LIMIT_BYTES,
+            ],
             'mediaFiles' => $work->mediaFiles()
                 ->orderBy('created_at')
                 ->get()

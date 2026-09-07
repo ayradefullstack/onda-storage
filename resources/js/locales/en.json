@@ -322,6 +322,7 @@
     "sidebar.nav.repertoire": "My Repertoire",
     "sidebar.nav.deposits": "Deposits & Declarations",
     "sidebar.nav.royalties": "Royalties & Payouts",
+    "sidebar.nav.works": "Works",
     "sidebar.nav.certificates": "Official Certificates",
     "sidebar.nav.services": "Services & Legal Framework",
     "sidebar.nav.tariffs": "Tariffs & Legislation",
@@ -331,20 +332,20 @@
     "sidebar.hotline.number": "021 74 12 34",
 
     "media.status.uploading": "Uploading",
-    "media.status.assembling": "Assembling",
-    "media.status.scanning": "Scanning",
-    "media.status.processing": "Processing",
-    "media.status.ready": "Ready",
+    "media.status.assembling": "Finishing up",
+    "media.status.scanning": "Checking",
+    "media.status.processing": "Preparing",
+    "media.status.ready": "Deposited",
     "media.status.failed": "Failed",
-    "media.status.quarantined": "Quarantined",
-    "media.quarantineExplain": "This file was flagged by the security scan and is under review — this is not something you did wrong.",
-    "media.failedExplain": "Processing this file failed. Our team has been notified; you don't need to re-upload yet.",
+    "media.status.quarantined": "Held for review",
+    "media.quarantineWithRef": "This file was flagged by an automatic security check and is being reviewed by our team — this isn't something you did. Reference {ref}. Author hotline: {hotline}.",
+    "media.failedWithRef": "Something went wrong while preparing this deposit — you don't need to re-upload yet. If you contact support, quote reference {ref}.",
 
     "upload.status.queued": "Queued",
     "upload.status.initializing": "Starting…",
     "upload.status.uploading": "Uploading",
     "upload.status.paused": "Paused",
-    "upload.status.completing": "Finishing…",
+    "upload.status.completing": "Finishing up…",
     "upload.status.completed": "Uploaded",
     "upload.status.failed": "Failed",
     "upload.status.expired": "Session expired",
@@ -352,31 +353,39 @@
 
     "upload.actions.pause": "Pause",
     "upload.actions.resume": "Resume",
+    "upload.actions.retry": "Retry",
     "upload.actions.cancel": "Cancel",
 
     "upload.eta": "{time} remaining",
 
     "upload.error.crcMismatch": "Checksum mismatch — retry",
-    "upload.error.crcMismatchWithChunk": "Chunk {index} failed a checksum check — retry",
+    "upload.error.crcMismatchWithChunk": "Part {index} failed a checksum check — retry",
     "upload.error.network": "Network error — retry",
-    "upload.error.networkWithChunk": "Chunk {index} failed — retry",
+    "upload.error.networkWithChunk": "Part {index} failed — retry",
     "upload.error.workerError": "Could not prepare this file for upload — retry",
-    "upload.error.workerErrorWithChunk": "Chunk {index} could not be prepared — retry",
+    "upload.error.workerErrorWithChunk": "Part {index} could not be prepared — retry",
     "upload.error.serverError": "The server rejected this upload — retry",
-    "upload.error.serverErrorWithChunk": "Chunk {index} was rejected by the server — retry",
+    "upload.error.serverErrorWithChunk": "Part {index} was rejected by the server — retry",
     "upload.error.missingChunks": "Some parts of this file did not reach the server — retry",
     "upload.error.unknown": "Something went wrong — retry",
-    "upload.error.unknownWithChunk": "Chunk {index} failed for an unknown reason — retry",
-    "upload.error.expired": "This upload session expired before it finished. Start it again to get a fresh session.",
-    "upload.error.quotaExceeded": "This upload would exceed your storage quota.",
-    "upload.error.quotaExceededWithRemaining": "This upload would exceed your storage quota — {remaining} remaining.",
+    "upload.error.unknownWithChunk": "Part {index} failed for an unknown reason — retry",
+    "upload.error.expired": "This upload session expired — nothing was lost. Reselect the file to start a fresh session.",
+    "upload.error.authExpired": "You've been signed out — nothing was lost. Log in again, then reselect the file to resume.",
+    "upload.error.quotaExceeded": "This deposit would exceed your storage quota. Call the author hotline ({hotline}) for help.",
+    "upload.error.quotaExceededWithRemaining": "This deposit needs more room than you have — {remaining} left. Call the author hotline ({hotline}) to request more.",
 
-    "upload.reject.extension": "\"{filename}\" is not an accepted file type.",
-    "upload.reject.size": "\"{filename}\" is too large (5 GB maximum).",
+    "upload.reject.extension": "\"{filename}\" is not an accepted type. Accepted formats: {extensions}.",
+    "upload.reject.size": "\"{filename}\" is too large — the limit is {size}.",
 
-    "upload.dropzone.title": "Drag files here, or browse",
+    "upload.dropzone.title": "Drag files here, or browse — upload starts right away",
     "upload.dropzone.hint": "Up to {size} — {extensions}",
     "upload.dropzone.browse": "Browse files",
+
+    "upload.trust.encrypted": "Encrypted before it touches the disk.",
+    "upload.trust.fingerprint": "A cryptographic fingerprint proves what was deposited, and when.",
+    "upload.trust.audit": "Every deposit is recorded in an audit trail once it's ready.",
+
+    "upload.persistence.line": "Continues in the background — browse the rest of the site freely. Closing this tab pauses it; reselect the same file here to resume.",
 
     "upload.resume.title": "Resume your uploads",
     "upload.resume.description": "These uploads were in progress before your last visit. Select the same file again to continue where you left off — your browser cannot reopen it automatically.",
@@ -386,6 +395,11 @@
     "upload.aggregate.inProgress": "{count} file(s) uploading",
     "upload.aggregate.title": "Uploads",
     "upload.aggregate.empty": "No uploads yet",
+
+    "upload.cancel.confirmTitle": "Cancel this upload?",
+    "upload.cancel.confirmBody": "{sent} already sent will be discarded — this can't be undone.",
+    "upload.cancel.keepGoing": "Keep uploading",
+    "upload.cancel.confirmAction": "Discard and cancel",
 
     "works.index.title": "Works",
     "works.index.subtitle": "Your deposited works and their files",
@@ -410,6 +424,24 @@
 
     "works.show.addFiles": "Add files",
     "works.show.filesTitle": "Files",
-    "works.show.noFiles": "No files uploaded yet.",
-    "works.show.variantCount": "{count} variant(s)"
+    "works.show.noFiles": "No deposits yet. Drop a file above to start — {extensions}, up to {size}. Every file is encrypted before it's written to disk, fingerprinted, and checked before it's marked deposited.",
+    "works.show.variantCount": "{count} variant(s)",
+
+    "works.show.quota": "{used} of {limit} used — {remaining} left",
+    "works.show.quotaForFile": "Needs {size} — {remaining} will remain after this deposit",
+
+    "works.show.fingerprint": "Fingerprint",
+    "works.show.copyFingerprint": "Copy",
+    "works.show.fingerprintCopied": "Copied",
+    "works.show.depositedOn": "Deposited {date}",
+    "works.show.auditNotice": "Recorded in the deposit's audit trail.",
+    "works.show.view": "View",
+
+    "media.preview.error": "Couldn't load this preview — try again in a moment.",
+    "media.preview.unsupported": "Preview isn't available yet for this file type.",
+
+    "works.show.stage.queued": "Queued — will start automatically.",
+    "works.show.stage.finishing": "Finishing up — almost there.",
+    "works.show.stage.checking": "Checking the file before it's deposited.",
+    "works.show.stage.preparing": "Preparing your deposit."
 }

@@ -28,6 +28,20 @@ export function formatSpeed(bytesPerSecond: number, locale: string): string {
     return `${formatBytes(bytesPerSecond, locale)}/s`;
 }
 
+/** Locale month/weekday names, Latin digits — same digit policy as the rest of this file. */
+export function formatDate(isoString: string, locale: string): string {
+    const date = new Date(isoString);
+
+    if (Number.isNaN(date.getTime())) {
+        return isoString;
+    }
+
+    return new Intl.DateTimeFormat(locale, {
+        dateStyle: 'medium',
+        numberingSystem: 'latn',
+    }).format(date);
+}
+
 export function formatDuration(totalSeconds: number | null): string {
     if (
         totalSeconds === null ||
@@ -46,4 +60,35 @@ export function formatDuration(totalSeconds: number | null): string {
     return hours > 0
         ? `${hours}:${pad(minutes)}:${pad(remainingSeconds)}`
         : `${minutes}:${pad(remainingSeconds)}`;
+}
+
+/**
+ * Truncates from the middle of the basename, keeping the extension intact —
+ * an RTL paragraph reordering a name truncated from the end can otherwise
+ * hide or misplace the extension. `maxLength` counts characters, not bytes.
+ */
+export function truncateFilenameMiddle(
+    filename: string,
+    maxLength = 40,
+): string {
+    if (filename.length <= maxLength) {
+        return filename;
+    }
+
+    const dot = filename.lastIndexOf('.');
+    const hasExtension =
+        dot > 0 && dot < filename.length - 1 && filename.length - dot <= 12;
+    const extension = hasExtension ? filename.slice(dot) : '';
+    const base = hasExtension ? filename.slice(0, dot) : filename;
+
+    const keep = maxLength - extension.length - 1; // 1 for the ellipsis
+
+    if (keep <= 2) {
+        return `…${extension}`;
+    }
+
+    const headLength = Math.ceil(keep / 2);
+    const tailLength = Math.floor(keep / 2);
+
+    return `${base.slice(0, headLength)}…${base.slice(base.length - tailLength)}${extension}`;
 }

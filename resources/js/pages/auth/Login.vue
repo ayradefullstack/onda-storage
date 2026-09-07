@@ -111,7 +111,7 @@ defineProps<{
                     :tabindex="2"
                     autocomplete="current-password"
                     :placeholder="t('auth.passwordPlaceholder')"
-                    class="input-premium h-11 text-sm"
+                    class="input-premium h-11 ps-8 text-sm"
                 />
                 <InputError :message="errors.password" />
             </div>

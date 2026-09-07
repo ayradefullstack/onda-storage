@@ -4,7 +4,7 @@ import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { formatBytes } from '@/lib/format';
+import { formatBytes, truncateFilenameMiddle } from '@/lib/format';
 import type { UploadFileState } from '@/types/upload';
 
 const props = defineProps<{
@@ -51,9 +51,12 @@ function onFileChosen(id: string, event: Event): void {
                     :key="file.id"
                     class="flex flex-wrap items-center justify-between gap-2"
                 >
-                    <span class="text-sm"
-                        >{{ file.filename }} —
-                        {{ formatBytes(file.size, locale) }}</span
+                    <span class="text-sm" :title="file.filename"
+                        ><bdi>{{ truncateFilenameMiddle(file.filename) }}</bdi>
+                        —
+                        <bdi dir="ltr">{{
+                            formatBytes(file.size, locale)
+                        }}</bdi></span
                     >
                     <Button
                         size="sm"
