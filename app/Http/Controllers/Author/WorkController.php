@@ -28,7 +28,7 @@ final class WorkController extends Controller
             ->where('author_id', $request->user()->id)
             ->withCount('mediaFiles')
             ->latest()
-            ->get(['id', 'uuid', 'title', 'status', 'created_at']);
+            ->get(['id', 'uuid', 'title', 'description', 'status', 'created_at']);
 
         return Inertia::render('author/works/Index', [
             'works' => $works,
