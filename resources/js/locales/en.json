@@ -15,11 +15,9 @@
     "nav.skipToContent": "Skip to content",
     "nav.userMenu": "Account Menu",
     "nav.signOut": "Sign Out",
-
     "announcement.text": "2026 Declaration Campaign: Digital deposit of works is now open to all creators.",
     "announcement.badge": "Official Notice",
     "announcement.hotline": "Authors Support Hotline: 021 74 12 34",
-
     "common.language.ar": "العربية",
     "common.language.fr": "Français",
     "common.language.en": "English",
@@ -28,7 +26,6 @@
     "theme.dark": "Dark",
     "theme.system": "System",
     "theme.current": "Theme: {theme}",
-
     "hero.badge": "Official ONDA Digital Platform",
     "hero.title": "Protecting Creation, Empowering Algerian Art.",
     "hero.subtitle": "The unified national platform of the National Copyright and Related Rights Office for digital deposit, legal protection, and administration of your creative works.",
@@ -37,7 +34,6 @@
     "hero.trust1": "Certified Digital Timestamp",
     "hero.trust2": "Compliant with Ordinance 03-05",
     "hero.trust3": "Sovereign Hosting in Algeria",
-
     "cert.title": "Certificate of Deposit",
     "cert.sub": "Secure Digital Certificate",
     "cert.authenticated": "Authenticated",
@@ -48,7 +44,6 @@
     "cert.statusVal": "Protected by ONDA",
     "cert.instantVerify": "Instant Verification",
     "cert.instantVerifyDesc": "Scan the official QR Code to verify work authenticity and registration timestamp.",
-
     "stats.works": "120,000+",
     "stats.worksLabel": "Registered & Protected Works",
     "stats.members": "45,000+",
@@ -57,27 +52,21 @@
     "stats.agenciesLabel": "Regional Agencies & Delegations",
     "stats.protection": "100%",
     "stats.protectionLabel": "Legal & Sovereign Protection",
-
     "services.heading": "Digital Services for Authors & Licensees",
     "services.subheading": "A full suite of digital tools designed to facilitate declaration, copyright protection, and royalty distribution.",
     "services.access": "Access Service",
-
     "services.card1.title": "Deposit & Registration of Works",
     "services.card1.desc": "Upload your literary, audiovisual, musical or software works with immediate official deposit receipt issuance.",
     "services.card1.badge": "Secure Deposit",
-
     "services.card2.title": "E-Portal for Member Authors",
     "services.card2.desc": "Track declaration status, obtain certificates, and check distribution schedules in real time.",
     "services.card2.badge": "Member Space",
-
     "services.card3.title": "Licensing & Royalties Payment",
     "services.card3.desc": "Secure electronic payment gateway for broadcasters, venue operators, and commercial users.",
     "services.card3.badge": "Online Payment",
-
     "services.card4.title": "National Rights Repertoire",
     "services.card4.desc": "Public searchable database to verify protection status and rights holders of Algerian works.",
     "services.card4.badge": "Public Search",
-
     "repertoire.heading": "National Repertoire Search Engine",
     "repertoire.subheading": "Search through hundreds of thousands of protected titles in the national artistic and intellectual heritage.",
     "repertoire.searchPlaceholder": "Search by work title, author name, deposit number, or IPI code...",
@@ -87,33 +76,27 @@
     "repertoire.filterCinema": "Audiovisual",
     "repertoire.filterPlastic": "Fine Arts",
     "repertoire.resultsNotice": "Displaying authenticated results from the ONDA national registry",
-
     "news.heading": "News & Regulatory Bulletins",
     "news.subheading": "Stay updated on recent regulatory decisions, royalty distribution sessions, and official announcements.",
     "news.readMore": "Read full announcement",
-
     "news.item1.category": "Royalty Distribution",
     "news.item1.date": "August 2026",
     "news.item1.title": "Launch of General Royalty Distribution Session for Authors & Performers",
     "news.item1.desc": "ONDA informs all registered members of the start of bank transfers for radio and television broadcast royalties.",
-
     "news.item2.category": "Digitalization",
     "news.item2.date": "July 2026",
     "news.item2.title": "Deployment of New Digital Deposit Receipt with Cryptographic Timestamp",
     "news.item2.desc": "Every newly deposited work now receives a tamper-proof certificate of priority with QR code verification.",
-
     "news.item3.category": "Regulations",
     "news.item3.date": "June 2026",
     "news.item3.title": "Practical Guide: Protecting & Declaring Software and Digital Solutions",
     "news.item3.desc": "Publication of the official guide detailing copyright protection procedures for developers and digital creators.",
-
     "deposit.heading": "Types of Works Eligible for Deposit",
     "deposit.intro": "The National Office accepts digital deposit and protection of all forms of artistic and intellectual expression.",
     "deposit.categories.text": "Texts & Literary Works",
     "deposit.categories.audio": "Musical & Audio Creations",
     "deposit.categories.video": "Audiovisual & Film Works",
     "deposit.categories.software": "Software & Digital Programs",
-
     "howItWorks.heading": "3-Step Registration Process",
     "howItWorks.step1.title": "Create your verified account",
     "howItWorks.step1.description": "Register your identity as an author or legal representative to access the digital portal.",
@@ -121,17 +104,14 @@
     "howItWorks.step2.description": "Upload your files and metadata with complete confidentiality (large files up to 5 GB).",
     "howItWorks.step3.title": "Receive your legal receipt",
     "howItWorks.step3.description": "Download your official timestamped certificate proving priority of creation with the Office.",
-
     "guarantees.heading": "Our Security & Sovereignty Commitments",
     "guarantees.fileSize": "Resilient upload up to 5 GB per file without quality degradation.",
     "guarantees.resumable": "Automatic upload resumption if your network connection drops.",
     "guarantees.storage": "Data stored in Algeria on sovereign, highly secure institutional servers.",
     "guarantees.checksum": "Cryptographic verification using SHA-256 checksum on arrival.",
-
     "closing.heading": "Join Over 45,000 Protected Creators",
     "closing.subtitle": "Protect your intellectual creations today with the national benchmark copyright institution.",
     "closing.cta": "Create Author Account",
-
     "footer.aboutOnda": "About ONDA",
     "footer.aboutText": "Public institution under the supervision of the Ministry of Culture, ensuring copyright and related rights protection for creators and artists in Algeria.",
     "footer.quickLinks": "Quick Links",
@@ -143,7 +123,6 @@
     "footer.address": "Grand Seminaire St., Bologhine, Algiers, Algeria",
     "footer.storageNotice": "All files and data are securely hosted and preserved on ONDA's institutional servers in Algeria.",
     "footer.copyright": "© {year} ONDA — National Copyright and Related Rights Office. All rights reserved.",
-
     "auth.loginTitle": "Sign in to your account",
     "auth.loginDesc": "Access your author space to manage your works, declarations, and royalties with ONDA",
     "auth.email": "Email address",
@@ -164,7 +143,6 @@
     "auth.pill1": "Certified Legal Protection & Priority Proof",
     "auth.pill2": "Real-Time Tracking of Declarations & Royalties",
     "auth.pill3": "Sovereign & Encrypted Hosting in Algeria",
-
     "auth.registerTitle": "Create an author account",
     "auth.registerDesc": "Join over 45,000 protected creators and access ONDA's digital copyright services",
     "auth.firstName": "First name (Latin)",
@@ -333,7 +311,6 @@
     "sidebar.nav.support": "Technical Support",
     "sidebar.hotline.title": "Author Hotline",
     "sidebar.hotline.number": "021 74 12 34",
-
     "media.status.uploading": "Uploading",
     "media.status.assembling": "Finishing up",
     "media.status.scanning": "Checking",
@@ -343,7 +320,6 @@
     "media.status.quarantined": "Held for review",
     "media.quarantineWithRef": "This file was flagged by an automatic security check and is being reviewed by our team — this isn't something you did. Reference {ref}. Author hotline: {hotline}.",
     "media.failedWithRef": "Something went wrong while preparing this deposit — you don't need to re-upload yet. If you contact support, quote reference {ref}.",
-
     "upload.status.queued": "Queued",
     "upload.status.initializing": "Starting…",
     "upload.status.uploading": "Uploading",
@@ -353,14 +329,11 @@
     "upload.status.failed": "Failed",
     "upload.status.expired": "Session expired",
     "upload.status.quota_exceeded": "Quota exceeded",
-
     "upload.actions.pause": "Pause",
     "upload.actions.resume": "Resume",
     "upload.actions.retry": "Retry",
     "upload.actions.cancel": "Cancel",
-
     "upload.eta": "{time} remaining",
-
     "upload.error.crcMismatch": "Checksum mismatch — retry",
     "upload.error.crcMismatchWithChunk": "Part {index} failed a checksum check — retry",
     "upload.error.network": "Network error — retry",
@@ -376,34 +349,26 @@
     "upload.error.authExpired": "You've been signed out — nothing was lost. Log in again, then reselect the file to resume.",
     "upload.error.quotaExceeded": "This deposit would exceed your storage quota. Call the author hotline ({hotline}) for help.",
     "upload.error.quotaExceededWithRemaining": "This deposit needs more room than you have — {remaining} left. Call the author hotline ({hotline}) to request more.",
-
     "upload.reject.extension": "\"{filename}\" is not an accepted type. Accepted formats: {extensions}.",
     "upload.reject.size": "\"{filename}\" is too large — the limit is {size}.",
-
     "upload.dropzone.title": "Drag files here, or browse — upload starts right away",
     "upload.dropzone.hint": "Up to {size} — {extensions}",
     "upload.dropzone.browse": "Browse files",
-
     "upload.trust.encrypted": "Encrypted before it touches the disk.",
     "upload.trust.fingerprint": "A cryptographic fingerprint proves what was deposited, and when.",
     "upload.trust.audit": "Every deposit is recorded in an audit trail once it's ready.",
-
     "upload.persistence.line": "Continues in the background — browse the rest of the site freely. Closing this tab pauses it; reselect the same file here to resume.",
-
     "upload.resume.title": "Resume your uploads",
     "upload.resume.description": "These uploads were in progress before your last visit. Select the same file again to continue where you left off — your browser cannot reopen it automatically.",
     "upload.resume.selectFile": "Select file",
     "upload.resume.sizeMismatch": "That file's size doesn't match the upload in progress — please select the exact same file.",
-
     "upload.aggregate.inProgress": "{count} file(s) uploading",
     "upload.aggregate.title": "Uploads",
     "upload.aggregate.empty": "No uploads yet",
-
     "upload.cancel.confirmTitle": "Cancel this upload?",
     "upload.cancel.confirmBody": "{sent} already sent will be discarded — this can't be undone.",
     "upload.cancel.keepGoing": "Keep uploading",
     "upload.cancel.confirmAction": "Discard and cancel",
-
     "works.index.title": "Works & Creative Heritage",
     "works.index.subtitle": "Digital registry of your registered creations, files, and legal copyright protections",
     "works.index.newWork": "New work",
@@ -438,7 +403,6 @@
     "works.index.cancel": "Cancel",
     "works.index.showingCount": "Showing {count} work(s)",
     "works.index.noDescription": "No description provided for this work.",
-
     "works.status.draft": "Draft",
     "works.status.submitted": "Submitted",
     "works.status.under_review": "Under review",
@@ -446,7 +410,6 @@
     "works.status.approved": "Approved & Protected",
     "works.status.rejected": "Rejected",
     "works.status.pending": "Under review",
-
     "works.create.title": "New work",
     "works.create.subtitle": "Create a work, then upload its files",
     "works.create.titleLabel": "Title",
@@ -455,27 +418,80 @@
     "works.create.descriptionPlaceholder": "Briefly describe the work…",
     "works.create.submit": "Create work",
     "works.create.submitting": "Creating…",
-
     "works.show.addFiles": "Add files",
     "works.show.filesTitle": "Files",
     "works.show.noFiles": "No deposits yet. Drop a file above to start — {extensions}, up to {size}. Every file is encrypted before it's written to disk, fingerprinted, and checked before it's marked deposited.",
     "works.show.variantCount": "{count} variant(s)",
-
     "works.show.quota": "{used} of {limit} used — {remaining} left",
     "works.show.quotaForFile": "Needs {size} — {remaining} will remain after this deposit",
-
     "works.show.fingerprint": "Fingerprint",
     "works.show.copyFingerprint": "Copy",
     "works.show.fingerprintCopied": "Copied",
     "works.show.depositedOn": "Deposited {date}",
     "works.show.auditNotice": "Recorded in the deposit's audit trail.",
     "works.show.view": "View",
-
     "media.preview.error": "Couldn't load this preview — try again in a moment.",
     "media.preview.unsupported": "Preview isn't available yet for this file type.",
-
     "works.show.stage.queued": "Queued — will start automatically.",
     "works.show.stage.finishing": "Finishing up — almost there.",
     "works.show.stage.checking": "Checking the file before it's deposited.",
-    "works.show.stage.preparing": "Preparing your deposit."
+    "works.show.stage.preparing": "Preparing your deposit.",
+    "admin.authors.title": "Authors",
+    "admin.authors.subtitle": "Every registered author, sorted by recent activity.",
+    "admin.authors.searchPlaceholder": "Search by name or email",
+    "admin.authors.allWilayas": "All wilayas",
+    "admin.authors.colName": "Name",
+    "admin.authors.colWilaya": "Wilaya",
+    "admin.authors.colWorks": "Works",
+    "admin.authors.colFiles": "Files",
+    "admin.authors.colStorage": "Storage",
+    "admin.authors.colLastActivity": "Last activity",
+    "admin.authors.noActivity": "No activity",
+    "admin.authors.empty": "No authors registered",
+    "admin.authors.emptyDescription": "No author account matches these criteria.",
+    "admin.authors.emailVerified": "Email verified",
+    "admin.authors.emailUnverified": "Email unverified",
+    "admin.authors.registeredOn": "Registered on",
+    "admin.authors.lastDeposit": "Last deposit",
+    "admin.authors.worksTitle": "This author's works",
+    "admin.authors.noWorks": "No works submitted",
+    "admin.authors.noWorksDescription": "This author hasn't submitted a work matching this filter yet.",
+    "admin.works.title": "Works",
+    "admin.works.subtitle": "Every submitted work, across every author.",
+    "admin.works.searchPlaceholder": "Search by title",
+    "admin.works.authorPlaceholder": "Author (name or email)",
+    "admin.works.allStatuses": "All statuses",
+    "admin.works.dateRangeTo": "to",
+    "admin.works.colTitle": "Title",
+    "admin.works.colAuthor": "Author",
+    "admin.works.colStatus": "Status",
+    "admin.works.colFiles": "Files",
+    "admin.works.colSize": "Size",
+    "admin.works.colSubmitted": "Submitted",
+    "admin.works.colReady": "Ready",
+    "admin.works.hasBlockingFile": "Blocking file",
+    "admin.works.empty": "No works to review",
+    "admin.works.emptyDescription": "No submitted work matches these criteria.",
+    "admin.works.registeredOn": "registered",
+    "admin.works.filesTitle": "Deposited files",
+    "admin.works.noFiles": "No file has been deposited for this work.",
+    "admin.works.fingerprint": "SHA-256 fingerprint",
+    "admin.works.copyFingerprint": "Copy fingerprint",
+    "admin.works.scanResult": "Scan result",
+    "admin.works.macVerified": "MAC verified",
+    "admin.works.macCheckedOnRead": "Checked on each read",
+    "admin.works.depositedOn": "Deposited on",
+    "admin.works.playPreview": "Play preview",
+    "admin.works.noPreviewAvailable": "No preview available — use the original file stream instead.",
+    "admin.works.watermarkNotice": "Watermarked with your name and the time of viewing.",
+    "admin.scanResult.clean": "Clean",
+    "admin.scanResult.infected": "Infected",
+    "admin.scanResult.pending": "Pending",
+    "admin.scanResult.unknown": "Unknown",
+    "admin.stream.trigger": "Stream full original…",
+    "admin.stream.confirmBody": "You are about to view another author's full original file. This access is logged and attributed to your account.",
+    "admin.stream.cancel": "Cancel",
+    "admin.stream.confirmAction": "Continue",
+    "admin.quota.usedOfLimit": "{used} of {limit} used ({percent}%)",
+    "admin.pagination.showing": "Showing {from} to {to} of {total}"
 }

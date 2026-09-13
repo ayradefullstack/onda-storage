@@ -15,11 +15,9 @@
     "nav.skipToContent": "تخطَّ إلى المحتوى",
     "nav.userMenu": "قائمة الحساب",
     "nav.signOut": "تسجيل الخروج",
-
     "announcement.text": "حملة تصريح 2026: فتح منصة الإيداع الرقمي والتصريح بالمصنفات لجميع المؤلفين.",
     "announcement.badge": "إعلان رسمي",
     "announcement.hotline": "خط مساعدة المؤلفين: 021 74 12 34",
-
     "common.language.ar": "العربية",
     "common.language.fr": "Français",
     "common.language.en": "English",
@@ -28,7 +26,6 @@
     "theme.dark": "داكن",
     "theme.system": "النظام",
     "theme.current": "المظهر - {theme}",
-
     "hero.badge": "البوابة الرقمية الرسمية للديوان ONDA",
     "hero.title": "حماية الإبداع، وتثمين الفن الجزائري",
     "hero.subtitle": "المنصة الوطنية الموحدة للديوان الوطني لحقوق المؤلف والحقوق المجاورة للإيداع الرقمي، وحماية المصنفات، وإدارة حقوق المبدعين والفنانين بأمان.",
@@ -37,7 +34,6 @@
     "hero.trust1": "توثيق تاريخي وإلكتروني معتمد",
     "hero.trust2": "مطابق للأمر رقم 03-05 المتعلق بحقوق المؤلف",
     "hero.trust3": "استضافة سيادية داخل التراب الوطني",
-
     "cert.title": "شهادة وإيصال الإيداع",
     "cert.sub": "وثيقة رقمية مؤمنة وموثقة",
     "cert.authenticated": "موثّق رسمياً",
@@ -48,7 +44,6 @@
     "cert.statusVal": "محمي بموجب القانون",
     "cert.instantVerify": "التحقق الإلكتروني الفوري",
     "cert.instantVerifyDesc": "امسح رمز الاستجابة السريعة QR Code للتأكد من أسبقية المصنف وتاريخ الإيداع.",
-
     "stats.works": "+120,000",
     "stats.worksLabel": "مصنف ومؤلف محمي ومسجل",
     "stats.members": "+45,000",
@@ -57,27 +52,21 @@
     "stats.agenciesLabel": "وكالة ومندوبية عبر الوطن",
     "stats.protection": "100%",
     "stats.protectionLabel": "حماية قانونية وسيادية تامة",
-
     "services.heading": "الخدمات الرقمية للمؤلفين والمستخدمين",
     "services.subheading": "مجموعة متكاملة من الخدمات التفاعلية لتسهيل التصريح بالمصنفات، حماية الحقوق، ومتابعة المستحقات.",
     "services.access": "الانتقال إلى الخدمة",
-
     "services.card1.title": "إيداع وتصريح المصنفات",
     "services.card1.desc": "رفع الملفات الأدبية، الموسيقية، السمعية البصرية والبرمجيات مع استلام إيصال إيداع رسمي فوري.",
     "services.card1.badge": "إيداع مؤمّن",
-
     "services.card2.title": "بوابة المؤلفين المنخرطين",
     "services.card2.desc": "متابعة مسار الملفات، الحصول على الشهادات، والاطلاع على جداول توزيع المستحقات المالية.",
     "services.card2.badge": "فضاء المنخرطين",
-
     "services.card3.title": "دفع الإتاوات ورخص الاستغلال",
     "services.card3.desc": "بوابة الدفع الإلكتروني الآمن للمؤسسات، القنوات، منظمي الحفلات ومستغلي المصنفات الفنية.",
     "services.card3.badge": "الدفع الإلكتروني",
-
     "services.card4.title": "الدليل الوطني للمصنفات المحمية",
     "services.card4.desc": "قاعدة بيانات وطنية للبحث والتأكد من أصحاب الحقوق والوضعية القانونية للمصنفات الفنية.",
     "services.card4.badge": "بحث واستعلام",
-
     "repertoire.heading": "محرك البحث في الرصيد والمصنفات الوطنية",
     "repertoire.subheading": "ابحث في مئات الآلاف من العناوين المحمية ضمن التراث الثقافي والإبداعي الوطني.",
     "repertoire.searchPlaceholder": "ابحث بعنوان العمل، اسم المؤلف، رقم الإيداع، أو الرمز الدولي IPI...",
@@ -87,33 +76,27 @@
     "repertoire.filterCinema": "سمعي بصري",
     "repertoire.filterPlastic": "فنون تشكيلية",
     "repertoire.resultsNotice": "عرض النتائج المعتمدة من السجل الوطني للديوان ONDA",
-
     "news.heading": "الأخبار والبلاغات القانونية",
     "news.subheading": "تابع آخر المستجدات، دورات توزيع المستحقات، والإعلانات الإدارية والتنظيمية للديوان.",
     "news.readMore": "قراءة البيان كاملاً",
-
     "news.item1.category": "توزيع الحقوق",
     "news.item1.date": "أوت 2026",
     "news.item1.title": "انطلاق دورة التوزيع العامة لحقوق المؤلفين والحقوق المجاورة",
     "news.item1.desc": "يعلم الديوان كافة منخرطيه بانطلاق عمليات صب المستحقات المتعلقة بالاستغلال التلفزيوني والإذاعي.",
-
     "news.item2.category": "الرقمنة والتحديث",
     "news.item2.date": "جويلية 2026",
     "news.item2.title": "إطلاق خدمة الإيصال الرقمي الجديد المزود بالبصمة الزمنية المشفرة",
     "news.item2.desc": "يستفيد كل مصنف جديد يتم إيداعه من شهادة إثبات أسبقية غير قابلة للتزوير مع رمز QR للتحقق السريع.",
-
     "news.item3.category": "التشريعات",
     "news.item3.date": "جوان 2026",
     "news.item3.title": "دليل إرشادي: حماية وتصريح البرمجيات والحلول الرقمية",
     "news.item3.desc": "صدور الدليل التوجيهي للمطورين ورواد الأعمال الرقميين حول آليات حماية الملكية الفكرية للبرامج.",
-
     "deposit.heading": "أنواع المصنفات المؤهلة للإيداع",
     "deposit.intro": "يقبل الديوان الإيداع الرقمي لكافة أشكال التعبير الفكري والفني لحمايتها وتوثيق أسبقيتها.",
     "deposit.categories.text": "النصوص والأعمال الأدبية",
     "deposit.categories.audio": "الأعمال الموسيقية والصوتية",
     "deposit.categories.video": "الأعمال السمعية البصرية والسينمائية",
     "deposit.categories.software": "البرمجيات والتطبيقات الرقمية",
-
     "howItWorks.heading": "مسار الإيداع في 3 خطوات بسيطة",
     "howItWorks.step1.title": "أنشئ حسابك الموثّق",
     "howItWorks.step1.description": "سجّل بياناتك الشخصية كمؤلف أو وكيل قانوني للوصول إلى المنصة.",
@@ -121,17 +104,14 @@
     "howItWorks.step2.description": "حمّل أعمالك والبيانات الوصفية بسرية تامة (أحجام ملفات تصل إلى 5 غيغابايت).",
     "howItWorks.step3.title": "استلم إيصال الإيداع الرسمي",
     "howItWorks.step3.description": "حمّل شهادتك الموثقة زمنياً والمثبتة لأسبقية عملك لدى الديوان الوطني.",
-
     "guarantees.heading": "التزاماتنا بالأمان والسيادة الرقمية",
     "guarantees.fileSize": "إمكانية رفع ملفات ضخمة حتى 5 غيغابايت دون ضغط أو فقدان جودة.",
     "guarantees.resumable": "استئناف تلقائي لعمليات الرفع في حال انقطاع الاتصال بالإنترنت.",
     "guarantees.storage": "بيانات محفوظة على خوادم سيادية داخل الجزائر خاضعة لأعلى معايير الأمان.",
     "guarantees.checksum": "تدقيق البصمة الرقمية المشفرة SHA-256 لكل ملف لضمان سلامته.",
-
     "closing.heading": "انضم إلى أكثر من 45,000 مبدع محمي",
     "closing.subtitle": "احمِ حقوقك الفكرية اليوم لدى الهيئة الوطنية الرسمية لحماية الإبداع في الجزائر.",
     "closing.cta": "إنشاء حساب مؤلف جديد",
-
     "footer.aboutOnda": "عن الديوان الوطني ONDA",
     "footer.aboutText": "مؤسسة عمومية ذات طابع صناعي وتجاري تحت وصاية وزارة الثقافة والفنون، تتولى حماية حقوق المؤلفين والفنانين في الجزائر.",
     "footer.quickLinks": "روابط سريعة",
@@ -143,7 +123,6 @@
     "footer.address": "شارع المعهد الأكبر، بولوغين، الجزائر العاصمة، الجزائر",
     "footer.storageNotice": "تُحفظ جميع الملفات والبيانات على خوادم الديوان المؤمنة داخل التراب الوطني الجزائري.",
     "footer.copyright": "© {year} الديوان الوطني لحقوق المؤلف والحقوق المجاورة. جميع الحقوق محفوظة.",
-
     "auth.loginTitle": "تسجيل الدخول إلى فضائك",
     "auth.loginDesc": "ادخل إلى فضاء المؤلف لإدارة مصنفاتك وتصاريحك ومستحقاتك لدى الديوان",
     "auth.email": "البريد الإلكتروني",
@@ -164,7 +143,6 @@
     "auth.pill1": "حماية قانونية وتوثيق تاريخي معتمد",
     "auth.pill2": "متابعة مسار التصاريح والمستحقات في الوقت الفعلي",
     "auth.pill3": "استضافة سيادية ومؤمنة داخل التراب الوطني",
-
     "auth.registerTitle": "إنشاء حساب مؤلف جديد",
     "auth.registerDesc": "انضم إلى أكثر من 45 ألف مبدع محمي واستفد من كافة الخدمات الرقمية للديوان",
     "auth.firstName": "الاسم (باللاتينية)",
@@ -333,7 +311,6 @@
     "sidebar.nav.support": "المساعدة والدعم الفني",
     "sidebar.hotline.title": "خط مساعدة المؤلفين",
     "sidebar.hotline.number": "021 74 12 34",
-
     "media.status.uploading": "جارٍ الرفع",
     "media.status.assembling": "جارٍ الإنهاء",
     "media.status.scanning": "جارٍ الفحص",
@@ -343,7 +320,6 @@
     "media.status.quarantined": "قيد المراجعة",
     "media.quarantineWithRef": "تم وضع علامة على هذا الملف من خلال فحص أمني تلقائي وهو قيد المراجعة من قبل فريقنا — هذا ليس خطأً من جانبكم. المرجع {ref}. خط مساعدة المؤلفين: {hotline}.",
     "media.failedWithRef": "حدث خطأ أثناء تحضير هذا الإيداع — لا حاجة لإعادة الرفع الآن. إذا تواصلتم مع الدعم، اذكروا المرجع {ref}.",
-
     "upload.status.queued": "في الانتظار",
     "upload.status.initializing": "جارٍ البدء…",
     "upload.status.uploading": "جارٍ الرفع",
@@ -353,14 +329,11 @@
     "upload.status.failed": "فشل",
     "upload.status.expired": "انتهت صلاحية الجلسة",
     "upload.status.quota_exceeded": "تم تجاوز الحصة",
-
     "upload.actions.pause": "إيقاف مؤقت",
     "upload.actions.resume": "استئناف",
     "upload.actions.retry": "إعادة المحاولة",
     "upload.actions.cancel": "إلغاء",
-
     "upload.eta": "الوقت المتبقي: {time}",
-
     "upload.error.crcMismatch": "خطأ في التحقق من السلامة — أعد المحاولة",
     "upload.error.crcMismatchWithChunk": "فشل الجزء {index} في التحقق من السلامة — أعد المحاولة",
     "upload.error.network": "خطأ في الشبكة — أعد المحاولة",
@@ -376,34 +349,26 @@
     "upload.error.authExpired": "تم تسجيل خروجكم — لم يُفقد شيء. سجّلوا الدخول من جديد، ثم أعيدوا اختيار الملف للمتابعة.",
     "upload.error.quotaExceeded": "سيؤدي هذا الإيداع إلى تجاوز حصة التخزين الخاصة بكم. اتصلوا بخط مساعدة المؤلفين ({hotline}) للمساعدة.",
     "upload.error.quotaExceededWithRemaining": "يحتاج هذا الإيداع مساحة أكبر مما هو متاح لديكم — المتبقي {remaining}. اتصلوا بخط مساعدة المؤلفين ({hotline}) لطلب مساحة إضافية.",
-
     "upload.reject.extension": "\"{filename}\" ليس نوعًا مقبولاً. الصيغ المقبولة: {extensions}.",
     "upload.reject.size": "\"{filename}\" كبير جدًا — الحد الأقصى {size}.",
-
     "upload.dropzone.title": "اسحب الملفات هنا، أو تصفح — يبدأ الرفع فورًا",
     "upload.dropzone.hint": "حتى {size} — {extensions}",
     "upload.dropzone.browse": "تصفح الملفات",
-
     "upload.trust.encrypted": "يُشفَّر الملف قبل كتابته على القرص.",
     "upload.trust.fingerprint": "تُثبت بصمة رقمية ما تم إيداعه ومتى.",
     "upload.trust.audit": "يُسجَّل كل إيداع في سجل تدقيق بمجرد أن يصبح جاهزًا.",
-
     "upload.persistence.line": "يستمر في الخلفية — تصفحوا بقية الموقع بحرية. يؤدي إغلاق هذا التبويب إلى إيقافه مؤقتًا؛ أعيدوا اختيار الملف نفسه هنا للاستئناف.",
-
     "upload.resume.title": "استئناف عمليات الرفع",
     "upload.resume.description": "كانت عمليات الرفع هذه جارية قبل زيارتك الأخيرة. اختر الملف نفسه مرة أخرى للمتابعة من حيث توقفت — لا يمكن لمتصفحك إعادة فتحه تلقائيًا.",
     "upload.resume.selectFile": "اختر الملف",
     "upload.resume.sizeMismatch": "حجم هذا الملف لا يطابق الرفع الجاري — يرجى اختيار الملف نفسه بالضبط.",
-
     "upload.aggregate.inProgress": "{count} ملف قيد الرفع",
     "upload.aggregate.title": "عمليات الرفع",
     "upload.aggregate.empty": "لا توجد عمليات رفع بعد",
-
     "upload.cancel.confirmTitle": "إلغاء هذا الرفع؟",
     "upload.cancel.confirmBody": "سيتم فقدان {sent} التي أُرسلت بالفعل — لا يمكن التراجع عن هذا الإجراء.",
     "upload.cancel.keepGoing": "متابعة الرفع",
     "upload.cancel.confirmAction": "التخلي والإلغاء",
-
     "works.index.title": "المصنفات والرصيد الإبداعي",
     "works.index.subtitle": "السجل الرقمي لمصنفاتكم المودعة، ملفاتها والحماية القانونية المرتبطة بها",
     "works.index.newWork": "عمل جديد",
@@ -438,7 +403,6 @@
     "works.index.cancel": "إلغاء",
     "works.index.showingCount": "عرض {count} مصنف(ـات)",
     "works.index.noDescription": "لا يوجد وصف مدخل لهذا المصنف.",
-
     "works.status.draft": "مسودة",
     "works.status.submitted": "تم التقديم",
     "works.status.under_review": "قيد المراجعة",
@@ -446,7 +410,6 @@
     "works.status.approved": "معتمد ومحمي",
     "works.status.rejected": "مرفوض",
     "works.status.pending": "قيد المعالجة",
-
     "works.create.title": "عمل جديد",
     "works.create.subtitle": "أنشئ عملاً، ثم ارفع ملفاته",
     "works.create.titleLabel": "العنوان",
@@ -455,27 +418,80 @@
     "works.create.descriptionPlaceholder": "صف العمل بإيجاز…",
     "works.create.submit": "إنشاء العمل",
     "works.create.submitting": "جارٍ الإنشاء…",
-
     "works.show.addFiles": "إضافة ملفات",
     "works.show.filesTitle": "الملفات",
     "works.show.noFiles": "لا توجد إيداعات بعد. أفلتوا ملفًا أعلاه للبدء — {extensions}، حتى {size}. يُشفَّر كل ملف قبل كتابته على القرص، وتُسجَّل بصمته، ثم يُفحص قبل تصنيفه كمودَع.",
     "works.show.variantCount": "{count} نسخة",
-
     "works.show.quota": "تم استخدام {used} من {limit} — المتبقي {remaining}",
     "works.show.quotaForFile": "يحتاج إلى {size} — سيتبقى {remaining} بعد هذا الإيداع",
-
     "works.show.fingerprint": "البصمة الرقمية",
     "works.show.copyFingerprint": "نسخ",
     "works.show.fingerprintCopied": "تم النسخ",
     "works.show.depositedOn": "تم الإيداع في {date}",
     "works.show.auditNotice": "مُسجَّل في سجل تدقيق هذا الإيداع.",
     "works.show.view": "معاينة",
-
     "media.preview.error": "تعذّر تحميل هذه المعاينة — أعيدوا المحاولة بعد قليل.",
     "media.preview.unsupported": "المعاينة غير متاحة بعد لهذا النوع من الملفات.",
-
     "works.show.stage.queued": "في الانتظار — سيبدأ تلقائيًا.",
     "works.show.stage.finishing": "جارٍ الإنهاء — كدنا ننتهي.",
     "works.show.stage.checking": "جارٍ فحص الملف قبل إيداعه.",
-    "works.show.stage.preparing": "جارٍ تحضير إيداعكم."
+    "works.show.stage.preparing": "جارٍ تحضير إيداعكم.",
+    "admin.authors.title": "المؤلفون",
+    "admin.authors.subtitle": "كل مؤلف مسجل، مرتب حسب النشاط الأخير.",
+    "admin.authors.searchPlaceholder": "البحث بالاسم أو البريد الإلكتروني",
+    "admin.authors.allWilayas": "كل الولايات",
+    "admin.authors.colName": "الاسم",
+    "admin.authors.colWilaya": "الولاية",
+    "admin.authors.colWorks": "الأعمال",
+    "admin.authors.colFiles": "الملفات",
+    "admin.authors.colStorage": "التخزين",
+    "admin.authors.colLastActivity": "آخر نشاط",
+    "admin.authors.noActivity": "لا نشاط",
+    "admin.authors.empty": "لا يوجد مؤلفون مسجلون",
+    "admin.authors.emptyDescription": "لا يوجد حساب مؤلف يطابق هذه المعايير.",
+    "admin.authors.emailVerified": "البريد الإلكتروني موثّق",
+    "admin.authors.emailUnverified": "البريد الإلكتروني غير موثّق",
+    "admin.authors.registeredOn": "تاريخ التسجيل",
+    "admin.authors.lastDeposit": "آخر إيداع",
+    "admin.authors.worksTitle": "أعمال هذا المؤلف",
+    "admin.authors.noWorks": "لا توجد أعمال مُقدَّمة",
+    "admin.authors.noWorksDescription": "لم يقدّم هذا المؤلف بعد أي عمل يطابق هذا التصفية.",
+    "admin.works.title": "الأعمال",
+    "admin.works.subtitle": "جميع الأعمال المُقدَّمة، من كل المؤلفين.",
+    "admin.works.searchPlaceholder": "البحث بالعنوان",
+    "admin.works.authorPlaceholder": "المؤلف (الاسم أو البريد الإلكتروني)",
+    "admin.works.allStatuses": "كل الحالات",
+    "admin.works.dateRangeTo": "إلى",
+    "admin.works.colTitle": "العنوان",
+    "admin.works.colAuthor": "المؤلف",
+    "admin.works.colStatus": "الحالة",
+    "admin.works.colFiles": "الملفات",
+    "admin.works.colSize": "الحجم",
+    "admin.works.colSubmitted": "تاريخ التقديم",
+    "admin.works.colReady": "جاهز",
+    "admin.works.hasBlockingFile": "ملف معلّق",
+    "admin.works.empty": "لا توجد أعمال للمراجعة",
+    "admin.works.emptyDescription": "لا يوجد عمل مُقدَّم يطابق هذه المعايير.",
+    "admin.works.registeredOn": "تاريخ التسجيل",
+    "admin.works.filesTitle": "الملفات المودعة",
+    "admin.works.noFiles": "لم يتم إيداع أي ملف لهذا العمل.",
+    "admin.works.fingerprint": "بصمة SHA-256",
+    "admin.works.copyFingerprint": "نسخ البصمة",
+    "admin.works.scanResult": "نتيجة الفحص",
+    "admin.works.macVerified": "التحقق من MAC",
+    "admin.works.macCheckedOnRead": "يتم التحقق عند كل قراءة",
+    "admin.works.depositedOn": "تاريخ الإيداع",
+    "admin.works.playPreview": "تشغيل المقتطف",
+    "admin.works.noPreviewAvailable": "لا توجد معاينة متاحة — استخدم بث الملف الأصلي.",
+    "admin.works.watermarkNotice": "علامة مائية: اسمك ووقت المعاينة.",
+    "admin.scanResult.clean": "سليم",
+    "admin.scanResult.infected": "مصاب",
+    "admin.scanResult.pending": "قيد الانتظار",
+    "admin.scanResult.unknown": "غير معروف",
+    "admin.stream.trigger": "بث الملف الأصلي الكامل…",
+    "admin.stream.confirmBody": "أنت على وشك الاطلاع على الملف الأصلي الكامل لمؤلف آخر. يتم تسجيل هذا الوصول ونسبته إلى حسابك.",
+    "admin.stream.cancel": "إلغاء",
+    "admin.stream.confirmAction": "متابعة",
+    "admin.quota.usedOfLimit": "{used} من {limit} مستخدمة ({percent}%)",
+    "admin.pagination.showing": "عرض {from} إلى {to} من أصل {total}"
 }

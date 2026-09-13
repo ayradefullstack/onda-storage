@@ -35,18 +35,16 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // P6 (scoped): the preview/stream read path only — see CLAUDE.md's phase
-// log for what's deliberately deferred (full downloads, admin watermarked
-// previews, production delivery). Neither role-owned — an admin and an
-// author both read files here, so this lives in neither routes/admin.php
-// nor routes/author.php. `role:author` today is a known, temporary gap:
-// the admin review console (not yet built) will need its own access here,
-// which is deliberately out of scope for this refactor — widening it now
-// would be a behaviour change, not a file move. `media.link` issues a
-// fresh 15-minute signed URL on demand; `media.stream` is what that URL
-// points at, and carries its own `signed` check on top of the normal
-// auth/role gate (see StreamController's doc comment for why all four
-// layers are needed).
-Route::middleware(['auth', 'verified', 'role:author'])->group(function () {
+// log for what's deliberately deferred (full downloads, production
+// delivery). Neither role-owned — an admin and an author both read files
+// here, so this lives in neither routes/admin.php nor routes/author.php.
+// `role:author|admin` admits both; `MediaFilePolicy::view` does the real
+// ownership check underneath (an author only their own file, an admin any
+// file — see its doc comment). `media.link` issues a fresh 15-minute signed
+// URL on demand; `media.stream` is what that URL points at, and carries its
+// own `signed` check on top of the normal auth/role gate (see
+// StreamController's doc comment for why all four layers are needed).
+Route::middleware(['auth', 'verified', 'role:author|admin'])->group(function () {
     Route::get('/media/{mediaFile:uuid}/link', StreamLinkController::class)
         ->name('media.link');
 

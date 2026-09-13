@@ -30,6 +30,7 @@ final class VaultDoctor
             ...$this->masterKeyChecks(),
             ...$this->databaseAndQueueChecks(),
             ...$this->redisCheck(),
+            ...$this->assetBuildChecks(),
         ]);
     }
 
@@ -688,6 +689,118 @@ final class VaultDoctor
         $out = @shell_exec('ps aux 2>/dev/null | grep "queue:work" | grep -v grep');
 
         return is_string($out) ? trim($out) !== '' : null;
+    }
+
+    /**
+     * A stale `public/build` bundle is invisible from the browser — the app
+     * looks fine and behaves as if committed source fixes do not exist. This
+     * exact trap (a chunk-upload fix sitting in source while a pre-fix
+     * bundle kept being served) survived two manual test cycles before it
+     * was found by reading logs, not by anything in this tool. It belongs
+     * here so it surfaces on every run instead of by accident.
+     *
+     * @return list<CheckResult>
+     */
+    private function assetBuildChecks(): array
+    {
+        return [$this->assetSourceCheck(
+            public_path('hot'),
+            public_path('build/manifest.json'),
+            resource_path('js'),
+            app()->environment(),
+        )];
+    }
+
+    private function assetSourceCheck(
+        string $hotFile,
+        string $manifestPath,
+        string $jsSourceDir,
+        string $environment,
+    ): CheckResult {
+        $key = 'assets.source';
+        $label = 'Frontend asset source';
+
+        if (is_file($hotFile)) {
+            return new CheckResult(
+                $key,
+                $label,
+                CheckResult::PASS,
+                'Vite dev server (hot)',
+                'A Vite dev server is active — the browser receives fresh, unbundled assets.',
+            );
+        }
+
+        if (! is_file($manifestPath)) {
+            return new CheckResult(
+                $key,
+                $label,
+                CheckResult::FAIL,
+                'no build found',
+                "Neither a Vite dev server (public/hot) nor a built manifest ($manifestPath) exists — run `npm run dev` or `npm run build`.",
+            );
+        }
+
+        if ($environment !== 'local') {
+            return new CheckResult(
+                $key,
+                $label,
+                CheckResult::PASS,
+                "built assets ($environment)",
+                'Serving the compiled build — expected outside local development.',
+            );
+        }
+
+        $buildTime = filemtime($manifestPath);
+        $newestSource = $this->newestMtimeUnder($jsSourceDir);
+
+        if ($buildTime === false || $newestSource === false || $newestSource <= $buildTime) {
+            return new CheckResult(
+                $key,
+                $label,
+                CheckResult::PASS,
+                'built assets (public/build)',
+                'Serving the compiled build; it is at least as new as resources/js.',
+            );
+        }
+
+        $ageMinutes = max(1, (int) round(($newestSource - $buildTime) / 60));
+
+        return new CheckResult(
+            $key,
+            $label,
+            CheckResult::WARN,
+            'built assets (public/build) — stale',
+            "resources/js has a file about {$ageMinutes} minute(s) newer than public/build/manifest.json. ".
+                'The browser is serving a bundle compiled before your latest source changes — run `npm run build`, '.
+                'or start `npm run dev` for local work. Serving built assets locally is legitimate; this only warns when they are behind.',
+        );
+    }
+
+    private function newestMtimeUnder(string $dir): int|false
+    {
+        if (! is_dir($dir)) {
+            return false;
+        }
+
+        $newest = false;
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
+        );
+
+        foreach ($iterator as $file) {
+            if (! $file->isFile()) {
+                continue;
+            }
+
+            $mtime = $file->getMTime();
+
+            if ($newest === false || $mtime > $newest) {
+                $newest = $mtime;
+            }
+        }
+
+        return $newest;
     }
 
     /**

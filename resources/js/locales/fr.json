@@ -15,11 +15,9 @@
     "nav.skipToContent": "Passer au contenu",
     "nav.userMenu": "Menu du compte",
     "nav.signOut": "Se déconnecter",
-
     "announcement.text": "Campagne Déclaration 2026 : Le dépôt numérique des œuvres est désormais ouvert.",
     "announcement.badge": "Communiqué",
     "announcement.hotline": "Assistance Auteurs : 021 74 12 34",
-
     "common.language.ar": "العربية",
     "common.language.fr": "Français",
     "common.language.en": "English",
@@ -28,7 +26,6 @@
     "theme.dark": "Sombre",
     "theme.system": "Système",
     "theme.current": "Thème : {theme}",
-
     "hero.badge": "Portail Numérique Officiel ONDA",
     "hero.title": "Protéger la Création, Valoriser l'Art.",
     "hero.subtitle": "La plateforme nationale unifiée de l'Office National des Droits d'Auteur et Droits Voisins pour la protection légale, le dépôt numérique et la valorisation de vos œuvres créatives.",
@@ -37,7 +34,6 @@
     "hero.trust1": "Horodatage Certifié",
     "hero.trust2": "Conforme Ordonnance 03-05",
     "hero.trust3": "Hébergement Souverain en Algérie",
-
     "cert.title": "Attestation de Dépôt",
     "cert.sub": "Certificat Numérique Sécurisé",
     "cert.authenticated": "Authentifié",
@@ -48,7 +44,6 @@
     "cert.statusVal": "Protégé par l'ONDA",
     "cert.instantVerify": "Vérification Immédiate",
     "cert.instantVerifyDesc": "Scannez le QR Code officiel pour attester l'authenticité de l'œuvre et son horodatage.",
-
     "stats.works": "120 000+",
     "stats.worksLabel": "Œuvres Enregistrées",
     "stats.members": "45 000+",
@@ -57,27 +52,21 @@
     "stats.agenciesLabel": "Délégations & Agences Régionales",
     "stats.protection": "100%",
     "stats.protectionLabel": "Protection & Souveraineté Juridique",
-
     "services.heading": "Services Numériques aux Auteurs & Usagers",
     "services.subheading": "Une suite complète d'outils interactifs conçus pour faciliter la déclaration, la protection et la gestion de vos droits d'auteur.",
     "services.access": "Accéder au service",
-
     "services.card1.title": "Dépôt & Enregistrement d'Œuvres",
     "services.card1.desc": "Téléversez vos œuvres littéraires, audiovisuelles, musicales ou logicielles avec délivrance immédiate d'un récépissé officiel.",
     "services.card1.badge": "Dépôt Sécurisé",
-
     "services.card2.title": "E-Portail des Auteurs Adhérents",
     "services.card2.desc": "Consultez l'état d'avancement de vos dossiers, vos attestations et le calendrier des répartitions de vos droits.",
     "services.card2.badge": "Espace Membre",
-
     "services.card3.title": "Paiement des Redevances & Licences",
     "services.card3.desc": "Solution de paiement électronique sécurisée pour les diffuseurs, organisateurs d'événements et exploitants d'œuvres.",
     "services.card3.badge": "Paiement en Ligne",
-
     "services.card4.title": "Répertoire National des Droits",
     "services.card4.desc": "Base de données publique interrogeable pour vérifier le statut de protection et les titulaires de droits.",
     "services.card4.badge": "Consultation",
-
     "repertoire.heading": "Moteur de Recherche du Répertoire National",
     "repertoire.subheading": "Recherchez parmi des centaines de milliers de titres protégés du patrimoine artistique et intellectuel national.",
     "repertoire.searchPlaceholder": "Rechercher par titre d'œuvre, nom d'auteur, numéro d'enregistrement ou code IPI...",
@@ -87,33 +76,27 @@
     "repertoire.filterCinema": "Audiovisuel",
     "repertoire.filterPlastic": "Arts Plastiques",
     "repertoire.resultsNotice": "Affichage des résultats certifiés du répertoire national ONDA",
-
     "news.heading": "Actualités & Bulletins Juridiques",
     "news.subheading": "Restez informé des dernières décisions réglementaires, sessions de répartition et annonces officielles de l'Office.",
     "news.readMore": "Lire le communiqué",
-
     "news.item1.category": "Répartition des Droits",
     "news.item1.date": "Août 2026",
     "news.item1.title": "Lancement de la Session de Répartition Générale des Droits d'Auteur",
     "news.item1.desc": "L'ONDA informe l'ensemble de ses adhérents du démarrage des virements relatifs aux exploitations audiovisuelles et radiophoniques.",
-
     "news.item2.category": "Digitalisation",
     "news.item2.date": "Juillet 2026",
     "news.item2.title": "Déploiement du Nouveau Récépissé Numérique à Horodatage Sécurisé",
     "news.item2.desc": "Chaque nouvelle œuvre déposée bénéficie dorénavant d'un certificat d'antériorité infalsifiable avec vérification QR Code.",
-
     "news.item3.category": "Réglementation",
     "news.item3.date": "Juin 2026",
     "news.item3.title": "Guide Pratique : Déclaration des Créations Numériques & Logiciels",
     "news.item3.desc": "Publication du guide officiel détaillant les démarches de protection des développeurs et créateurs de solutions numériques.",
-
     "deposit.heading": "Types d'Œuvres Éligibles au Dépôt",
     "deposit.intro": "L'Office National accepte le dépôt et la protection de toutes les formes d'expression intellectuelle et artistique.",
     "deposit.categories.text": "Textes & Œuvres Littéraires",
     "deposit.categories.audio": "Œuvres Musicales & Sonores",
     "deposit.categories.video": "Œuvres Audiovisuelles & Cinématographiques",
     "deposit.categories.software": "Logiciels & Programmes Informatiques",
-
     "howItWorks.heading": "Processus d'Enregistrement en 3 Étapes",
     "howItWorks.step1.title": "Créez votre compte certifié",
     "howItWorks.step1.description": "Renseignez votre identité d'auteur ou mandataire légal pour accéder au guichet numérique.",
@@ -121,17 +104,14 @@
     "howItWorks.step2.description": "Téléversez vos fichiers et métadonnées en toute confidentialité (fichiers volumineux jusqu'à 5 Go).",
     "howItWorks.step3.title": "Obtenez votre récépissé légal",
     "howItWorks.step3.description": "Téléchargez votre attestation officielle horodatée prouvant l'antériorité de votre création.",
-
     "guarantees.heading": "Nos Engagements de Sécurité & Souveraineté",
     "guarantees.fileSize": "Téléversement résilient jusqu'à 5 Go par fichier sans perte de qualité.",
     "guarantees.resumable": "Reprise automatique des téléversements en cas de coupure de connexion réseau.",
     "guarantees.storage": "Données hébergées en Algérie sur des infrastructures souveraines hautement sécurisées.",
     "guarantees.checksum": "Vérification cryptographique par empreinte SHA-256 à chaque dépôt.",
-
     "closing.heading": "Rejoignez plus de 45 000 Créateurs Protégés",
     "closing.subtitle": "Protégez vos créations intellectuelles dès aujourd'hui auprès de l'institution nationale de référence.",
     "closing.cta": "Créer mon Compte Auteur",
-
     "footer.aboutOnda": "À Propos de l'ONDA",
     "footer.aboutText": "Établissement public à caractère industriel et commercial placé sous la tutelle du Ministère de la Culture, assurant la protection des droits des auteurs et des artistes en Algérie.",
     "footer.quickLinks": "Liens Rapides",
@@ -143,7 +123,6 @@
     "footer.address": "Rue du Grand Seminaire, Bologhine, Alger, Algérie",
     "footer.storageNotice": "Les fichiers et données sont hébergés et conservés sur les serveurs sécurisés de l'ONDA, en Algérie.",
     "footer.copyright": "© {year} ONDA — Office National des Droits d'Auteur et Droits Voisins. Tous droits réservés.",
-
     "auth.loginTitle": "Connexion à votre espace",
     "auth.loginDesc": "Accédez à votre espace auteur et gérez vos œuvres et déclarations ONDA",
     "auth.email": "Adresse Email",
@@ -164,7 +143,6 @@
     "auth.pill1": "Protection Juridique & Horodatage Officiel",
     "auth.pill2": "Suivi des Déclarations & Droits en Temps Réel",
     "auth.pill3": "Hébergement Souverain et Sécurisé en Algérie",
-
     "auth.registerTitle": "Créer un compte auteur",
     "auth.registerDesc": "Rejoignez plus de 45 000 créateurs protégés et accédez aux démarches numériques de l'ONDA",
     "auth.firstName": "Prénom (Latin)",
@@ -333,7 +311,6 @@
     "sidebar.nav.support": "Assistance Technique",
     "sidebar.hotline.title": "Assistance Auteurs",
     "sidebar.hotline.number": "021 74 12 34",
-
     "media.status.uploading": "Téléversement",
     "media.status.assembling": "Finalisation",
     "media.status.scanning": "Vérification",
@@ -343,7 +320,6 @@
     "media.status.quarantined": "En attente d'examen",
     "media.quarantineWithRef": "Ce fichier a été signalé par une vérification de sécurité automatique et est en cours d'examen par notre équipe — ce n'est pas une erreur de votre part. Référence {ref}. Assistance auteurs : {hotline}.",
     "media.failedWithRef": "Une erreur est survenue lors de la préparation de ce dépôt — inutile de le redéposer pour l'instant. Si vous contactez le support, indiquez la référence {ref}.",
-
     "upload.status.queued": "En attente",
     "upload.status.initializing": "Démarrage…",
     "upload.status.uploading": "Téléversement",
@@ -353,14 +329,11 @@
     "upload.status.failed": "Échec",
     "upload.status.expired": "Session expirée",
     "upload.status.quota_exceeded": "Quota dépassé",
-
     "upload.actions.pause": "Pause",
     "upload.actions.resume": "Reprendre",
     "upload.actions.retry": "Réessayer",
     "upload.actions.cancel": "Annuler",
-
     "upload.eta": "{time} restant",
-
     "upload.error.crcMismatch": "Erreur de somme de contrôle — réessayer",
     "upload.error.crcMismatchWithChunk": "La partie {index} a échoué la vérification — réessayer",
     "upload.error.network": "Erreur réseau — réessayer",
@@ -376,34 +349,26 @@
     "upload.error.authExpired": "Vous avez été déconnecté(e) — rien n'a été perdu. Reconnectez-vous, puis resélectionnez le fichier pour reprendre.",
     "upload.error.quotaExceeded": "Ce dépôt dépasserait votre quota de stockage. Appelez l'assistance auteurs ({hotline}) pour obtenir de l'aide.",
     "upload.error.quotaExceededWithRemaining": "Ce dépôt nécessite plus d'espace que vous n'en avez — {remaining} restants. Appelez l'assistance auteurs ({hotline}) pour en demander davantage.",
-
     "upload.reject.extension": "« {filename} » n'est pas un type accepté. Formats acceptés : {extensions}.",
     "upload.reject.size": "« {filename} » est trop volumineux — la limite est {size}.",
-
     "upload.dropzone.title": "Glissez des fichiers ici, ou parcourez — l'envoi démarre aussitôt",
     "upload.dropzone.hint": "Jusqu'à {size} — {extensions}",
     "upload.dropzone.browse": "Parcourir les fichiers",
-
     "upload.trust.encrypted": "Chiffré avant d'être écrit sur le disque.",
     "upload.trust.fingerprint": "Une empreinte cryptographique prouve ce qui a été déposé, et quand.",
     "upload.trust.audit": "Chaque dépôt est enregistré dans un journal d'audit une fois prêt.",
-
     "upload.persistence.line": "Se poursuit en arrière-plan — naviguez librement ailleurs sur le site. Fermer cet onglet le met en pause ; resélectionnez le même fichier ici pour reprendre.",
-
     "upload.resume.title": "Reprendre vos téléversements",
     "upload.resume.description": "Ces envois étaient en cours avant votre dernière visite. Sélectionnez à nouveau le même fichier pour continuer où vous en étiez — votre navigateur ne peut pas le rouvrir automatiquement.",
     "upload.resume.selectFile": "Sélectionner le fichier",
     "upload.resume.sizeMismatch": "La taille de ce fichier ne correspond pas à l'envoi en cours — veuillez sélectionner exactement le même fichier.",
-
     "upload.aggregate.inProgress": "{count} fichier(s) en cours d'envoi",
     "upload.aggregate.title": "Téléversements",
     "upload.aggregate.empty": "Aucun envoi pour le moment",
-
     "upload.cancel.confirmTitle": "Annuler cet envoi ?",
     "upload.cancel.confirmBody": "{sent} déjà envoyés seront perdus — action irréversible.",
     "upload.cancel.keepGoing": "Continuer l'envoi",
     "upload.cancel.confirmAction": "Abandonner et annuler",
-
     "works.index.title": "Œuvres & Patrimoine Créatif",
     "works.index.subtitle": "Registre numérique de vos œuvres déposées, fichiers et protections juridiques",
     "works.index.newWork": "Nouvelle œuvre",
@@ -438,7 +403,6 @@
     "works.index.cancel": "Annuler",
     "works.index.showingCount": "Affichage de {count} œuvre(s)",
     "works.index.noDescription": "Aucune description fournie pour cette œuvre.",
-
     "works.status.draft": "Brouillon",
     "works.status.submitted": "Soumise",
     "works.status.under_review": "En cours d'examen",
@@ -446,7 +410,6 @@
     "works.status.approved": "Validée & Protégée",
     "works.status.rejected": "Rejetée",
     "works.status.pending": "En cours d'examen",
-
     "works.create.title": "Nouvelle œuvre",
     "works.create.subtitle": "Créez une œuvre, puis déposez ses fichiers",
     "works.create.titleLabel": "Titre",
@@ -455,27 +418,80 @@
     "works.create.descriptionPlaceholder": "Décrivez brièvement l'œuvre…",
     "works.create.submit": "Créer l'œuvre",
     "works.create.submitting": "Création…",
-
     "works.show.addFiles": "Ajouter des fichiers",
     "works.show.filesTitle": "Fichiers",
     "works.show.noFiles": "Aucun dépôt pour le moment. Déposez un fichier ci-dessus pour commencer — {extensions}, jusqu'à {size}. Chaque fichier est chiffré avant d'être écrit sur le disque, doté d'une empreinte, puis vérifié avant d'être marqué comme déposé.",
     "works.show.variantCount": "{count} variante(s)",
-
     "works.show.quota": "{used} sur {limit} utilisés — {remaining} restants",
     "works.show.quotaForFile": "Nécessite {size} — {remaining} resteront après ce dépôt",
-
     "works.show.fingerprint": "Empreinte",
     "works.show.copyFingerprint": "Copier",
     "works.show.fingerprintCopied": "Copié",
     "works.show.depositedOn": "Déposé le {date}",
     "works.show.auditNotice": "Enregistré dans le journal d'audit du dépôt.",
     "works.show.view": "Voir",
-
     "media.preview.error": "Impossible de charger cet aperçu — réessayez dans un instant.",
     "media.preview.unsupported": "L'aperçu n'est pas encore disponible pour ce type de fichier.",
-
     "works.show.stage.queued": "En attente — démarrera automatiquement.",
     "works.show.stage.finishing": "Finalisation — presque terminé.",
     "works.show.stage.checking": "Vérification du fichier avant son dépôt.",
-    "works.show.stage.preparing": "Préparation de votre dépôt."
+    "works.show.stage.preparing": "Préparation de votre dépôt.",
+    "admin.authors.title": "Auteurs",
+    "admin.authors.subtitle": "Chaque auteur inscrit, trié par activité récente.",
+    "admin.authors.searchPlaceholder": "Rechercher par nom ou email",
+    "admin.authors.allWilayas": "Toutes les wilayas",
+    "admin.authors.colName": "Nom",
+    "admin.authors.colWilaya": "Wilaya",
+    "admin.authors.colWorks": "Œuvres",
+    "admin.authors.colFiles": "Fichiers",
+    "admin.authors.colStorage": "Stockage",
+    "admin.authors.colLastActivity": "Dernière activité",
+    "admin.authors.noActivity": "Aucune activité",
+    "admin.authors.empty": "Aucun auteur enregistré",
+    "admin.authors.emptyDescription": "Aucun compte auteur ne correspond à ces critères.",
+    "admin.authors.emailVerified": "Email vérifié",
+    "admin.authors.emailUnverified": "Email non vérifié",
+    "admin.authors.registeredOn": "Inscrit le",
+    "admin.authors.lastDeposit": "Dernier dépôt",
+    "admin.authors.worksTitle": "Œuvres de cet auteur",
+    "admin.authors.noWorks": "Aucune œuvre soumise",
+    "admin.authors.noWorksDescription": "Cet auteur n'a encore soumis aucune œuvre correspondant à ce filtre.",
+    "admin.works.title": "Œuvres",
+    "admin.works.subtitle": "Toutes les œuvres soumises, tous auteurs confondus.",
+    "admin.works.searchPlaceholder": "Rechercher par titre",
+    "admin.works.authorPlaceholder": "Auteur (nom ou email)",
+    "admin.works.allStatuses": "Tous les statuts",
+    "admin.works.dateRangeTo": "à",
+    "admin.works.colTitle": "Titre",
+    "admin.works.colAuthor": "Auteur",
+    "admin.works.colStatus": "Statut",
+    "admin.works.colFiles": "Fichiers",
+    "admin.works.colSize": "Taille",
+    "admin.works.colSubmitted": "Soumis le",
+    "admin.works.colReady": "Prêt",
+    "admin.works.hasBlockingFile": "Fichier bloquant",
+    "admin.works.empty": "Aucune œuvre à examiner",
+    "admin.works.emptyDescription": "Aucune œuvre soumise ne correspond à ces critères.",
+    "admin.works.registeredOn": "enregistrée le",
+    "admin.works.filesTitle": "Fichiers déposés",
+    "admin.works.noFiles": "Aucun fichier déposé pour cette œuvre.",
+    "admin.works.fingerprint": "Empreinte SHA-256",
+    "admin.works.copyFingerprint": "Copier l'empreinte",
+    "admin.works.scanResult": "Résultat de l'analyse",
+    "admin.works.macVerified": "MAC vérifié",
+    "admin.works.macCheckedOnRead": "Vérifié à chaque lecture",
+    "admin.works.depositedOn": "Déposé le",
+    "admin.works.playPreview": "Lire l'extrait",
+    "admin.works.noPreviewAvailable": "Aucun aperçu disponible — utilisez la lecture du fichier original.",
+    "admin.works.watermarkNotice": "Filigrane : votre nom et l'heure de consultation.",
+    "admin.scanResult.clean": "Sain",
+    "admin.scanResult.infected": "Infecté",
+    "admin.scanResult.pending": "En attente",
+    "admin.scanResult.unknown": "Inconnu",
+    "admin.stream.trigger": "Lire l'original complet…",
+    "admin.stream.confirmBody": "Vous êtes sur le point de consulter le fichier original complet d'un autre auteur. Cet accès est journalisé et associé à votre compte.",
+    "admin.stream.cancel": "Annuler",
+    "admin.stream.confirmAction": "Continuer",
+    "admin.quota.usedOfLimit": "{used} sur {limit} utilisés ({percent} %)",
+    "admin.pagination.showing": "Affichage de {from} à {to} sur {total}"
 }

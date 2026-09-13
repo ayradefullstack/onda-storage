@@ -16,9 +16,16 @@ use App\Models\User;
  */
 final class MediaFilePolicy
 {
+    /**
+     * An admin may view any file — the review console's whole purpose —
+     * while an author remains scoped to their own deposits. The `role:admin`
+     * route middleware already keeps non-admins out of admin-only routes;
+     * this is the ownership check for the routes both roles share
+     * (`media.stream`, `media.link`).
+     */
     public function view(User $user, MediaFile $mediaFile): bool
     {
-        return $user->id === $mediaFile->work->author_id;
+        return $user->id === $mediaFile->work->author_id || $user->hasRole('admin');
     }
 
     public function update(User $user, MediaFile $mediaFile): bool
