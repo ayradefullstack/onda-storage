@@ -1,15 +1,11 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import {
-    Award,
-    Building2,
-    Coins,
     Files,
-    FilePlus2,
-    FolderKanban,
+    FolderOpen,
     Headphones,
     LayoutGrid,
-    Scale,
+    Users,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -25,27 +21,30 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    useSidebar,
 } from '@/components/ui/sidebar';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { toUrl } from '@/lib/utils';
 import { dashboard as adminDashboard } from '@/routes/admin';
+import { index as adminAuthorsIndex } from '@/routes/admin/authors';
+import { index as adminWorksIndex } from '@/routes/admin/works';
 import { dashboard as authorDashboard } from '@/routes/author';
 import { index as worksIndex } from '@/routes/works';
 
 const { t, locale } = useI18n();
 const page = usePage();
+const { isMobile, state } = useSidebar();
 
 const isRtl = computed(() => locale.value === 'ar');
 const roles = computed(() => page.props.auth.roles);
 const isAuthor = computed(() => roles.value.includes('author'));
 const isAdmin = computed(() => roles.value.includes('admin'));
 
-/**
- * `false` (the default) means "no current page ever marks this active" —
- * used for the placeholder items below that all point at the dashboard
- * until their real pages exist, so the dashboard link itself doesn't look
- * active from every one of them.
- */
-function isActive(href: ReturnType<typeof authorDashboard>): boolean {
+function isActive(href: Parameters<typeof toUrl>[0]): boolean {
     return page.url === toUrl(href) || page.url.startsWith(toUrl(href) + '/');
 }
 
@@ -57,61 +56,31 @@ const mainNavItems = computed(() => [
         active: isActive(authorDashboard()),
     },
     {
-        title: t('sidebar.nav.repertoire'),
-        href: authorDashboard(),
-        icon: FolderKanban,
-        badge: '18',
-        active: false,
-    },
-    {
-        title: t('sidebar.nav.deposits'),
-        href: authorDashboard(),
-        icon: FilePlus2,
-        badge: '2',
-        active: false,
-    },
-    {
-        title: t('sidebar.nav.royalties'),
-        href: authorDashboard(),
-        icon: Coins,
-        active: false,
-    },
-    {
         title: t('sidebar.nav.works'),
         href: worksIndex(),
         icon: Files,
         active: isActive(worksIndex()),
     },
-    {
-        title: t('sidebar.nav.certificates'),
-        href: authorDashboard(),
-        icon: Award,
-        active: false,
-    },
 ]);
 
-const servicesNavItems = computed(() => [
-    {
-        title: t('sidebar.nav.tariffs'),
-        href: authorDashboard(),
-        icon: Scale,
-    },
-    {
-        title: t('sidebar.nav.agencies'),
-        href: authorDashboard(),
-        icon: Building2,
-    },
-]);
-
-// The admin review console (authors list, review queue) doesn't exist yet
-// — this section is deliberately just the one real route until that work
-// lands, rather than linking to pages that aren't built.
 const adminNavItems = computed(() => [
     {
         title: t('sidebar.nav.overview'),
         href: adminDashboard(),
         icon: LayoutGrid,
         active: isActive(adminDashboard()),
+    },
+    {
+        title: t('admin.authors.title'),
+        href: adminAuthorsIndex(),
+        icon: Users,
+        active: isActive(adminAuthorsIndex()),
+    },
+    {
+        title: t('admin.works.title'),
+        href: adminWorksIndex(),
+        icon: FolderOpen,
+        active: isActive(adminWorksIndex()),
     },
 ]);
 
@@ -188,40 +157,6 @@ const homeHref = computed(() =>
                         </SidebarMenuItem>
                     </SidebarMenu>
                 </SidebarGroup>
-
-                <!-- Services & Legal Group -->
-                <SidebarGroup class="mt-2">
-                    <SidebarGroupLabel
-                        class="text-start text-[11px] font-semibold tracking-wider text-muted-foreground/70 uppercase"
-                    >
-                        {{ t('sidebar.nav.services') }}
-                    </SidebarGroupLabel>
-                    <SidebarMenu>
-                        <SidebarMenuItem
-                            v-for="item in servicesNavItems"
-                            :key="item.title"
-                        >
-                            <SidebarMenuButton
-                                as-child
-                                :tooltip="item.title"
-                                class="rounded-lg text-muted-foreground transition-all hover:text-foreground"
-                            >
-                                <Link
-                                    :href="item.href"
-                                    class="flex w-full items-center gap-3 text-start"
-                                >
-                                    <component
-                                        :is="item.icon"
-                                        class="size-4 shrink-0"
-                                    />
-                                    <span class="truncate">{{
-                                        item.title
-                                    }}</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    </SidebarMenu>
-                </SidebarGroup>
             </template>
 
             <!-- Admin section — clearly separated from the author workspace
@@ -259,29 +194,71 @@ const homeHref = computed(() =>
             </SidebarGroup>
 
             <!-- Hotline Widget for Creators -->
-            <div
-                v-if="isAuthor"
-                class="mx-3 mt-auto mb-2 rounded-xl border border-onda-blue-500/20 bg-gradient-to-br from-onda-blue-500/5 to-onda-teal-500/5 p-3 dark:from-onda-blue-950/40 dark:to-onda-teal-950/40"
-            >
-                <div class="mb-1.5 flex items-center gap-2">
-                    <div
-                        class="flex size-6 items-center justify-center rounded-md bg-onda-blue-600/10 text-onda-blue-600 dark:bg-onda-blue-500/20 dark:text-onda-blue-400"
-                    >
-                        <Headphones class="size-3.5" />
-                    </div>
-                    <span class="text-xs font-semibold text-foreground">
-                        {{ t('sidebar.hotline.title') }}
-                    </span>
-                </div>
-                <p
-                    class="dir-ltr text-start font-mono text-xs font-bold tracking-wider text-onda-blue-700 dark:text-onda-blue-400"
+            <template v-if="isAuthor">
+                <!-- Expanded view: Full detailed card -->
+                <div
+                    class="mx-3 mt-auto mb-2 rounded-xl border border-onda-blue-500/20 bg-gradient-to-br from-onda-blue-500/5 to-onda-teal-500/5 p-3 group-data-[collapsible=icon]:hidden dark:from-onda-blue-950/40 dark:to-onda-teal-950/40"
                 >
-                    {{ t('sidebar.hotline.number') }}
-                </p>
-                <p class="mt-0.5 text-[10px] text-muted-foreground">
-                    Dimanche – Jeudi (08:30 - 16:30)
-                </p>
-            </div>
+                    <div class="mb-1.5 flex items-center gap-2">
+                        <div
+                            class="flex size-6 items-center justify-center rounded-md bg-onda-blue-600/10 text-onda-blue-600 dark:bg-onda-blue-500/20 dark:text-onda-blue-400"
+                        >
+                            <Headphones class="size-3.5" />
+                        </div>
+                        <span class="text-xs font-semibold text-foreground">
+                            {{ t('sidebar.hotline.title') }}
+                        </span>
+                    </div>
+                    <a
+                        :href="`tel:${t('sidebar.hotline.number').replace(/\s+/g, '')}`"
+                        class="dir-ltr block text-start font-mono text-xs font-bold tracking-wider text-onda-blue-700 transition-colors hover:underline dark:text-onda-blue-400"
+                    >
+                        {{ t('sidebar.hotline.number') }}
+                    </a>
+                    <p class="mt-0.5 text-[10px] text-muted-foreground">
+                        Dimanche – Jeudi (08:30 - 16:30)
+                    </p>
+                </div>
+
+                <!-- Collapsed view: Compact icon button with popout tooltip -->
+                <div
+                    class="mt-auto mb-2 hidden justify-center group-data-[collapsible=icon]:flex"
+                >
+                    <Tooltip>
+                        <TooltipTrigger as-child>
+                            <a
+                                :href="`tel:${t('sidebar.hotline.number').replace(/\s+/g, '')}`"
+                                class="flex size-8 items-center justify-center rounded-lg border border-onda-blue-500/20 bg-onda-blue-500/10 text-onda-blue-600 transition-all hover:scale-105 hover:bg-onda-blue-500/20 active:scale-95 dark:bg-onda-blue-500/20 dark:text-onda-blue-400"
+                                :aria-label="t('sidebar.hotline.title')"
+                            >
+                                <Headphones class="size-4" />
+                            </a>
+                        </TooltipTrigger>
+                        <TooltipContent
+                            :side="isRtl ? 'left' : 'right'"
+                            align="center"
+                            :side-offset="8"
+                            :hidden="state !== 'collapsed' || isMobile"
+                            class="p-2.5 shadow-xl"
+                        >
+                            <div class="space-y-1 min-w-[140px]">
+                                <div class="flex items-center gap-2">
+                                    <Headphones class="size-3.5 shrink-0" />
+                                    <span class="text-xs font-semibold">
+                                        {{ t('sidebar.hotline.title') }}
+                                    </span>
+                                </div>
+                                <p class="dir-ltr text-start font-mono text-xs font-bold tracking-wider">
+                                    {{ t('sidebar.hotline.number') }}
+                                </p>
+                                <p class="text-[10px] opacity-80 whitespace-nowrap">
+                                    Dimanche – Jeudi (08:30 - 16:30)
+                                </p>
+                            </div>
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
+            </template>
         </SidebarContent>
 
         <SidebarFooter class="border-t border-sidebar-border/60 pt-2">

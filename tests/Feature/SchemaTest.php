@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Models\Commune;
+use App\Models\Country;
 use App\Models\FileAccessLog;
 use App\Models\MediaFile;
 use App\Models\MediaVariant;
 use App\Models\StorageQuota;
 use App\Models\UploadSession;
+use App\Models\User;
+use App\Models\Wilaya;
 use App\Models\Work;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -38,6 +42,39 @@ test('upload_sessions has no deleted_at column and does not use SoftDeletes', fu
 test('file_access_logs has no deleted_at column and does not use SoftDeletes', function () {
     expect(Schema::hasColumn('file_access_logs', 'deleted_at'))->toBeFalse()
         ->and(in_array(SoftDeletes::class, class_uses_recursive(FileAccessLog::class), true))->toBeFalse();
+});
+
+dataset('soft_deletable_tables', [
+    'users' => ['users', User::class],
+    'works' => ['works', Work::class],
+    'media_files' => ['media_files', MediaFile::class],
+    'countries' => ['countries', Country::class],
+    'wilayas' => ['wilayas', Wilaya::class],
+    'communes' => ['communes', Commune::class],
+]);
+
+test('soft-deletable tables have both the deleted_at column and the SoftDeletes trait', function (string $table, string $modelClass) {
+    expect(Schema::hasColumn($table, 'deleted_at'))->toBeTrue()
+        ->and(in_array(SoftDeletes::class, class_uses_recursive($modelClass), true))->toBeTrue();
+})->with('soft_deletable_tables');
+
+test('media_variants and storage_quotas models do not use SoftDeletes', function (string $modelClass) {
+    expect(in_array(SoftDeletes::class, class_uses_recursive($modelClass), true))->toBeFalse();
+})->with([
+    'MediaVariant' => [MediaVariant::class],
+    'StorageQuota' => [StorageQuota::class],
+]);
+
+// See the soft-delete classification table in CLAUDE.md before changing this list.
+test('deleted_at exists on exactly the classified soft-deletable tables', function () {
+    $tablesWithDeletedAt = collect(Schema::getTables())
+        ->pluck('name')
+        ->filter(fn (string $table): bool => Schema::hasColumn($table, 'deleted_at'))
+        ->sort()
+        ->values()
+        ->all();
+
+    expect($tablesWithDeletedAt)->toBe(['communes', 'countries', 'media_files', 'users', 'wilayas', 'works']);
 });
 
 test('file_access_logs has no updated_at column usage', function () {
