@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Models\MediaFile;
+use App\Models\Oeuvre;
 use App\Models\User;
-use App\Models\Work;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -25,7 +25,7 @@ class MediaFileFactory extends Factory
         $uuid = (string) Str::uuid7();
 
         return [
-            'work_id' => Work::factory(),
+            'oeuvre_id' => Oeuvre::factory(),
             'uploaded_by' => User::factory(),
             'original_name' => fake()->word().'.mp4',
             'extension' => 'mp4',

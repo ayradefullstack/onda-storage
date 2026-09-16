@@ -46,7 +46,7 @@ final class CompleteUpload
         return DB::transaction(function () use ($session, $object, $extension): MediaFile {
             $mediaFile = new MediaFile;
             $mediaFile->uuid = (string) Str::uuid7();
-            $mediaFile->work_id = $session->work_id;
+            $mediaFile->oeuvre_id = $session->oeuvre_id;
             $mediaFile->uploaded_by = $session->user_id;
             $mediaFile->original_name = $session->filename;
             $mediaFile->extension = $extension;

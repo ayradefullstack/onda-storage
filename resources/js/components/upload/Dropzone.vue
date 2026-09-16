@@ -12,7 +12,7 @@ import {
 } from '@/lib/uploadValidation';
 
 const props = defineProps<{
-    workId: number;
+    oeuvreId: number;
 }>();
 
 const { t, locale } = useI18n();
@@ -28,7 +28,7 @@ function handleFiles(fileList: FileList | null): void {
         return;
     }
 
-    rejections.value = selectFiles(fileList, props.workId);
+    rejections.value = selectFiles(fileList, props.oeuvreId);
 }
 
 function onDragEnter(): void {

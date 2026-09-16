@@ -5,13 +5,13 @@ import { Badge } from '@/components/ui/badge';
 import type { BadgeVariants } from '@/components/ui/badge';
 
 /**
- * Renders either a `Work` status (`works.status.*`, already established by
+ * Renders either an `Oeuvre` status (`oeuvres.status.*`, already established by
  * the author-facing pages) or a `MediaFile` status (`media.status.*`) as a
  * Badge — reusing the existing translation namespaces rather than
  * inventing admin-only copy for the same underlying enum.
  */
 const props = defineProps<{
-    kind: 'work' | 'media';
+    kind: 'oeuvre' | 'media';
     status: string;
 }>();
 
@@ -37,14 +37,14 @@ const MEDIA_VARIANTS: Record<string, BadgeVariants['variant']> = {
 
 const variant = computed<BadgeVariants['variant']>(
     () =>
-        (props.kind === 'work' ? WORK_VARIANTS : MEDIA_VARIANTS)[
+        (props.kind === 'oeuvre' ? WORK_VARIANTS : MEDIA_VARIANTS)[
             props.status
         ] ?? 'outline',
 );
 
 const label = computed(() =>
     t(
-        `${props.kind === 'work' ? 'works.status' : 'media.status'}.${props.status}`,
+        `${props.kind === 'oeuvre' ? 'oeuvres.status' : 'media.status'}.${props.status}`,
     ),
 );
 </script>

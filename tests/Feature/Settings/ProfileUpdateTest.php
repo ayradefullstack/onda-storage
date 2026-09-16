@@ -67,7 +67,7 @@ test('user can delete their account', function () {
 
     $this->assertGuest();
 
-    // User has SoftDeletes (CLAUDE.md: "Soft deletes on works, media_files,
+    // User has SoftDeletes (CLAUDE.md: "Soft deletes on oeuvres, media_files,
     // users ONLY") — delete() sets deleted_at rather than removing the row,
     // so fresh() (which bypasses the SoftDeletingScope) still finds it.
     expect($user->fresh()->trashed())->toBeTrue();

@@ -1,24 +1,22 @@
 <?php
 
+use App\Http\Controllers\Author\OeuvreController;
 use App\Http\Controllers\Author\UploadController;
-use App\Http\Controllers\Author\WorkController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified', 'role:author'])->prefix('author')->name('author.')->group(function () {
     Route::inertia('dashboard', 'author/Dashboard')->name('dashboard');
 });
 
-// `works.*` deliberately keeps its (unprefixed-by-`author.`) name even
-// though its path now lives under /author — nothing else in the app names
-// a route `works.*`, so there is no collision forcing a rename, and every
-// existing `route('works.*')` caller (frontend Wayfinder imports, Pest
-// tests) keeps working unchanged. Only the URL and the controller's
-// namespace move.
-Route::middleware(['auth', 'verified', 'role:author'])->prefix('author/works')->name('works.')->group(function () {
-    Route::get('/', [WorkController::class, 'index'])->name('index');
-    Route::get('/create', [WorkController::class, 'create'])->name('create');
-    Route::post('/', [WorkController::class, 'store'])->name('store');
-    Route::get('/{work:uuid}', [WorkController::class, 'show'])->name('show');
+// `oeuvres.*` deliberately has no `author.` name prefix even though its
+// path lives under /author — nothing else in the app names a route
+// `oeuvres.*` (the admin side is `admin.oeuvres.*`), so there is no
+// collision forcing one.
+Route::middleware(['auth', 'verified', 'role:author'])->prefix('author/oeuvres')->name('oeuvres.')->group(function () {
+    Route::get('/', [OeuvreController::class, 'index'])->name('index');
+    Route::get('/create', [OeuvreController::class, 'create'])->name('create');
+    Route::post('/', [OeuvreController::class, 'store'])->name('store');
+    Route::get('/{oeuvre:uuid}', [OeuvreController::class, 'show'])->name('show');
 });
 
 // JSON endpoints inside the Inertia session — not an API, no Sanctum/tokens.

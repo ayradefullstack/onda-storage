@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
-import { useEventListener } from '@vueuse/core';
+import { Head, Link, router } from '@inertiajs/vue3';
 import {
     ArrowUpDown,
     BookOpen,
@@ -22,43 +21,43 @@ import {
     Shield,
     ShieldAlert,
     ShieldCheck,
-    Sparkles,
     Video,
 } from '@lucide/vue';
+import { useEventListener } from '@vueuse/core';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import InputError from '@/components/InputError.vue';
+import { oeuvreLabel } from '@/components/oeuvre/label';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { create, index, show } from '@/routes/works';
+import { create, index, show } from '@/routes/oeuvres';
 
-interface WorkSummary {
+interface OeuvreSummary {
     id: number;
     uuid: string;
-    title: string;
+    title: string | null;
     description?: string | null;
     status: string;
     created_at: string;
     media_files_count: number;
+    college_name: string | null;
 }
 
 const props = defineProps<{
-    works: WorkSummary[];
+    oeuvres: OeuvreSummary[];
 }>();
 
 const { t, locale } = useI18n();
+
+// A new oeuvre has no title until a later step names it — every display,
+// search and sort below goes through its label instead.
+const labelledOeuvres = computed(() =>
+    props.oeuvres.map((oeuvre) => ({
+        ...oeuvre,
+        label: oeuvreLabel(oeuvre, locale.value, t('oeuvres.untitled')),
+    })),
+);
 
 defineOptions({
     layout: {
@@ -74,26 +73,9 @@ const selectedStatus = ref<'all' | 'registered' | 'under_review' | 'draft'>(
 const selectedSort = ref<'newest' | 'oldest' | 'title' | 'files'>('newest');
 const viewMode = ref<'grid' | 'list'>('grid');
 const copiedUuid = ref<string | null>(null);
-const isQuickCreateOpen = ref(false);
-
-// Quick-Create Form via Inertia
-const form = useForm({
-    title: '',
-    description: '',
-});
-
-const submitQuickCreate = () => {
-    form.post('/author/works', {
-        preserveScroll: true,
-        onSuccess: () => {
-            isQuickCreateOpen.value = false;
-            form.reset();
-        },
-    });
-};
 
 // Copy UUID with feedback
-const copyWorkUuid = async (uuid: string) => {
+const copyOeuvreUuid = async (uuid: string) => {
     try {
         await navigator.clipboard.writeText(uuid);
         copiedUuid.value = uuid;
@@ -107,16 +89,17 @@ const copyWorkUuid = async (uuid: string) => {
     }
 };
 
-// Global Hotkeys (⌘N / Ctrl+N for New Work)
+// Global Hotkeys (⌘N / Ctrl+N for New Work) — opens the create page, the
+// same destination as the "new work" buttons.
 useEventListener('keydown', (e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') {
         e.preventDefault();
-        isQuickCreateOpen.value = true;
+        router.visit(create());
     }
 });
 
 // Category Heuristics & Icons
-const getWorkCategoryMeta = (title: string, description?: string | null) => {
+const getOeuvreCategoryMeta = (title: string, description?: string | null) => {
     const text = `${title} ${description || ''}`.toLowerCase();
 
     if (
@@ -202,7 +185,7 @@ const getStatusMeta = (status: string) => {
         case 'registered':
         case 'approved':
             return {
-                label: t('works.status.registered'),
+                label: t('oeuvres.status.registered'),
                 class: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
                 dotClass: 'bg-emerald-500',
                 pulse: true,
@@ -212,7 +195,7 @@ const getStatusMeta = (status: string) => {
         case 'submitted':
         case 'pending':
             return {
-                label: t('works.status.under_review'),
+                label: t('oeuvres.status.under_review'),
                 class: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30',
                 dotClass: 'bg-amber-500',
                 pulse: true,
@@ -220,7 +203,7 @@ const getStatusMeta = (status: string) => {
             };
         case 'rejected':
             return {
-                label: t('works.status.rejected'),
+                label: t('oeuvres.status.rejected'),
                 class: 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30',
                 dotClass: 'bg-rose-500',
                 pulse: false,
@@ -229,7 +212,7 @@ const getStatusMeta = (status: string) => {
         case 'draft':
         default:
             return {
-                label: t('works.status.draft'),
+                label: t('oeuvres.status.draft'),
                 class: 'bg-muted text-muted-foreground border-border/80',
                 dotClass: 'bg-muted-foreground/60',
                 pulse: false,
@@ -239,27 +222,28 @@ const getStatusMeta = (status: string) => {
 };
 
 // KPI Metrics
-const totalWorksCount = computed(() => props.works.length);
+const totalOeuvresCount = computed(() => props.oeuvres.length);
 
 const registeredCount = computed(
     () =>
-        props.works.filter((w) => ['registered', 'approved'].includes(w.status))
-            .length,
+        props.oeuvres.filter((w) =>
+            ['registered', 'approved'].includes(w.status),
+        ).length,
 );
 
 const underReviewCount = computed(
     () =>
-        props.works.filter((w) =>
+        props.oeuvres.filter((w) =>
             ['under_review', 'submitted', 'pending'].includes(w.status),
         ).length,
 );
 
 const draftCount = computed(
-    () => props.works.filter((w) => w.status === 'draft').length,
+    () => props.oeuvres.filter((w) => w.status === 'draft').length,
 );
 
 const totalFilesCount = computed(() =>
-    props.works.reduce((acc, w) => acc + (w.media_files_count || 0), 0),
+    props.oeuvres.reduce((acc, w) => acc + (w.media_files_count || 0), 0),
 );
 
 // Date Formatter
@@ -285,27 +269,28 @@ const formatDate = (dateString: string) => {
 };
 
 // Filtered & Sorted Works
-const filteredWorks = computed(() => {
-    let result = props.works.filter((work) => {
+const filteredOeuvres = computed(() => {
+    const result = labelledOeuvres.value.filter((oeuvre) => {
         // Search Filter
         const query = searchQuery.value.trim().toLowerCase();
         const matchesSearch =
             query === '' ||
-            work.title.toLowerCase().includes(query) ||
-            (work.description &&
-                work.description.toLowerCase().includes(query)) ||
-            work.uuid.toLowerCase().includes(query);
+            oeuvre.label.toLowerCase().includes(query) ||
+            (oeuvre.description &&
+                oeuvre.description.toLowerCase().includes(query)) ||
+            oeuvre.uuid.toLowerCase().includes(query);
 
         // Status Filter
         let matchesStatus = true;
+
         if (selectedStatus.value === 'registered') {
-            matchesStatus = ['registered', 'approved'].includes(work.status);
+            matchesStatus = ['registered', 'approved'].includes(oeuvre.status);
         } else if (selectedStatus.value === 'under_review') {
             matchesStatus = ['under_review', 'submitted', 'pending'].includes(
-                work.status,
+                oeuvre.status,
             );
         } else if (selectedStatus.value === 'draft') {
-            matchesStatus = work.status === 'draft';
+            matchesStatus = oeuvre.status === 'draft';
         }
 
         return matchesSearch && matchesStatus;
@@ -319,15 +304,18 @@ const filteredWorks = computed(() => {
                 new Date(a.created_at).getTime()
             );
         }
+
         if (selectedSort.value === 'oldest') {
             return (
                 new Date(a.created_at).getTime() -
                 new Date(b.created_at).getTime()
             );
         }
+
         if (selectedSort.value === 'title') {
-            return a.title.localeCompare(b.title);
+            return a.label.localeCompare(b.label);
         }
+
         if (selectedSort.value === 'files') {
             return (b.media_files_count || 0) - (a.media_files_count || 0);
         }
@@ -344,7 +332,7 @@ const resetFilters = () => {
 </script>
 
 <template>
-    <Head :title="t('works.index.title')" />
+    <Head :title="t('oeuvres.index.title')" />
 
     <div class="mx-auto w-full max-w-7xl space-y-6 p-4 sm:p-6 lg:p-8">
         <!-- 1. Top Sovereign Hero Banner -->
@@ -371,7 +359,7 @@ const resetFilters = () => {
                             <Shield
                                 class="size-3.5 text-onda-blue-600 dark:text-onda-blue-400"
                             />
-                            <span>{{ t('works.index.title') }}</span>
+                            <span>{{ t('oeuvres.index.title') }}</span>
                         </Badge>
 
                         <span
@@ -381,8 +369,8 @@ const resetFilters = () => {
                                 class="size-1.5 animate-pulse rounded-full bg-emerald-500"
                             />
                             {{
-                                t('works.index.showingCount', {
-                                    count: totalWorksCount,
+                                t('oeuvres.index.showingCount', {
+                                    count: totalOeuvresCount,
                                 })
                             }}
                         </span>
@@ -392,12 +380,12 @@ const resetFilters = () => {
                         <h1
                             class="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl lg:text-4xl"
                         >
-                            {{ t('works.index.title') }}
+                            {{ t('oeuvres.index.title') }}
                         </h1>
                         <p
                             class="text-sm leading-relaxed text-muted-foreground sm:text-base"
                         >
-                            {{ t('works.index.subtitle') }}
+                            {{ t('oeuvres.index.subtitle') }}
                         </p>
                     </div>
                 </div>
@@ -405,15 +393,17 @@ const resetFilters = () => {
                 <!-- Action Button Group -->
                 <div class="flex shrink-0 flex-wrap items-center gap-3">
                     <Button
+                        as-child
                         class="h-11 cursor-pointer gap-2 rounded-xl bg-gradient-to-r from-onda-blue-600 to-onda-blue-700 px-5 text-sm font-semibold text-white shadow-lg shadow-onda-blue-600/25 transition-all duration-200 hover:-translate-y-0.5 hover:from-onda-blue-700 hover:to-onda-blue-800 hover:shadow-onda-blue-600/40 active:translate-y-0 dark:from-onda-blue-500 dark:to-onda-blue-600 dark:text-gray-950"
-                        @click="isQuickCreateOpen = true"
                     >
-                        <FolderPlus class="size-4.5" />
-                        <span>{{ t('works.index.newWork') }}</span>
-                        <kbd
-                            class="hidden rounded-md bg-white/20 px-1.5 py-0.5 font-mono text-[10px] font-bold text-white uppercase sm:inline-block dark:bg-black/20 dark:text-gray-950"
-                            >⌘N</kbd
-                        >
+                        <Link :href="create()">
+                            <FolderPlus class="size-4.5" />
+                            <span>{{ t('oeuvres.index.newOeuvre') }}</span>
+                            <kbd
+                                class="hidden rounded-md bg-white/20 px-1.5 py-0.5 font-mono text-[10px] font-bold text-white uppercase sm:inline-block dark:bg-black/20 dark:text-gray-950"
+                                >⌘N</kbd
+                            >
+                        </Link>
                     </Button>
                 </div>
             </div>
@@ -428,7 +418,7 @@ const resetFilters = () => {
                 <CardContent class="p-4 sm:p-5">
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-medium text-muted-foreground">
-                            {{ t('works.index.statTotal') }}
+                            {{ t('oeuvres.index.statTotal') }}
                         </span>
                         <div
                             class="flex size-8 items-center justify-center rounded-lg bg-onda-blue-500/10 text-onda-blue-600 transition-transform group-hover:scale-110 dark:text-onda-blue-400"
@@ -440,12 +430,12 @@ const resetFilters = () => {
                         <span
                             class="text-2xl font-black tracking-tight text-foreground sm:text-3xl"
                         >
-                            {{ totalWorksCount }}
+                            {{ totalOeuvresCount }}
                         </span>
                         <span class="text-xs text-muted-foreground">
                             {{
-                                t('works.index.fileCount', {
-                                    count: totalWorksCount,
+                                t('oeuvres.index.fileCount', {
+                                    count: totalOeuvresCount,
                                 })
                             }}
                         </span>
@@ -460,7 +450,7 @@ const resetFilters = () => {
                 <CardContent class="p-4 sm:p-5">
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-medium text-muted-foreground">
-                            {{ t('works.index.statRegistered') }}
+                            {{ t('oeuvres.index.statRegistered') }}
                         </span>
                         <div
                             class="flex size-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 transition-transform group-hover:scale-110 dark:text-emerald-400"
@@ -475,7 +465,7 @@ const resetFilters = () => {
                             {{ registeredCount }}
                         </span>
                         <span class="text-xs text-muted-foreground">
-                            / {{ totalWorksCount }}
+                            / {{ totalOeuvresCount }}
                         </span>
                     </div>
                 </CardContent>
@@ -488,7 +478,7 @@ const resetFilters = () => {
                 <CardContent class="p-4 sm:p-5">
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-medium text-muted-foreground">
-                            {{ t('works.index.statUnderReview') }}
+                            {{ t('oeuvres.index.statUnderReview') }}
                         </span>
                         <div
                             class="flex size-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 transition-transform group-hover:scale-110 dark:text-amber-400"
@@ -505,7 +495,7 @@ const resetFilters = () => {
                         <span class="text-xs text-muted-foreground">
                             {{
                                 draftCount > 0
-                                    ? `(${draftCount} ${t('works.index.filterDraft')})`
+                                    ? `(${draftCount} ${t('oeuvres.index.filterDraft')})`
                                     : ''
                             }}
                         </span>
@@ -520,7 +510,7 @@ const resetFilters = () => {
                 <CardContent class="p-4 sm:p-5">
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-medium text-muted-foreground">
-                            {{ t('works.index.statFiles') }}
+                            {{ t('oeuvres.index.statFiles') }}
                         </span>
                         <div
                             class="flex size-8 items-center justify-center rounded-lg bg-onda-teal-500/10 text-onda-teal-600 transition-transform group-hover:scale-110 dark:text-onda-teal-400"
@@ -535,7 +525,7 @@ const resetFilters = () => {
                             {{ totalFilesCount }}
                         </span>
                         <span class="text-xs text-muted-foreground">
-                            {{ t('works.index.statFiles') }}
+                            {{ t('oeuvres.index.statFiles') }}
                         </span>
                     </div>
                 </CardContent>
@@ -556,7 +546,7 @@ const resetFilters = () => {
                     <Input
                         v-model="searchQuery"
                         type="text"
-                        :placeholder="t('works.index.searchPlaceholder')"
+                        :placeholder="t('oeuvres.index.searchPlaceholder')"
                         class="input-premium h-10 rounded-xl ps-9.5 text-xs sm:text-sm"
                     />
                 </div>
@@ -575,9 +565,9 @@ const resetFilters = () => {
                         ]"
                         @click="selectedStatus = 'all'"
                     >
-                        {{ t('works.index.filterAll') }}
+                        {{ t('oeuvres.index.filterAll') }}
                         <span class="ms-1 text-[10px] opacity-70"
-                            >({{ totalWorksCount }})</span
+                            >({{ totalOeuvresCount }})</span
                         >
                     </button>
                     <button
@@ -590,7 +580,7 @@ const resetFilters = () => {
                         ]"
                         @click="selectedStatus = 'registered'"
                     >
-                        {{ t('works.index.filterRegistered') }}
+                        {{ t('oeuvres.index.filterRegistered') }}
                         <span class="ms-1 text-[10px] opacity-70"
                             >({{ registeredCount }})</span
                         >
@@ -605,7 +595,7 @@ const resetFilters = () => {
                         ]"
                         @click="selectedStatus = 'under_review'"
                     >
-                        {{ t('works.index.filterUnderReview') }}
+                        {{ t('oeuvres.index.filterUnderReview') }}
                         <span class="ms-1 text-[10px] opacity-70"
                             >({{ underReviewCount }})</span
                         >
@@ -620,7 +610,7 @@ const resetFilters = () => {
                         ]"
                         @click="selectedStatus = 'draft'"
                     >
-                        {{ t('works.index.filterDraft') }}
+                        {{ t('oeuvres.index.filterDraft') }}
                         <span class="ms-1 text-[10px] opacity-70"
                             >({{ draftCount }})</span
                         >
@@ -642,16 +632,16 @@ const resetFilters = () => {
                         class="input-premium h-10 cursor-pointer appearance-none rounded-xl bg-background ps-8 pe-8 text-xs font-medium text-foreground focus:outline-none"
                     >
                         <option value="newest">
-                            {{ t('works.index.sortNewest') }}
+                            {{ t('oeuvres.index.sortNewest') }}
                         </option>
                         <option value="oldest">
-                            {{ t('works.index.sortOldest') }}
+                            {{ t('oeuvres.index.sortOldest') }}
                         </option>
                         <option value="title">
-                            {{ t('works.index.sortTitle') }}
+                            {{ t('oeuvres.index.sortTitle') }}
                         </option>
                         <option value="files">
-                            {{ t('works.index.sortFiles') }}
+                            {{ t('oeuvres.index.sortFiles') }}
                         </option>
                     </select>
                 </div>
@@ -668,7 +658,7 @@ const resetFilters = () => {
                                 ? 'bg-background text-onda-blue-600 shadow-xs dark:text-onda-blue-400'
                                 : 'text-muted-foreground hover:text-foreground',
                         ]"
-                        :title="t('works.index.grid')"
+                        :title="t('oeuvres.index.grid')"
                         @click="viewMode = 'grid'"
                     >
                         <Grid3X3 class="size-4" />
@@ -681,7 +671,7 @@ const resetFilters = () => {
                                 ? 'bg-background text-onda-blue-600 shadow-xs dark:text-onda-blue-400'
                                 : 'text-muted-foreground hover:text-foreground',
                         ]"
-                        :title="t('works.index.list')"
+                        :title="t('oeuvres.index.list')"
                         @click="viewMode = 'list'"
                     >
                         <List class="size-4" />
@@ -693,7 +683,7 @@ const resetFilters = () => {
         <!-- 4. Main Content Area -->
         <!-- A. ZERO WORKS STATE (No Works at all in account) -->
         <div
-            v-if="props.works.length === 0"
+            v-if="props.oeuvres.length === 0"
             class="relative overflow-hidden rounded-3xl border border-dashed border-border/90 bg-card/60 p-8 text-center backdrop-blur-xs sm:p-14"
         >
             <div
@@ -710,22 +700,24 @@ const resetFilters = () => {
                     <h3
                         class="text-lg font-bold tracking-tight text-foreground sm:text-xl"
                     >
-                        {{ t('works.index.empty') }}
+                        {{ t('oeuvres.index.empty') }}
                     </h3>
                     <p
                         class="text-xs leading-relaxed text-muted-foreground sm:text-sm"
                     >
-                        {{ t('works.index.emptyDescription') }}
+                        {{ t('oeuvres.index.emptyDescription') }}
                     </p>
                 </div>
 
                 <div class="pt-2">
                     <Button
+                        as-child
                         class="h-11 cursor-pointer gap-2 rounded-xl bg-gradient-to-r from-onda-blue-600 to-onda-blue-700 px-6 font-semibold text-white shadow-lg shadow-onda-blue-600/25 transition-all duration-200 hover:-translate-y-0.5 hover:from-onda-blue-700 hover:to-onda-blue-800 hover:shadow-onda-blue-600/40"
-                        @click="isQuickCreateOpen = true"
                     >
-                        <Plus class="size-4" />
-                        <span>{{ t('works.index.emptyAction') }}</span>
+                        <Link :href="create()">
+                            <Plus class="size-4" />
+                            <span>{{ t('oeuvres.index.emptyAction') }}</span>
+                        </Link>
                     </Button>
                 </div>
             </div>
@@ -733,7 +725,7 @@ const resetFilters = () => {
 
         <!-- B. NO FILTER RESULTS STATE -->
         <div
-            v-else-if="filteredWorks.length === 0"
+            v-else-if="filteredOeuvres.length === 0"
             class="rounded-3xl border border-dashed border-border/80 bg-card/40 p-10 text-center backdrop-blur-xs sm:p-14"
         >
             <div class="mx-auto max-w-sm space-y-4">
@@ -744,10 +736,10 @@ const resetFilters = () => {
                 </div>
                 <div class="space-y-1">
                     <h3 class="text-base font-bold text-foreground">
-                        {{ t('works.index.noSearchResults') }}
+                        {{ t('oeuvres.index.noSearchResults') }}
                     </h3>
                     <p class="text-xs text-muted-foreground">
-                        {{ t('works.index.searchPlaceholder') }}
+                        {{ t('oeuvres.index.searchPlaceholder') }}
                     </p>
                 </div>
                 <Button
@@ -756,7 +748,7 @@ const resetFilters = () => {
                     @click="resetFilters"
                 >
                     <RotateCcw class="size-3.5" />
-                    <span>{{ t('works.index.resetFilters') }}</span>
+                    <span>{{ t('oeuvres.index.resetFilters') }}</span>
                 </Button>
             </div>
         </div>
@@ -767,8 +759,8 @@ const resetFilters = () => {
             class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
             <div
-                v-for="work in filteredWorks"
-                :key="work.uuid"
+                v-for="oeuvre in filteredOeuvres"
+                :key="oeuvre.uuid"
                 class="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-onda-blue-500/40 hover:shadow-xl hover:shadow-onda-blue-600/5 dark:bg-card/90 dark:hover:border-onda-blue-400/40"
             >
                 <!-- Top Card Bar: Category & Status Badge -->
@@ -779,17 +771,17 @@ const resetFilters = () => {
                             <div
                                 :class="[
                                     'flex size-7 items-center justify-center rounded-lg border',
-                                    getWorkCategoryMeta(
-                                        work.title,
-                                        work.description,
+                                    getOeuvreCategoryMeta(
+                                        oeuvre.label,
+                                        oeuvre.description,
                                     ).colorClass,
                                 ]"
                             >
                                 <component
                                     :is="
-                                        getWorkCategoryMeta(
-                                            work.title,
-                                            work.description,
+                                        getOeuvreCategoryMeta(
+                                            oeuvre.label,
+                                            oeuvre.description,
                                         ).icon
                                     "
                                     class="size-3.5"
@@ -798,16 +790,16 @@ const resetFilters = () => {
                             <span
                                 :class="[
                                     'rounded-md border px-2 py-0.5 text-[11px] font-semibold',
-                                    getWorkCategoryMeta(
-                                        work.title,
-                                        work.description,
+                                    getOeuvreCategoryMeta(
+                                        oeuvre.label,
+                                        oeuvre.description,
                                     ).badgeClass,
                                 ]"
                             >
                                 {{
-                                    getWorkCategoryMeta(
-                                        work.title,
-                                        work.description,
+                                    getOeuvreCategoryMeta(
+                                        oeuvre.label,
+                                        oeuvre.description,
                                     ).label
                                 }}
                             </span>
@@ -818,47 +810,49 @@ const resetFilters = () => {
                             variant="outline"
                             :class="[
                                 'gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
-                                getStatusMeta(work.status).class,
+                                getStatusMeta(oeuvre.status).class,
                             ]"
                         >
                             <span
-                                v-if="getStatusMeta(work.status).pulse"
+                                v-if="getStatusMeta(oeuvre.status).pulse"
                                 :class="[
                                     'size-1.5 animate-pulse rounded-full',
-                                    getStatusMeta(work.status).dotClass,
+                                    getStatusMeta(oeuvre.status).dotClass,
                                 ]"
                             />
                             <span
                                 v-else
                                 :class="[
                                     'size-1.5 rounded-full',
-                                    getStatusMeta(work.status).dotClass,
+                                    getStatusMeta(oeuvre.status).dotClass,
                                 ]"
                             />
-                            <span>{{ getStatusMeta(work.status).label }}</span>
+                            <span>{{
+                                getStatusMeta(oeuvre.status).label
+                            }}</span>
                         </Badge>
                     </div>
 
                     <!-- Work Title & Description -->
                     <div class="mt-4 space-y-1.5">
                         <Link
-                            :href="show(work.uuid)"
+                            :href="show(oeuvre.uuid)"
                             class="block group-hover:text-onda-blue-600 dark:group-hover:text-onda-blue-400"
                         >
                             <h2
                                 class="line-clamp-1 text-base font-bold tracking-tight text-foreground transition-colors"
-                                :title="work.title"
+                                :title="oeuvre.label"
                             >
-                                {{ work.title }}
+                                {{ oeuvre.label }}
                             </h2>
                         </Link>
                         <p
                             class="line-clamp-2 text-xs leading-relaxed text-muted-foreground"
-                            :title="work.description || ''"
+                            :title="oeuvre.description || ''"
                         >
                             {{
-                                work.description ||
-                                t('works.index.noDescription')
+                                oeuvre.description ||
+                                t('oeuvres.index.noDescription')
                             }}
                         </p>
                     </div>
@@ -877,8 +871,8 @@ const resetFilters = () => {
                                 class="size-3.5 text-onda-blue-600 dark:text-onda-blue-400"
                             />
                             <span>{{
-                                t('works.index.fileCount', {
-                                    count: work.media_files_count || 0,
+                                t('oeuvres.index.fileCount', {
+                                    count: oeuvre.media_files_count || 0,
                                 })
                             }}</span>
                         </div>
@@ -886,7 +880,7 @@ const resetFilters = () => {
                         <span
                             class="font-mono text-[11px] text-muted-foreground"
                         >
-                            {{ formatDate(work.created_at) }}
+                            {{ formatDate(oeuvre.created_at) }}
                         </span>
                     </div>
 
@@ -896,23 +890,23 @@ const resetFilters = () => {
                         <button
                             type="button"
                             class="flex cursor-pointer items-center gap-1 rounded-lg border border-border/80 bg-muted/40 px-2 py-1.5 font-mono text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                            :title="work.uuid"
-                            @click="copyWorkUuid(work.uuid)"
+                            :title="oeuvre.uuid"
+                            @click="copyOeuvreUuid(oeuvre.uuid)"
                         >
                             <component
-                                :is="copiedUuid === work.uuid ? Check : Copy"
+                                :is="copiedUuid === oeuvre.uuid ? Check : Copy"
                                 :class="[
                                     'size-3 shrink-0',
-                                    copiedUuid === work.uuid
+                                    copiedUuid === oeuvre.uuid
                                         ? 'text-emerald-600 dark:text-emerald-400'
                                         : 'text-muted-foreground',
                                 ]"
                             />
                             <span class="max-w-[75px] truncate sm:max-w-[90px]">
                                 {{
-                                    copiedUuid === work.uuid
-                                        ? t('works.index.uuidCopied')
-                                        : work.uuid.slice(0, 8) + '...'
+                                    copiedUuid === oeuvre.uuid
+                                        ? t('oeuvres.index.uuidCopied')
+                                        : oeuvre.uuid.slice(0, 8) + '...'
                                 }}
                             </span>
                         </button>
@@ -923,8 +917,10 @@ const resetFilters = () => {
                             size="sm"
                             class="h-8.5 cursor-pointer gap-1.5 rounded-xl bg-onda-blue-600/10 px-3 text-xs font-semibold text-onda-blue-700 transition-all hover:bg-onda-blue-600 hover:text-white dark:bg-onda-blue-500/20 dark:text-onda-blue-300 dark:hover:bg-onda-blue-500 dark:hover:text-gray-950"
                         >
-                            <Link :href="show(work.uuid)">
-                                <span>{{ t('works.index.manageWork') }}</span>
+                            <Link :href="show(oeuvre.uuid)">
+                                <span>{{
+                                    t('oeuvres.index.manageOeuvre')
+                                }}</span>
                                 <ExternalLink class="size-3 rtl:rotate-180" />
                             </Link>
                         </Button>
@@ -945,20 +941,20 @@ const resetFilters = () => {
                             class="border-b border-border/70 bg-muted/40 font-semibold text-muted-foreground"
                         >
                             <th class="px-4 py-3.5 text-start font-medium">
-                                {{ t('works.index.title') }}
+                                {{ t('oeuvres.index.title') }}
                             </th>
                             <th
                                 class="hidden px-4 py-3.5 text-start font-medium md:table-cell"
                             >
-                                {{ t('works.index.copyUuid') }}
+                                {{ t('oeuvres.index.copyUuid') }}
                             </th>
                             <th class="px-4 py-3.5 text-start font-medium">
-                                {{ t('works.index.statFiles') }}
+                                {{ t('oeuvres.index.statFiles') }}
                             </th>
                             <th
                                 class="hidden px-4 py-3.5 text-start font-medium sm:table-cell"
                             >
-                                {{ t('works.index.createdOn', { date: '' }) }}
+                                {{ t('oeuvres.index.createdOn', { date: '' }) }}
                             </th>
                             <th class="px-4 py-3.5 text-start font-medium">
                                 {{ t('dashboard.table.colStatus') }}
@@ -970,30 +966,30 @@ const resetFilters = () => {
                     </thead>
                     <tbody class="divide-y divide-border/60">
                         <tr
-                            v-for="work in filteredWorks"
-                            :key="work.uuid"
+                            v-for="oeuvre in filteredOeuvres"
+                            :key="oeuvre.uuid"
                             class="group transition-colors hover:bg-accent/40"
                         >
                             <!-- Title & Category Icon -->
                             <td class="px-4 py-3.5">
                                 <Link
-                                    :href="show(work.uuid)"
+                                    :href="show(oeuvre.uuid)"
                                     class="flex items-center gap-3"
                                 >
                                     <div
                                         :class="[
                                             'flex size-8 shrink-0 items-center justify-center rounded-lg border',
-                                            getWorkCategoryMeta(
-                                                work.title,
-                                                work.description,
+                                            getOeuvreCategoryMeta(
+                                                oeuvre.label,
+                                                oeuvre.description,
                                             ).colorClass,
                                         ]"
                                     >
                                         <component
                                             :is="
-                                                getWorkCategoryMeta(
-                                                    work.title,
-                                                    work.description,
+                                                getOeuvreCategoryMeta(
+                                                    oeuvre.label,
+                                                    oeuvre.description,
                                                 ).icon
                                             "
                                             class="size-4"
@@ -1003,13 +999,13 @@ const resetFilters = () => {
                                         <p
                                             class="max-w-xs truncate font-bold text-foreground transition-colors group-hover:text-onda-blue-600 sm:max-w-sm md:max-w-md dark:group-hover:text-onda-blue-400"
                                         >
-                                            {{ work.title }}
+                                            {{ oeuvre.label }}
                                         </p>
                                         <p
-                                            v-if="work.description"
+                                            v-if="oeuvre.description"
                                             class="max-w-xs truncate text-[11px] text-muted-foreground sm:max-w-sm"
                                         >
-                                            {{ work.description }}
+                                            {{ oeuvre.description }}
                                         </p>
                                     </div>
                                 </Link>
@@ -1020,19 +1016,21 @@ const resetFilters = () => {
                                 <button
                                     type="button"
                                     class="flex cursor-pointer items-center gap-1.5 rounded-md bg-muted/60 px-2 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                                    :title="work.uuid"
-                                    @click="copyWorkUuid(work.uuid)"
+                                    :title="oeuvre.uuid"
+                                    @click="copyOeuvreUuid(oeuvre.uuid)"
                                 >
-                                    <span>{{ work.uuid.slice(0, 10) }}...</span>
+                                    <span
+                                        >{{ oeuvre.uuid.slice(0, 10) }}...</span
+                                    >
                                     <component
                                         :is="
-                                            copiedUuid === work.uuid
+                                            copiedUuid === oeuvre.uuid
                                                 ? Check
                                                 : Copy
                                         "
                                         :class="[
                                             'size-3 shrink-0',
-                                            copiedUuid === work.uuid
+                                            copiedUuid === oeuvre.uuid
                                                 ? 'text-emerald-600 dark:text-emerald-400'
                                                 : 'text-muted-foreground',
                                         ]"
@@ -1048,7 +1046,7 @@ const resetFilters = () => {
                                     <Files
                                         class="size-3 text-onda-blue-600 dark:text-onda-blue-400"
                                     />
-                                    {{ work.media_files_count || 0 }}
+                                    {{ oeuvre.media_files_count || 0 }}
                                 </span>
                             </td>
 
@@ -1056,7 +1054,7 @@ const resetFilters = () => {
                             <td
                                 class="hidden px-4 py-3.5 font-mono whitespace-nowrap text-muted-foreground sm:table-cell"
                             >
-                                {{ formatDate(work.created_at) }}
+                                {{ formatDate(oeuvre.created_at) }}
                             </td>
 
                             <!-- Status Badge -->
@@ -1065,25 +1063,29 @@ const resetFilters = () => {
                                     variant="outline"
                                     :class="[
                                         'gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
-                                        getStatusMeta(work.status).class,
+                                        getStatusMeta(oeuvre.status).class,
                                     ]"
                                 >
                                     <span
-                                        v-if="getStatusMeta(work.status).pulse"
+                                        v-if="
+                                            getStatusMeta(oeuvre.status).pulse
+                                        "
                                         :class="[
                                             'size-1.5 animate-pulse rounded-full',
-                                            getStatusMeta(work.status).dotClass,
+                                            getStatusMeta(oeuvre.status)
+                                                .dotClass,
                                         ]"
                                     />
                                     <span
                                         v-else
                                         :class="[
                                             'size-1.5 rounded-full',
-                                            getStatusMeta(work.status).dotClass,
+                                            getStatusMeta(oeuvre.status)
+                                                .dotClass,
                                         ]"
                                     />
                                     <span>{{
-                                        getStatusMeta(work.status).label
+                                        getStatusMeta(oeuvre.status).label
                                     }}</span>
                                 </Badge>
                             </td>
@@ -1096,9 +1098,9 @@ const resetFilters = () => {
                                     variant="ghost"
                                     class="h-8 cursor-pointer gap-1.5 px-2.5 text-xs font-semibold text-onda-blue-600 hover:bg-onda-blue-500/10 hover:text-onda-blue-700 dark:text-onda-blue-400"
                                 >
-                                    <Link :href="show(work.uuid)">
+                                    <Link :href="show(oeuvre.uuid)">
                                         <span>{{
-                                            t('works.index.manageWork')
+                                            t('oeuvres.index.manageOeuvre')
                                         }}</span>
                                         <ExternalLink
                                             class="size-3 rtl:rotate-180"
@@ -1112,84 +1114,4 @@ const resetFilters = () => {
             </div>
         </div>
     </div>
-
-    <!-- 5. Quick Work Creation Modal Dialog -->
-    <Dialog :open="isQuickCreateOpen" @update:open="isQuickCreateOpen = $event">
-        <DialogContent class="sm:max-w-lg">
-            <DialogHeader>
-                <div
-                    class="mb-2 flex size-11 items-center justify-center rounded-xl bg-onda-blue-500/10 text-onda-blue-600 dark:text-onda-blue-400"
-                >
-                    <Sparkles class="size-5.5" />
-                </div>
-                <DialogTitle class="text-lg font-bold tracking-tight">
-                    {{ t('works.index.quickCreateTitle') }}
-                </DialogTitle>
-                <DialogDescription class="text-xs text-muted-foreground">
-                    {{ t('works.index.quickCreateSubtitle') }}
-                </DialogDescription>
-            </DialogHeader>
-
-            <form @submit.prevent="submitQuickCreate" class="space-y-4 py-2">
-                <!-- Title Field -->
-                <div class="space-y-1.5">
-                    <Label for="quick-title" class="text-xs font-semibold">
-                        {{ t('works.create.titleLabel') }}
-                        <span class="text-destructive">*</span>
-                    </Label>
-                    <Input
-                        id="quick-title"
-                        v-model="form.title"
-                        type="text"
-                        required
-                        autofocus
-                        :placeholder="t('works.create.titlePlaceholder')"
-                        class="input-premium h-10 text-xs sm:text-sm"
-                    />
-                    <InputError :message="form.errors.title" />
-                </div>
-
-                <!-- Description Field -->
-                <div class="space-y-1.5">
-                    <Label
-                        for="quick-description"
-                        class="text-xs font-semibold"
-                    >
-                        {{ t('works.create.descriptionLabel') }}
-                    </Label>
-                    <textarea
-                        id="quick-description"
-                        v-model="form.description"
-                        rows="3"
-                        :placeholder="t('works.create.descriptionPlaceholder')"
-                        class="flex w-full rounded-xl border border-input bg-background/50 px-3.5 py-2.5 text-xs shadow-xs transition-all outline-none placeholder:text-muted-foreground focus-visible:border-onda-blue-600 focus-visible:ring-4 focus-visible:ring-onda-blue-600/20 sm:text-sm dark:bg-input/20"
-                    />
-                    <InputError :message="form.errors.description" />
-                </div>
-
-                <DialogFooter class="mt-4 gap-2 sm:gap-0">
-                    <DialogClose as-child>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            class="cursor-pointer rounded-xl text-xs"
-                        >
-                            {{ t('works.index.cancel') }}
-                        </Button>
-                    </DialogClose>
-                    <Button
-                        type="submit"
-                        :disabled="form.processing"
-                        class="cursor-pointer rounded-xl bg-gradient-to-r from-onda-blue-600 to-onda-blue-700 px-5 text-xs font-semibold text-white shadow-md hover:from-onda-blue-700 hover:to-onda-blue-800"
-                    >
-                        {{
-                            form.processing
-                                ? t('works.create.submitting')
-                                : t('works.create.submit')
-                        }}
-                    </Button>
-                </DialogFooter>
-            </form>
-        </DialogContent>
-    </Dialog>
 </template>

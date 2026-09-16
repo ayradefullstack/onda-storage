@@ -7,8 +7,8 @@ use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Value\UploadIntent;
 use App\Models\FileAccessLog;
 use App\Models\MediaFile;
+use App\Models\Oeuvre;
 use App\Models\User;
-use App\Models\Work;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
@@ -20,7 +20,7 @@ use Spatie\Permission\Models\Role;
  * watermarking, production delivery). Every fixture goes through the REAL
  * `VaultContract` — the same pre-allocate/write-chunk/finalize path a real
  * upload uses — so these prove the full round trip through HTTP, not just
- * that a mocked status string renders. `WorksStatusTest.php` established
+ * that a mocked status string renders. `OeuvresStatusTest.php` established
  * this same technique for the P5 pipeline; this file's fixture is
  * deliberately identical in shape.
  */
@@ -33,18 +33,18 @@ function streamTestAuthor(): User
     return $user;
 }
 
-function streamTestMediaFile(User $author, Work $work, string $status = 'ready'): MediaFile
+function streamTestMediaFile(User $author, Oeuvre $oeuvre, string $status = 'ready'): MediaFile
 {
     $vault = app(VaultContract::class);
     $bytes = file_get_contents(base_path('tests/fixtures/sample.mp4'));
 
-    $session = $vault->beginUpload(new UploadIntent($work->id, $author->id, 'sample.mp4', strlen($bytes)));
+    $session = $vault->beginUpload(new UploadIntent($oeuvre->id, $author->id, 'sample.mp4', strlen($bytes)));
     $vault->writeChunk($session, 0, $bytes);
     $object = $vault->finalize($session->fresh());
 
     $mediaFile = new MediaFile;
     $mediaFile->uuid = (string) Str::uuid7();
-    $mediaFile->work_id = $work->id;
+    $mediaFile->oeuvre_id = $oeuvre->id;
     $mediaFile->uploaded_by = $author->id;
     $mediaFile->original_name = 'sample.mp4';
     $mediaFile->extension = 'mp4';
@@ -73,8 +73,8 @@ function streamTestCleanup(MediaFile $mediaFile): void
 
 test('streams the full file with the exact original bytes', function () {
     $author = streamTestAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
-    $mediaFile = streamTestMediaFile($author, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = streamTestMediaFile($author, $oeuvre);
     $original = file_get_contents(base_path('tests/fixtures/sample.mp4'));
 
     $url = SignedMediaUrl::forStreaming($mediaFile, $author);
@@ -91,8 +91,8 @@ test('streams the full file with the exact original bytes', function () {
 
 test('a Range request returns 206 with exactly the requested bytes', function () {
     $author = streamTestAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
-    $mediaFile = streamTestMediaFile($author, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = streamTestMediaFile($author, $oeuvre);
     $original = file_get_contents(base_path('tests/fixtures/sample.mp4'));
 
     $url = SignedMediaUrl::forStreaming($mediaFile, $author);
@@ -111,8 +111,8 @@ test('a Range request returns 206 with exactly the requested bytes', function ()
 
 test('a Range start not on a 16-byte cipher block boundary still decrypts correctly', function () {
     $author = streamTestAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
-    $mediaFile = streamTestMediaFile($author, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = streamTestMediaFile($author, $oeuvre);
     $original = file_get_contents(base_path('tests/fixtures/sample.mp4'));
 
     $url = SignedMediaUrl::forStreaming($mediaFile, $author);
@@ -133,8 +133,8 @@ test('a Range start not on a 16-byte cipher block boundary still decrypts correc
 
 test('an expired signature is rejected', function () {
     $author = streamTestAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
-    $mediaFile = streamTestMediaFile($author, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = streamTestMediaFile($author, $oeuvre);
 
     $expiredUrl = URL::temporarySignedRoute(
         'media.stream',
@@ -150,8 +150,8 @@ test('an expired signature is rejected', function () {
 test('an author cannot stream another author\'s deposit', function () {
     $owner = streamTestAuthor();
     $other = streamTestAuthor();
-    $work = Work::factory()->create(['author_id' => $owner->id]);
-    $mediaFile = streamTestMediaFile($owner, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $owner->id]);
+    $mediaFile = streamTestMediaFile($owner, $oeuvre);
 
     // A validly-signed link for the owner, opened from a different
     // authenticated session — the signature alone doesn't prove who's
@@ -166,8 +166,8 @@ test('an author cannot stream another author\'s deposit', function () {
 
 test('a deposit still mid-pipeline cannot be streamed', function () {
     $author = streamTestAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
-    $mediaFile = streamTestMediaFile($author, $work, status: 'scanning');
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = streamTestMediaFile($author, $oeuvre, status: 'scanning');
 
     $url = SignedMediaUrl::forStreaming($mediaFile, $author);
 
@@ -178,8 +178,8 @@ test('a deposit still mid-pipeline cannot be streamed', function () {
 
 test('a successful stream writes a chained file_access_logs row', function () {
     $author = streamTestAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
-    $mediaFile = streamTestMediaFile($author, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = streamTestMediaFile($author, $oeuvre);
 
     $url = SignedMediaUrl::forStreaming($mediaFile, $author);
     $this->actingAs($author)->get($url)->assertOk();
@@ -197,8 +197,8 @@ test('a successful stream writes a chained file_access_logs row', function () {
 test('media.link issues a url only for a ready deposit the requester owns', function () {
     $author = streamTestAuthor();
     $other = streamTestAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
-    $ready = streamTestMediaFile($author, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $ready = streamTestMediaFile($author, $oeuvre);
 
     $this->actingAs($author)
         ->getJson(route('media.link', $ready))
@@ -211,7 +211,7 @@ test('media.link issues a url only for a ready deposit the requester owns', func
 
     streamTestCleanup($ready);
 
-    $notReady = streamTestMediaFile($author, $work, status: 'processing');
+    $notReady = streamTestMediaFile($author, $oeuvre, status: 'processing');
 
     $this->actingAs($author)
         ->getJson(route('media.link', $notReady))

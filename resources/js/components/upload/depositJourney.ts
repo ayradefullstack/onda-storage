@@ -10,7 +10,7 @@
 import type { MediaFileSummary, UploadFileState } from '@/types/upload';
 
 /**
- * Merges the client-tracked in-flight uploads for one work with its
+ * Merges the client-tracked in-flight uploads for one oeuvre with its
  * server-tracked `MediaFile` rows into a single ordered list, so a file
  * never disappears from the page between "still uploading" and "has a
  * completed row" — the structural gap the redesign exists to close.
@@ -20,12 +20,14 @@ import type { MediaFileSummary, UploadFileState } from '@/types/upload';
  */
 export function mergeDepositEntries(
     uploadFiles: UploadFileState[],
-    workId: number,
+    oeuvreId: number,
     mediaFiles: MediaFileSummary[],
     readyAtLoadUuids: ReadonlySet<string>,
 ): DepositEntry[] {
     const uploadEntries: UploadEntry[] = uploadFiles
-        .filter((file) => file.workId === workId && file.status !== 'completed')
+        .filter(
+            (file) => file.oeuvreId === oeuvreId && file.status !== 'completed',
+        )
         .map((file) => ({ kind: 'upload', file }));
 
     const mediaEntries: MediaEntry[] = mediaFiles.map((file) => ({

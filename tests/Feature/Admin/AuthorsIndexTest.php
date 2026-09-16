@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use App\Models\MediaFile;
+use App\Models\Oeuvre;
 use App\Models\StorageQuota;
 use App\Models\User;
 use App\Models\Wilaya;
-use App\Models\Work;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -32,10 +32,10 @@ test('works count, files count and storage used are correct against seeded data'
     $admin = User::factory()->withRole('admin')->create();
     $author = User::factory()->withRole('author')->create();
 
-    $workOne = Work::factory()->create(['author_id' => $author->id, 'status' => 'submitted']);
-    $workTwo = Work::factory()->create(['author_id' => $author->id, 'status' => 'draft']);
-    MediaFile::factory()->count(2)->create(['work_id' => $workOne->id, 'size_bytes' => 1000]);
-    MediaFile::factory()->count(1)->create(['work_id' => $workTwo->id, 'size_bytes' => 500]);
+    $oeuvreOne = Oeuvre::factory()->create(['author_id' => $author->id, 'status' => 'submitted']);
+    $oeuvreTwo = Oeuvre::factory()->create(['author_id' => $author->id, 'status' => 'draft']);
+    MediaFile::factory()->count(2)->create(['oeuvre_id' => $oeuvreOne->id, 'size_bytes' => 1000]);
+    MediaFile::factory()->count(1)->create(['oeuvre_id' => $oeuvreTwo->id, 'size_bytes' => 500]);
 
     StorageQuota::factory()->create([
         'user_id' => $author->id,
@@ -49,7 +49,7 @@ test('works count, files count and storage used are correct against seeded data'
         ->firstWhere('email', $author->email);
 
     expect($row)
-        ->works_count->toBe(2)
+        ->oeuvres_count->toBe(2)
         ->files_count->toBe(3)
         ->quota_used_bytes->toBe(2500)
         ->quota_limit_bytes->toBe(10_000);
@@ -60,8 +60,8 @@ test('the index issues a small, fixed number of queries regardless of author cou
 
     foreach (range(1, 5) as $i) {
         $author = User::factory()->withRole('author')->create();
-        $work = Work::factory()->create(['author_id' => $author->id]);
-        MediaFile::factory()->create(['work_id' => $work->id]);
+        $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+        MediaFile::factory()->create(['oeuvre_id' => $oeuvre->id]);
     }
 
     DB::enableQueryLog();

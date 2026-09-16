@@ -31,9 +31,9 @@ import {
 import { toUrl } from '@/lib/utils';
 import { dashboard as adminDashboard } from '@/routes/admin';
 import { index as adminAuthorsIndex } from '@/routes/admin/authors';
-import { index as adminWorksIndex } from '@/routes/admin/works';
+import { index as adminOeuvresIndex } from '@/routes/admin/oeuvres';
 import { dashboard as authorDashboard } from '@/routes/author';
-import { index as worksIndex } from '@/routes/works';
+import { index as oeuvresIndex } from '@/routes/oeuvres';
 
 const { t, locale } = useI18n();
 const page = usePage();
@@ -48,7 +48,15 @@ function isActive(href: Parameters<typeof toUrl>[0]): boolean {
     return page.url === toUrl(href) || page.url.startsWith(toUrl(href) + '/');
 }
 
-const mainNavItems = computed(() => [
+const mainNavItems = computed<
+    {
+        title: string;
+        href: ReturnType<typeof authorDashboard>;
+        icon: typeof LayoutGrid;
+        active: boolean;
+        badge?: string | number;
+    }[]
+>(() => [
     {
         title: t('sidebar.nav.overview'),
         href: authorDashboard(),
@@ -56,10 +64,10 @@ const mainNavItems = computed(() => [
         active: isActive(authorDashboard()),
     },
     {
-        title: t('sidebar.nav.works'),
-        href: worksIndex(),
+        title: t('sidebar.nav.oeuvres'),
+        href: oeuvresIndex(),
         icon: Files,
-        active: isActive(worksIndex()),
+        active: isActive(oeuvresIndex()),
     },
 ]);
 
@@ -77,10 +85,10 @@ const adminNavItems = computed(() => [
         active: isActive(adminAuthorsIndex()),
     },
     {
-        title: t('admin.works.title'),
-        href: adminWorksIndex(),
+        title: t('admin.oeuvres.title'),
+        href: adminOeuvresIndex(),
         icon: FolderOpen,
-        active: isActive(adminWorksIndex()),
+        active: isActive(adminOeuvresIndex()),
     },
 ]);
 

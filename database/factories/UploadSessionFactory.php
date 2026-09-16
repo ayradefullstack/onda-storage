@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Models\Oeuvre;
 use App\Models\UploadSession;
 use App\Models\User;
-use App\Models\Work;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -27,7 +27,7 @@ class UploadSessionFactory extends Factory
 
         return [
             'user_id' => User::factory(),
-            'work_id' => Work::factory(),
+            'oeuvre_id' => Oeuvre::factory(),
             'filename' => fake()->word().'.mp4',
             'size_bytes' => $sizeBytes,
             'chunk_size' => $chunkSize,

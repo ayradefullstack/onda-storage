@@ -3,11 +3,11 @@
 namespace App\Providers;
 
 use App\Models\MediaFile;
+use App\Models\Oeuvre;
 use App\Models\UploadSession;
-use App\Models\Work;
 use App\Policies\MediaFilePolicy;
+use App\Policies\OeuvrePolicy;
 use App\Policies\UploadSessionPolicy;
-use App\Policies\WorkPolicy;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Date;
@@ -43,7 +43,7 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configurePolicies(): void
     {
-        Gate::policy(Work::class, WorkPolicy::class);
+        Gate::policy(Oeuvre::class, OeuvrePolicy::class);
         Gate::policy(UploadSession::class, UploadSessionPolicy::class);
         Gate::policy(MediaFile::class, MediaFilePolicy::class);
     }

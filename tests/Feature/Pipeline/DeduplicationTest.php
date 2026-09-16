@@ -6,8 +6,8 @@ use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Value\UploadIntent;
 use App\Jobs\ProcessMediaFile;
 use App\Models\MediaFile;
+use App\Models\Oeuvre;
 use App\Models\User;
-use App\Models\Work;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
@@ -21,18 +21,18 @@ function dedupAuthor(): User
     return $user;
 }
 
-function dedupUploadFixture(User $author, Work $work, string $filename): MediaFile
+function dedupUploadFixture(User $author, Oeuvre $oeuvre, string $filename): MediaFile
 {
     $vault = app(VaultContract::class);
     $bytes = file_get_contents(base_path('tests/fixtures/sample.mp4'));
 
-    $session = $vault->beginUpload(new UploadIntent($work->id, $author->id, $filename, strlen($bytes)));
+    $session = $vault->beginUpload(new UploadIntent($oeuvre->id, $author->id, $filename, strlen($bytes)));
     $vault->writeChunk($session, 0, $bytes);
     $object = $vault->finalize($session->fresh());
 
     $mediaFile = new MediaFile;
     $mediaFile->uuid = (string) Str::uuid7();
-    $mediaFile->work_id = $work->id;
+    $mediaFile->oeuvre_id = $oeuvre->id;
     $mediaFile->uploaded_by = $author->id;
     $mediaFile->original_name = $filename;
     $mediaFile->extension = 'mp4';
@@ -53,10 +53,10 @@ function dedupUploadFixture(User $author, Work $work, string $filename): MediaFi
 
 test('two identical uploads leave one set of bytes on disk with ref_count 2', function () {
     $author = dedupAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
 
-    $first = dedupUploadFixture($author, $work, 'first-copy.mp4');
-    $second = dedupUploadFixture($author, $work, 'second-copy.mp4');
+    $first = dedupUploadFixture($author, $oeuvre, 'first-copy.mp4');
+    $second = dedupUploadFixture($author, $oeuvre, 'second-copy.mp4');
 
     $firstPathBeforeDedup = $first->path;
     $secondPathBeforeDedup = $second->path;
@@ -89,10 +89,10 @@ test('two identical uploads leave one set of bytes on disk with ref_count 2', fu
 
 test('deleting one of a deduplicated pair does not delete the shared bytes', function () {
     $author = dedupAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
 
-    $first = dedupUploadFixture($author, $work, 'pair-a.mp4');
-    $second = dedupUploadFixture($author, $work, 'pair-b.mp4');
+    $first = dedupUploadFixture($author, $oeuvre, 'pair-a.mp4');
+    $second = dedupUploadFixture($author, $oeuvre, 'pair-b.mp4');
 
     ProcessMediaFile::dispatch($first->uuid);
     ProcessMediaFile::dispatch($second->uuid);

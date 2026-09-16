@@ -15,7 +15,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property string $uuid
  * @property int $user_id
- * @property int $work_id
+ * @property int $oeuvre_id
  * @property string $filename
  * @property int $size_bytes
  * @property int $chunk_size
@@ -58,10 +58,10 @@ class UploadSession extends Model
     }
 
     /**
-     * @return BelongsTo<Work, $this>
+     * @return BelongsTo<Oeuvre, $this>
      */
-    public function work(): BelongsTo
+    public function oeuvre(): BelongsTo
     {
-        return $this->belongsTo(Work::class);
+        return $this->belongsTo(Oeuvre::class);
     }
 }

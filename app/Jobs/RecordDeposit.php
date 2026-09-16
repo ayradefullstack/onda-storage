@@ -60,7 +60,7 @@ final class RecordDeposit extends PipelineJob
                 'media_file_uuid' => $mediaFile->uuid,
                 'sha256_plain' => $mediaFile->sha256_plain,
                 'size_bytes' => $mediaFile->size_bytes,
-                'author_id' => $mediaFile->work->author_id,
+                'author_id' => $mediaFile->oeuvre->author_id,
                 'recorded_at' => now()->toISOString(),
             ];
 

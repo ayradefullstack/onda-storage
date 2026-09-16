@@ -10,8 +10,8 @@ use App\Jobs\ComputeContentHash;
 use App\Jobs\ProcessMediaFile;
 use App\Models\FileAccessLog;
 use App\Models\MediaFile;
+use App\Models\Oeuvre;
 use App\Models\User;
-use App\Models\Work;
 use Illuminate\Bus\UniqueLock;
 use Illuminate\Queue\Events\UniqueJobSkipped;
 use Illuminate\Support\Facades\Cache;
@@ -29,18 +29,18 @@ function failureTestAuthor(): User
     return $user;
 }
 
-function failureTestUploadFixture(User $author, Work $work): MediaFile
+function failureTestUploadFixture(User $author, Oeuvre $oeuvre): MediaFile
 {
     $vault = app(VaultContract::class);
     $bytes = file_get_contents(base_path('tests/fixtures/sample.mp4'));
 
-    $session = $vault->beginUpload(new UploadIntent($work->id, $author->id, 'sample.mp4', strlen($bytes)));
+    $session = $vault->beginUpload(new UploadIntent($oeuvre->id, $author->id, 'sample.mp4', strlen($bytes)));
     $vault->writeChunk($session, 0, $bytes);
     $object = $vault->finalize($session->fresh());
 
     $mediaFile = new MediaFile;
     $mediaFile->uuid = (string) Str::uuid7();
-    $mediaFile->work_id = $work->id;
+    $mediaFile->oeuvre_id = $oeuvre->id;
     $mediaFile->uploaded_by = $author->id;
     $mediaFile->original_name = 'sample.mp4';
     $mediaFile->extension = 'mp4';
@@ -61,8 +61,8 @@ function failureTestUploadFixture(User $author, Work $work): MediaFile
 
 test('an exception mid-chain leaves no file in work/', function () {
     $author = failureTestAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
-    $mediaFile = failureTestUploadFixture($author, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = failureTestUploadFixture($author, $oeuvre);
 
     // Corrupts the recorded size so ComputeContentHash's own integrity
     // check (decrypted size must equal size_bytes) throws — a real,
@@ -86,9 +86,9 @@ test('an exception mid-chain leaves no file in work/', function () {
 
 test('two real deposit rows chain: the second row\'s prev_hash is the first row\'s row_hash', function () {
     $author = failureTestAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
-    $mediaFileA = failureTestUploadFixture($author, $work);
-    $mediaFileB = failureTestUploadFixture($author, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFileA = failureTestUploadFixture($author, $oeuvre);
+    $mediaFileB = failureTestUploadFixture($author, $oeuvre);
 
     ProcessMediaFile::dispatch($mediaFileA->uuid);
     ProcessMediaFile::dispatch($mediaFileB->uuid);
@@ -142,8 +142,8 @@ test('the hash chain detects a tampered row: recomputing from altered content di
 
 test('ShouldBeUnique prevents a second dispatch for the same media file uuid', function () {
     $author = failureTestAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
-    $mediaFile = failureTestUploadFixture($author, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = failureTestUploadFixture($author, $oeuvre);
 
     $job = new ComputeContentHash($mediaFile->uuid);
     $lock = Cache::lock(UniqueLock::getKey($job), 10);

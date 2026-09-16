@@ -313,7 +313,7 @@ function persist(fileState: UploadFileState): void {
     const map = readPersistedMap();
     map[fileState.id] = {
         id: fileState.id,
-        workId: fileState.workId,
+        oeuvreId: fileState.oeuvreId,
         sessionUuid: fileState.sessionUuid,
         filename: fileState.filename,
         size: fileState.size,
@@ -374,7 +374,10 @@ function restorePersistedUploads(): void {
 
         const fileState: UploadFileState = {
             id: persistedUpload.id,
-            workId: persistedUpload.workId,
+            // A record written before the works → oeuvres rename carries
+            // `workId`; without the fallback a tab that was mid-upload at
+            // deploy time would restore an entry no page ever matches.
+            oeuvreId: persistedUpload.oeuvreId ?? persistedUpload.workId,
             file: null,
             filename: persistedUpload.filename,
             size: persistedUpload.size,
@@ -664,7 +667,7 @@ async function startFile(fileState: UploadFileState): Promise<void> {
 
     try {
         const response = await initUpload({
-            work_id: fileState.workId,
+            oeuvre_id: fileState.oeuvreId,
             filename: fileState.filename,
             size_bytes: fileState.size,
             mime: fileState.mime,
@@ -728,7 +731,7 @@ function pumpQueue(): void {
 
 function enqueueFile(
     file: File,
-    workId: number,
+    oeuvreId: number,
 ): { ok: true; id: string } | { ok: false; reason: 'extension' | 'size' } {
     const validation = validateFile(file);
 
@@ -740,7 +743,7 @@ function enqueueFile(
 
     const fileState: UploadFileState = {
         id,
-        workId,
+        oeuvreId,
         file,
         filename: file.name,
         size: file.size,

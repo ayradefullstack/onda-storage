@@ -7,8 +7,8 @@ use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Value\UploadIntent;
 use App\Jobs\ProcessMediaFile;
 use App\Models\MediaFile;
+use App\Models\Oeuvre;
 use App\Models\User;
-use App\Models\Work;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -16,7 +16,7 @@ use Spatie\Permission\Models\Role;
 
 /**
  * Backs P4's manual gate items (a) and (e) at the layer a feature test can
- * actually reach: does `works.show`'s Inertia payload — the exact props
+ * actually reach: does `oeuvres.show`'s Inertia payload — the exact props
  * `Show.vue` renders `StatusBadge` from — correctly report `ready`,
  * `failed`, and `quarantined` after running the REAL P5 pipeline (not a
  * mocked status string)? This does not prove the browser paints the badge
@@ -26,7 +26,7 @@ use Spatie\Permission\Models\Role;
  * rendering, by manual browser testing only — browser automation is
  * unavailable in this environment (see the phase report).
  */
-function worksStatusAuthor(): User
+function oeuvresStatusAuthor(): User
 {
     Role::findOrCreate('author');
     $user = User::factory()->create();
@@ -35,18 +35,18 @@ function worksStatusAuthor(): User
     return $user;
 }
 
-function worksStatusUploadFixture(User $author, Work $work): MediaFile
+function oeuvresStatusUploadFixture(User $author, Oeuvre $oeuvre): MediaFile
 {
     $vault = app(VaultContract::class);
     $bytes = file_get_contents(base_path('tests/fixtures/sample.mp4'));
 
-    $session = $vault->beginUpload(new UploadIntent($work->id, $author->id, 'sample.mp4', strlen($bytes)));
+    $session = $vault->beginUpload(new UploadIntent($oeuvre->id, $author->id, 'sample.mp4', strlen($bytes)));
     $vault->writeChunk($session, 0, $bytes);
     $object = $vault->finalize($session->fresh());
 
     $mediaFile = new MediaFile;
     $mediaFile->uuid = (string) Str::uuid7();
-    $mediaFile->work_id = $work->id;
+    $mediaFile->oeuvre_id = $oeuvre->id;
     $mediaFile->uploaded_by = $author->id;
     $mediaFile->original_name = 'sample.mp4';
     $mediaFile->extension = 'mp4';
@@ -65,7 +65,7 @@ function worksStatusUploadFixture(User $author, Work $work): MediaFile
     return $mediaFile;
 }
 
-function worksStatusCleanup(MediaFile $mediaFile): void
+function oeuvresStatusCleanup(MediaFile $mediaFile): void
 {
     $mediaFile->refresh();
     $disk = Storage::disk($mediaFile->disk);
@@ -73,19 +73,19 @@ function worksStatusCleanup(MediaFile $mediaFile): void
     @unlink($disk->path($mediaFile->mac_path));
 }
 
-test('after the real pipeline reaches ready, works.show reports it verified — not just uploaded', function () {
-    $user = worksStatusAuthor();
-    $work = Work::factory()->create(['author_id' => $user->id]);
-    $mediaFile = worksStatusUploadFixture($user, $work);
+test('after the real pipeline reaches ready, oeuvres.show reports it verified — not just uploaded', function () {
+    $user = oeuvresStatusAuthor();
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
+    $mediaFile = oeuvresStatusUploadFixture($user, $oeuvre);
 
     // QUEUE_CONNECTION=sync in tests — this runs the whole real chain
     // (DecryptToTemp..CleanupTemp) synchronously, not a mocked transition.
     ProcessMediaFile::dispatch($mediaFile->uuid);
 
     $this->actingAs($user)
-        ->get(route('works.show', $work))
+        ->get(route('oeuvres.show', $oeuvre))
         ->assertInertia(fn (Assert $page) => $page
-            ->component('author/works/Show')
+            ->component('author/oeuvres/Show')
             ->where('mediaFiles.0.status', 'ready')
             ->where('mediaFiles.0.sha256_plain', hash_file('sha256', base_path('tests/fixtures/sample.mp4')))
             ->where('mediaFiles.0.duration_sec', 2)
@@ -93,13 +93,13 @@ test('after the real pipeline reaches ready, works.show reports it verified — 
             ->where('mediaFiles.0.height', 240),
         );
 
-    worksStatusCleanup($mediaFile);
+    oeuvresStatusCleanup($mediaFile);
 });
 
 test('a file the pipeline fails is reported as failed, not silently as ready', function () {
-    $user = worksStatusAuthor();
-    $work = Work::factory()->create(['author_id' => $user->id]);
-    $mediaFile = worksStatusUploadFixture($user, $work);
+    $user = oeuvresStatusAuthor();
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
+    $mediaFile = oeuvresStatusUploadFixture($user, $oeuvre);
 
     // A real, deterministic mid-chain failure (ComputeContentHash's own
     // size-integrity check), not a mocked status write — see P5's
@@ -114,14 +114,14 @@ test('a file the pipeline fails is reported as failed, not silently as ready', f
     }
 
     $this->actingAs($user)
-        ->get(route('works.show', $work))
+        ->get(route('oeuvres.show', $oeuvre))
         ->assertInertia(fn (Assert $page) => $page
-            ->component('author/works/Show')
+            ->component('author/oeuvres/Show')
             ->where('mediaFiles.0.status', 'failed')
             ->where('mediaFiles.0.sha256_plain', null),
         );
 
-    worksStatusCleanup($mediaFile);
+    oeuvresStatusCleanup($mediaFile);
 });
 
 test('a file the scanner flags is reported as quarantined, not silently as ready', function () {
@@ -135,36 +135,36 @@ test('a file the scanner flags is reported as quarantined, not silently as ready
         }
     });
 
-    $user = worksStatusAuthor();
-    $work = Work::factory()->create(['author_id' => $user->id]);
-    $mediaFile = worksStatusUploadFixture($user, $work);
+    $user = oeuvresStatusAuthor();
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
+    $mediaFile = oeuvresStatusUploadFixture($user, $oeuvre);
 
     ProcessMediaFile::dispatch($mediaFile->uuid);
 
     $this->actingAs($user)
-        ->get(route('works.show', $work))
+        ->get(route('oeuvres.show', $oeuvre))
         ->assertInertia(fn (Assert $page) => $page
-            ->component('author/works/Show')
+            ->component('author/oeuvres/Show')
             ->where('mediaFiles.0.status', 'quarantined'),
         );
 
-    worksStatusCleanup($mediaFile);
+    oeuvresStatusCleanup($mediaFile);
 });
 
 test('a file still in the pipeline is reported honestly as scanning, not as done', function () {
-    $user = worksStatusAuthor();
-    $work = Work::factory()->create(['author_id' => $user->id]);
-    $mediaFile = worksStatusUploadFixture($user, $work);
+    $user = oeuvresStatusAuthor();
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
+    $mediaFile = oeuvresStatusUploadFixture($user, $oeuvre);
 
     // No dispatch — the file has been finalized (P3) but P5 hasn't touched
     // it yet, matching the moment right after upload completes.
     $this->actingAs($user)
-        ->get(route('works.show', $work))
+        ->get(route('oeuvres.show', $oeuvre))
         ->assertInertia(fn (Assert $page) => $page
-            ->component('author/works/Show')
+            ->component('author/oeuvres/Show')
             ->where('mediaFiles.0.status', 'scanning')
             ->where('mediaFiles.0.sha256_plain', null),
         );
 
-    worksStatusCleanup($mediaFile);
+    oeuvresStatusCleanup($mediaFile);
 });

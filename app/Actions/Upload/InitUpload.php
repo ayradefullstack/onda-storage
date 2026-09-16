@@ -8,10 +8,10 @@ use App\Domain\Quota\QuotaPolicy;
 use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Exceptions\InsufficientStorage;
 use App\Domain\Vault\Value\UploadIntent;
+use App\Models\Oeuvre;
 use App\Models\StorageQuota;
 use App\Models\UploadSession;
 use App\Models\User;
-use App\Models\Work;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\ValidationException;
@@ -52,11 +52,11 @@ final class InitUpload
         private readonly QuotaPolicy $quotaPolicy,
     ) {}
 
-    public function handle(User $user, int $workId, string $filename, int $sizeBytes, string $mime): UploadSession
+    public function handle(User $user, int $oeuvreId, string $filename, int $sizeBytes, string $mime): UploadSession
     {
-        $work = Work::findOrFail($workId);
+        $oeuvre = Oeuvre::findOrFail($oeuvreId);
 
-        if (! $user->can('update', $work)) {
+        if (! $user->can('update', $oeuvre)) {
             throw new AuthorizationException('This work does not belong to you.');
         }
 
@@ -73,7 +73,7 @@ final class InitUpload
 
         try {
             return $this->vault->beginUpload(new UploadIntent(
-                workId: $work->id,
+                oeuvreId: $oeuvre->id,
                 userId: $user->id,
                 filename: $filename,
                 sizeBytes: $sizeBytes,

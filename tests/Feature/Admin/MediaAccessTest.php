@@ -11,8 +11,8 @@ use App\Domain\Vault\Value\UploadIntent;
 use App\Models\FileAccessLog;
 use App\Models\MediaFile;
 use App\Models\MediaVariant;
+use App\Models\Oeuvre;
 use App\Models\User;
-use App\Models\Work;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -21,18 +21,18 @@ function adminMediaTestAuthor(): User
     return User::factory()->withRole('author')->create();
 }
 
-function adminMediaTestFile(User $author, Work $work, string $status = 'ready'): MediaFile
+function adminMediaTestFile(User $author, Oeuvre $oeuvre, string $status = 'ready'): MediaFile
 {
     $vault = app(VaultContract::class);
     $bytes = file_get_contents(base_path('tests/fixtures/sample.mp4'));
 
-    $session = $vault->beginUpload(new UploadIntent($work->id, $author->id, 'sample.mp4', strlen($bytes)));
+    $session = $vault->beginUpload(new UploadIntent($oeuvre->id, $author->id, 'sample.mp4', strlen($bytes)));
     $vault->writeChunk($session, 0, $bytes);
     $object = $vault->finalize($session->fresh());
 
     $mediaFile = new MediaFile;
     $mediaFile->uuid = (string) Str::uuid7();
-    $mediaFile->work_id = $work->id;
+    $mediaFile->oeuvre_id = $oeuvre->id;
     $mediaFile->uploaded_by = $author->id;
     $mediaFile->original_name = 'sample.mp4';
     $mediaFile->extension = 'mp4';
@@ -97,8 +97,8 @@ function adminMediaTestPosterVariant(MediaFile $mediaFile): MediaVariant
 test('an admin can stream another author\'s deposit', function () {
     $admin = User::factory()->withRole('admin')->create();
     $author = adminMediaTestAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
-    $mediaFile = adminMediaTestFile($author, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = adminMediaTestFile($author, $oeuvre);
 
     $url = SignedMediaUrl::forStreaming($mediaFile, $admin);
 
@@ -110,8 +110,8 @@ test('an admin can stream another author\'s deposit', function () {
 test('a second author cannot stream a deposit they do not own', function () {
     $owner = adminMediaTestAuthor();
     $stranger = adminMediaTestAuthor();
-    $work = Work::factory()->create(['author_id' => $owner->id]);
-    $mediaFile = adminMediaTestFile($owner, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $owner->id]);
+    $mediaFile = adminMediaTestFile($owner, $oeuvre);
 
     $url = SignedMediaUrl::forStreaming($mediaFile, $stranger);
 
@@ -123,8 +123,8 @@ test('a second author cannot stream a deposit they do not own', function () {
 test('an admin previewing a variant writes a file_access_logs row naming the admin', function () {
     $admin = User::factory()->withRole('admin')->create();
     $author = adminMediaTestAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
-    $mediaFile = adminMediaTestFile($author, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = adminMediaTestFile($author, $oeuvre);
     adminMediaTestPosterVariant($mediaFile);
 
     $response = $this->actingAs($admin)->get(route('admin.media.variant', ['mediaFile' => $mediaFile, 'kind' => 'poster']));
@@ -144,8 +144,8 @@ test('an admin previewing a variant writes a file_access_logs row naming the adm
 test('a variant preview never touches the vault original', function () {
     $admin = User::factory()->withRole('admin')->create();
     $author = adminMediaTestAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
-    $mediaFile = adminMediaTestFile($author, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = adminMediaTestFile($author, $oeuvre);
     adminMediaTestPosterVariant($mediaFile);
 
     // Fixture setup above already used the real VaultContract; swap it out
@@ -166,8 +166,8 @@ test('a variant preview never touches the vault original', function () {
 test('previewing a variant kind with no stored variant 404s instead of falling back to the original', function () {
     $admin = User::factory()->withRole('admin')->create();
     $author = adminMediaTestAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
-    $mediaFile = adminMediaTestFile($author, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = adminMediaTestFile($author, $oeuvre);
 
     $this->actingAs($admin)
         ->get(route('admin.media.variant', ['mediaFile' => $mediaFile, 'kind' => 'waveform']))
@@ -178,8 +178,8 @@ test('previewing a variant kind with no stored variant 404s instead of falling b
 
 test('an author cannot reach the admin variant preview endpoint', function () {
     $author = adminMediaTestAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
-    $mediaFile = adminMediaTestFile($author, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = adminMediaTestFile($author, $oeuvre);
     adminMediaTestPosterVariant($mediaFile);
 
     $this->actingAs($author)

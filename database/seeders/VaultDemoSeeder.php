@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Models\Oeuvre;
 use App\Models\StorageQuota;
 use App\Models\User;
-use App\Models\Work;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
@@ -67,7 +67,7 @@ class VaultDemoSeeder extends Seeder
                 ],
             );
 
-            Work::factory()
+            Oeuvre::factory()
                 ->count(2)
                 ->state(fn (): array => ['uuid' => (string) Str::uuid7()])
                 ->create(['author_id' => $user->id]);

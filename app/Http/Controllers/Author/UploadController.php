@@ -29,7 +29,7 @@ final class UploadController extends Controller
     {
         $session = $action->handle(
             user: $request->user(),
-            workId: (int) $request->validated('work_id'),
+            oeuvreId: (int) $request->validated('oeuvre_id'),
             filename: (string) $request->validated('filename'),
             sizeBytes: (int) $request->validated('size_bytes'),
             mime: (string) $request->validated('mime'),

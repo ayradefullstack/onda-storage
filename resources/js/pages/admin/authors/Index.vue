@@ -26,7 +26,7 @@ interface AuthorRow {
     name: string;
     email: string;
     wilaya: { name_fr: string; name_ar: string } | null;
-    works_count: number;
+    oeuvres_count: number;
     files_count: number;
     quota_used_bytes: number;
     quota_limit_bytes: number;
@@ -90,7 +90,7 @@ function applyFilters(overrides: Record<string, string> = {}): void {
     );
 }
 
-type SortColumn = 'activity' | 'quota' | 'works' | 'files' | 'name';
+type SortColumn = 'activity' | 'quota' | 'oeuvres' | 'files' | 'name';
 
 function sortHref(column: SortColumn): string {
     const direction =
@@ -202,12 +202,12 @@ const hasResults = computed(() => props.authors.data.length > 0);
                         </th>
                         <th class="px-3 py-2 text-start font-medium">
                             <Link
-                                :href="sortHref('works')"
+                                :href="sortHref('oeuvres')"
                                 class="inline-flex items-center gap-1 hover:text-foreground"
                             >
-                                {{ t('admin.authors.colWorks') }}
+                                {{ t('admin.authors.colOeuvres') }}
                                 <component
-                                    :is="sortIcon('works')"
+                                    :is="sortIcon('oeuvres')"
                                     class="size-3"
                                 />
                             </Link>
@@ -273,7 +273,7 @@ const hasResults = computed(() => props.authors.data.length > 0);
                             }}
                         </td>
                         <td class="px-3 py-2">
-                            <bdi dir="ltr">{{ author.works_count }}</bdi>
+                            <bdi dir="ltr">{{ author.oeuvres_count }}</bdi>
                         </td>
                         <td class="px-3 py-2">
                             <bdi dir="ltr">{{ author.files_count }}</bdi>

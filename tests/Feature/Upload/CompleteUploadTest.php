@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 use App\Domain\Quota\QuotaPolicy;
+use App\Models\Oeuvre;
 use App\Models\StorageQuota;
 use App\Models\UploadSession;
 use App\Models\User;
-use App\Models\Work;
 use Illuminate\Testing\TestResponse;
 use Spatie\Permission\Models\Role;
 
@@ -28,10 +28,10 @@ beforeEach(function () {
  * and returns the `complete` response. Chunk size is fixed at 32 (set in
  * beforeEach above).
  */
-function completeAnUploadOfSize(User $user, Work $work, int $sizeBytes): TestResponse
+function completeAnUploadOfSize(User $user, Oeuvre $oeuvre, int $sizeBytes): TestResponse
 {
     $init = test()->actingAs($user)->postJson('/uploads', [
-        'work_id' => $work->id,
+        'oeuvre_id' => $oeuvre->id,
         'filename' => 'movie.mp4',
         'size_bytes' => $sizeBytes,
         'mime' => 'video/mp4',
@@ -56,10 +56,10 @@ function completeAnUploadOfSize(User $user, Work $work, int $sizeBytes): TestRes
 
 test('completing an upload with a missing chunk returns 409 listing the missing index', function () {
     $user = completeTestAuthor();
-    $work = Work::factory()->create(['author_id' => $user->id]);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
 
     $init = $this->actingAs($user)->postJson('/uploads', [
-        'work_id' => $work->id,
+        'oeuvre_id' => $oeuvre->id,
         'filename' => 'movie.mp4',
         'size_bytes' => 96, // 3 chunks: 0, 1, 2
         'mime' => 'video/mp4',
@@ -87,7 +87,7 @@ test('completing an upload with a missing chunk returns 409 listing the missing 
 
 test('an upload that would exceed the storage quota is blocked at init with the remaining bytes', function () {
     $user = completeTestAuthor();
-    $work = Work::factory()->create(['author_id' => $user->id]);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
 
     StorageQuota::factory()->create([
         'user_id' => $user->id,
@@ -96,7 +96,7 @@ test('an upload that would exceed the storage quota is blocked at init with the 
     ]);
 
     $response = $this->actingAs($user)->postJson('/uploads', [
-        'work_id' => $work->id,
+        'oeuvre_id' => $oeuvre->id,
         'filename' => 'movie.mp4',
         'size_bytes' => 500, // 900 + 500 > 1000
         'mime' => 'video/mp4',
@@ -105,12 +105,12 @@ test('an upload that would exceed the storage quota is blocked at init with the 
     $response->assertStatus(413);
     expect($response->json('remaining_bytes'))->toBe(100);
 
-    expect(UploadSession::where('work_id', $work->id)->exists())->toBeFalse();
+    expect(UploadSession::where('oeuvre_id', $oeuvre->id)->exists())->toBeFalse();
 });
 
 test('an upload within quota is allowed to init', function () {
     $user = completeTestAuthor();
-    $work = Work::factory()->create(['author_id' => $user->id]);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
 
     StorageQuota::factory()->create([
         'user_id' => $user->id,
@@ -119,7 +119,7 @@ test('an upload within quota is allowed to init', function () {
     ]);
 
     $response = $this->actingAs($user)->postJson('/uploads', [
-        'work_id' => $work->id,
+        'oeuvre_id' => $oeuvre->id,
         'filename' => 'movie.mp4',
         'size_bytes' => 500,
         'mime' => 'video/mp4',
@@ -130,7 +130,7 @@ test('an upload within quota is allowed to init', function () {
 
 test('two sequential completes leave used_bytes equal to the exact sum of both file sizes', function () {
     $user = completeTestAuthor();
-    $work = Work::factory()->create(['author_id' => $user->id]);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
 
     StorageQuota::factory()->create([
         'user_id' => $user->id,
@@ -138,8 +138,8 @@ test('two sequential completes leave used_bytes equal to the exact sum of both f
         'used_bytes' => 0,
     ]);
 
-    completeAnUploadOfSize($user, $work, 64)->assertCreated();
-    completeAnUploadOfSize($user, $work, 96)->assertCreated();
+    completeAnUploadOfSize($user, $oeuvre, 64)->assertCreated();
+    completeAnUploadOfSize($user, $oeuvre, 96)->assertCreated();
 
     $quota = StorageQuota::where('user_id', $user->id)->first();
     expect($quota->used_bytes)->toBe(64 + 96);
@@ -147,11 +147,11 @@ test('two sequential completes leave used_bytes equal to the exact sum of both f
 
 test('completing an upload for a user with no quota row creates one from the default', function () {
     $user = completeTestAuthor();
-    $work = Work::factory()->create(['author_id' => $user->id]);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
 
     expect(StorageQuota::where('user_id', $user->id)->exists())->toBeFalse();
 
-    completeAnUploadOfSize($user, $work, 64)->assertCreated();
+    completeAnUploadOfSize($user, $oeuvre, 64)->assertCreated();
 
     $quota = StorageQuota::where('user_id', $user->id)->firstOrFail();
     expect($quota->used_bytes)->toBe(64)
@@ -160,7 +160,7 @@ test('completing an upload for a user with no quota row creates one from the def
 
 test('a failed complete (missing chunks) does not change used_bytes', function () {
     $user = completeTestAuthor();
-    $work = Work::factory()->create(['author_id' => $user->id]);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
 
     StorageQuota::factory()->create([
         'user_id' => $user->id,
@@ -169,7 +169,7 @@ test('a failed complete (missing chunks) does not change used_bytes', function (
     ]);
 
     $init = $this->actingAs($user)->postJson('/uploads', [
-        'work_id' => $work->id,
+        'oeuvre_id' => $oeuvre->id,
         'filename' => 'movie.mp4',
         'size_bytes' => 96, // 3 chunks
         'mime' => 'video/mp4',

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Models\Oeuvre;
 use App\Models\UploadSession;
 use App\Models\User;
-use App\Models\Work;
 use Illuminate\Support\Carbon;
 use Spatie\Permission\Models\Role;
 
@@ -42,10 +42,10 @@ beforeEach(function () {
 
 test('GET /uploads/{session} reports exactly the chunks received so far, for a resuming client', function () {
     $user = resumeStatusAuthor();
-    $work = Work::factory()->create(['author_id' => $user->id]);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
 
     $init = $this->actingAs($user)->postJson('/uploads', [
-        'work_id' => $work->id,
+        'oeuvre_id' => $oeuvre->id,
         'filename' => 'movie.mp4',
         'size_bytes' => 96, // 3 chunks of 32 bytes
         'mime' => 'video/mp4',
@@ -75,10 +75,10 @@ test('GET /uploads/{session} reports exactly the chunks received so far, for a r
 
 test('GET /uploads/{session} reflects a fully-received-but-not-yet-completed upload', function () {
     $user = resumeStatusAuthor();
-    $work = Work::factory()->create(['author_id' => $user->id]);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
 
     $init = $this->actingAs($user)->postJson('/uploads', [
-        'work_id' => $work->id,
+        'oeuvre_id' => $oeuvre->id,
         'filename' => 'movie.mp4',
         'size_bytes' => 64,
         'mime' => 'video/mp4',
@@ -101,10 +101,10 @@ test('GET /uploads/{session} reflects a fully-received-but-not-yet-completed upl
 
 test('a resumed session that has since expired is reported as such, not silently treated as active', function () {
     $user = resumeStatusAuthor();
-    $work = Work::factory()->create(['author_id' => $user->id]);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
 
     $init = $this->actingAs($user)->postJson('/uploads', [
-        'work_id' => $work->id,
+        'oeuvre_id' => $oeuvre->id,
         'filename' => 'movie.mp4',
         'size_bytes' => 64,
         'mime' => 'video/mp4',

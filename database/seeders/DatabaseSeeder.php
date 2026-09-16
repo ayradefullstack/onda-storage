@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             CountrySeeder::class,
             WilayaSeeder::class,
             CommuneSeeder::class,
+            MembershipTypeSeeder::class,
             RoleAndUserSeeder::class,
             VaultDemoSeeder::class,
         ]);

@@ -47,7 +47,7 @@ export interface UploadChunk {
  */
 export interface UploadFileState {
     id: string;
-    workId: number;
+    oeuvreId: number;
     file: File | null;
     filename: string;
     size: number;
@@ -136,7 +136,9 @@ export type WorkerResponse = WorkerSliceResult | WorkerSliceError;
 /** sessionStorage record — enough to offer, and validate, a resume. */
 export interface PersistedUpload {
     id: string;
-    workId: number;
+    oeuvreId: number;
+    /** Pre-rename field name — read only as a fallback, never written. */
+    workId?: number;
     sessionUuid: string;
     filename: string;
     size: number;

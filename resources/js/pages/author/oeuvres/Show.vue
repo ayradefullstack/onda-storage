@@ -2,6 +2,9 @@
 import { Head, router } from '@inertiajs/vue3';
 import { computed, onBeforeUnmount, onMounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import ClassificationCard from '@/components/oeuvre/ClassificationCard.vue';
+import type { OeuvreClassification } from '@/components/oeuvre/ClassificationCard.vue';
+import { oeuvreLabel } from '@/components/oeuvre/label';
 import { Card, CardContent } from '@/components/ui/card';
 import DepositCard from '@/components/upload/DepositCard.vue';
 import type { DepositEntry } from '@/components/upload/depositJourney';
@@ -17,13 +20,15 @@ import {
     allowedExtensionList,
     MAX_FILE_SIZE_BYTES,
 } from '@/lib/uploadValidation';
-import { index } from '@/routes/works';
+import { index } from '@/routes/oeuvres';
 import type { MediaFileStatus, MediaFileSummary } from '@/types/upload';
 
-interface WorkDetail {
+interface OeuvreDetail {
     id: number;
     uuid: string;
-    title: string;
+    title: string | null;
+    college_name: string | null;
+    code_college_snapshot: string | null;
     description: string | null;
     status: string;
     created_at: string;
@@ -35,7 +40,8 @@ interface Quota {
 }
 
 const props = defineProps<{
-    work: WorkDetail;
+    oeuvre: OeuvreDetail;
+    classification: OeuvreClassification | null;
     mediaFiles: MediaFileSummary[];
     quota: Quota;
 }>();
@@ -112,18 +118,18 @@ onBeforeUnmount(() => {
 
 // A file completing (P3's `complete`) doesn't itself refresh this page's
 // props — the upload store and this page are independent. Watching for a
-// newly-completed upload belonging to this work and reloading once picks
+// newly-completed upload belonging to this oeuvre and reloading once picks
 // up the new MediaFile row immediately, instead of waiting for the next
 // scheduled poll tick.
 const queue = useUploadQueue();
-const completedForThisWork = computed(
+const completedForThisOeuvre = computed(
     () =>
         queue.files.value.filter(
-            (f) => f.workId === props.work.id && f.status === 'completed',
+            (f) => f.oeuvreId === props.oeuvre.id && f.status === 'completed',
         ).length,
 );
 
-watch(completedForThisWork, (next, previous) => {
+watch(completedForThisOeuvre, (next, previous) => {
     if (next > previous) {
         router.reload({ only: [...RELOAD_PROPS] });
     }
@@ -136,14 +142,14 @@ watch(completedForThisWork, (next, previous) => {
 const entries = computed<DepositEntry[]>(() =>
     mergeDepositEntries(
         queue.files.value,
-        props.work.id,
+        props.oeuvre.id,
         props.mediaFiles,
         readyAtLoadUuids,
     ),
 );
 
-const pendingResumesForWork = computed(() =>
-    queue.pendingResumes.value.filter((f) => f.workId === props.work.id),
+const pendingResumesForOeuvre = computed(() =>
+    queue.pendingResumes.value.filter((f) => f.oeuvreId === props.oeuvre.id),
 );
 
 function onReselect(id: string, file: File): void {
@@ -155,35 +161,44 @@ function onReselect(id: string, file: File): void {
     }
 }
 
+const label = computed(() =>
+    oeuvreLabel(props.oeuvre, locale.value, t('oeuvres.untitled')),
+);
+
 const quotaRemaining = computed(() =>
     Math.max(0, props.quota.limit_bytes - props.quota.used_bytes),
 );
 </script>
 
 <template>
-    <Head :title="work.title" />
+    <Head :title="label" />
 
     <div class="mx-auto w-full max-w-4xl space-y-6 p-4 sm:p-6 lg:p-8">
         <div>
             <h1 class="text-xl font-semibold tracking-tight">
-                {{ work.title }}
+                <bdi>{{ label }}</bdi>
             </h1>
             <p
-                v-if="work.description"
+                v-if="oeuvre.description"
                 class="mt-1 text-sm text-muted-foreground"
             >
-                {{ work.description }}
+                {{ oeuvre.description }}
             </p>
         </div>
+
+        <ClassificationCard
+            v-if="classification"
+            :classification="classification"
+        />
 
         <Card>
             <CardContent class="space-y-3 py-6">
                 <div class="flex items-center justify-between gap-3">
                     <h2 class="text-sm font-medium">
-                        {{ t('works.show.addFiles') }}
+                        {{ t('oeuvres.show.addFiles') }}
                     </h2>
                     <i18n-t
-                        keypath="works.show.quota"
+                        keypath="oeuvres.show.quota"
                         tag="span"
                         class="text-xs text-muted-foreground"
                     >
@@ -204,24 +219,24 @@ const quotaRemaining = computed(() =>
                         >
                     </i18n-t>
                 </div>
-                <Dropzone :work-id="work.id" />
+                <Dropzone :oeuvre-id="oeuvre.id" />
             </CardContent>
         </Card>
 
         <div>
             <h2 class="mb-3 text-sm font-medium">
-                {{ t('works.show.filesTitle') }}
+                {{ t('oeuvres.show.filesTitle') }}
             </h2>
 
             <ResumeBanner
-                :files="pendingResumesForWork"
+                :files="pendingResumesForOeuvre"
                 @reselect="onReselect"
             />
 
             <Card v-if="entries.length === 0">
                 <CardContent class="py-10 text-center text-sm">
                     <i18n-t
-                        keypath="works.show.noFiles"
+                        keypath="oeuvres.show.noFiles"
                         tag="p"
                         class="text-muted-foreground"
                     >

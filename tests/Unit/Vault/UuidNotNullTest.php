@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use App\Models\MediaFile;
+use App\Models\Oeuvre;
 use App\Models\User;
-use App\Models\Work;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -19,13 +19,13 @@ uses(TestCase::class, RefreshDatabase::class);
  * must fail loudly at the database, not produce a row with an empty uuid.
  */
 dataset('uuid_enforced_tables', [
-    'works' => ['works', fn () => ['author_id' => User::factory()->create()->id, 'title' => 'x', 'status' => 'draft']],
+    'oeuvres' => ['oeuvres', fn () => ['author_id' => User::factory()->create()->id, 'title' => 'x', 'status' => 'draft']],
     'media_files' => ['media_files', function () {
-        $work = Work::factory()->create();
+        $oeuvre = Oeuvre::factory()->create();
 
         return [
-            'work_id' => $work->id,
-            'uploaded_by' => $work->author_id,
+            'oeuvre_id' => $oeuvre->id,
+            'uploaded_by' => $oeuvre->author_id,
             'original_name' => 'x.mp4',
             'extension' => 'mp4',
             'mime' => 'video/mp4',
@@ -40,11 +40,11 @@ dataset('uuid_enforced_tables', [
         ];
     }],
     'upload_sessions' => ['upload_sessions', function () {
-        $work = Work::factory()->create();
+        $oeuvre = Oeuvre::factory()->create();
 
         return [
-            'user_id' => $work->author_id,
-            'work_id' => $work->id,
+            'user_id' => $oeuvre->author_id,
+            'oeuvre_id' => $oeuvre->id,
             'filename' => 'x',
             'size_bytes' => 1,
             'chunk_size' => 1,
@@ -57,14 +57,14 @@ dataset('uuid_enforced_tables', [
         ];
     }],
     'media_variants' => ['media_variants', function () {
-        $work = Work::factory()->create();
-        $mediaFile = MediaFile::factory()->create(['work_id' => $work->id]);
+        $oeuvre = Oeuvre::factory()->create();
+        $mediaFile = MediaFile::factory()->create(['oeuvre_id' => $oeuvre->id]);
 
         return ['media_file_id' => $mediaFile->id, 'kind' => 'thumbnail', 'path' => 'x', 'size_bytes' => 1];
     }],
     'file_access_logs' => ['file_access_logs', function () {
-        $work = Work::factory()->create();
-        $mediaFile = MediaFile::factory()->create(['work_id' => $work->id]);
+        $oeuvre = Oeuvre::factory()->create();
+        $mediaFile = MediaFile::factory()->create(['oeuvre_id' => $oeuvre->id]);
 
         return ['media_file_id' => $mediaFile->id, 'action' => 'stream', 'ip' => '127.0.0.1', 'row_hash' => str_repeat('a', 64)];
     }],

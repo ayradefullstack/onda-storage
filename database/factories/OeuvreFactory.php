@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Models\Oeuvre;
 use App\Models\User;
-use App\Models\Work;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Work>
+ * @extends Factory<Oeuvre>
  */
-class WorkFactory extends Factory
+class OeuvreFactory extends Factory
 {
-    protected $model = Work::class;
+    protected $model = Oeuvre::class;
 
     /**
      * @return array<string, mixed>

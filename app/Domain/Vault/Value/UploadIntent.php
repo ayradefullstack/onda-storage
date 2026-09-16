@@ -11,7 +11,7 @@ namespace App\Domain\Vault\Value;
 final readonly class UploadIntent
 {
     public function __construct(
-        public int $workId,
+        public int $oeuvreId,
         public int $userId,
         public string $filename,
         public int $sizeBytes,

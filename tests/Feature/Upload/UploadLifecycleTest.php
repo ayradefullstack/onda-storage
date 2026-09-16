@@ -14,9 +14,9 @@ use App\Jobs\ProcessMediaFile;
 use App\Jobs\RecordDeposit;
 use App\Jobs\ScanForMalware;
 use App\Models\MediaFile;
+use App\Models\Oeuvre;
 use App\Models\UploadSession;
 use App\Models\User;
-use App\Models\Work;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Role;
@@ -86,12 +86,12 @@ test('a full 3-chunk lifecycle round-trips the exact source bytes', function () 
 
     useSmallChunks();
     $user = authorUser();
-    $work = Work::factory()->create(['author_id' => $user->id]);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
 
     $plaintext = random_bytes(74); // 32 + 32 + 10 (short final chunk)
 
     $init = $this->actingAs($user)->postJson('/uploads', [
-        'work_id' => $work->id,
+        'oeuvre_id' => $oeuvre->id,
         'filename' => 'movie.mp4',
         'size_bytes' => strlen($plaintext),
         'mime' => 'video/mp4',
@@ -148,11 +148,11 @@ test('a full 3-chunk lifecycle round-trips the exact source bytes', function () 
 test('chunks arriving out of order still assemble the correct file', function () {
     useSmallChunks();
     $user = authorUser();
-    $work = Work::factory()->create(['author_id' => $user->id]);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
     $plaintext = random_bytes(96); // 3 full 32-byte chunks
 
     $init = $this->actingAs($user)->postJson('/uploads', [
-        'work_id' => $work->id,
+        'oeuvre_id' => $oeuvre->id,
         'filename' => 'movie.mp4',
         'size_bytes' => strlen($plaintext),
         'mime' => 'video/mp4',
@@ -177,11 +177,11 @@ test('chunks arriving out of order still assemble the correct file', function ()
 test('resending an already-received chunk is a no-op and does not double-count bytes', function () {
     useSmallChunks();
     $user = authorUser();
-    $work = Work::factory()->create(['author_id' => $user->id]);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
     $plaintext = random_bytes(64);
 
     $init = $this->actingAs($user)->postJson('/uploads', [
-        'work_id' => $work->id,
+        'oeuvre_id' => $oeuvre->id,
         'filename' => 'movie.mp4',
         'size_bytes' => strlen($plaintext),
         'mime' => 'video/mp4',
@@ -207,11 +207,11 @@ test('resending an already-received chunk is a no-op and does not double-count b
 test('a final chunk shorter than chunk_size is accepted', function () {
     useSmallChunks();
     $user = authorUser();
-    $work = Work::factory()->create(['author_id' => $user->id]);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
     $plaintext = random_bytes(40); // 1 full chunk (32) + 1 short final chunk (8)
 
     $init = $this->actingAs($user)->postJson('/uploads', [
-        'work_id' => $work->id,
+        'oeuvre_id' => $oeuvre->id,
         'filename' => 'movie.mp4',
         'size_bytes' => strlen($plaintext),
         'mime' => 'video/mp4',
@@ -227,10 +227,10 @@ test('a final chunk shorter than chunk_size is accepted', function () {
 test('a non-final chunk shorter than chunk_size is rejected', function () {
     useSmallChunks();
     $user = authorUser();
-    $work = Work::factory()->create(['author_id' => $user->id]);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
 
     $init = $this->actingAs($user)->postJson('/uploads', [
-        'work_id' => $work->id,
+        'oeuvre_id' => $oeuvre->id,
         'filename' => 'movie.mp4',
         'size_bytes' => 64,
         'mime' => 'video/mp4',

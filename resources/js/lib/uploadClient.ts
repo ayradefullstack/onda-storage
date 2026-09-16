@@ -63,7 +63,7 @@ async function assertOk(response: Response): Promise<void> {
 }
 
 export interface InitUploadPayload {
-    work_id: number;
+    oeuvre_id: number;
     filename: string;
     size_bytes: number;
     mime: string;

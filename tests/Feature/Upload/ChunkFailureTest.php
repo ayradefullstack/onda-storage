@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Models\Oeuvre;
 use App\Models\UploadSession;
 use App\Models\User;
-use App\Models\Work;
 use Illuminate\Support\Carbon;
 use Spatie\Permission\Models\Role;
 
@@ -17,10 +17,10 @@ function failureAuthorUser(): User
     return $user;
 }
 
-function initSessionUuid(User $user, Work $work, int $sizeBytes = 64): string
+function initSessionUuid(User $user, Oeuvre $oeuvre, int $sizeBytes = 64): string
 {
     return test()->actingAs($user)->postJson('/uploads', [
-        'work_id' => $work->id,
+        'oeuvre_id' => $oeuvre->id,
         'filename' => 'movie.mp4',
         'size_bytes' => $sizeBytes,
         'mime' => 'video/mp4',
@@ -33,8 +33,8 @@ beforeEach(function () {
 
 test('a CRC32 mismatch returns 422 and does not advance the received mask', function () {
     $user = failureAuthorUser();
-    $work = Work::factory()->create(['author_id' => $user->id]);
-    $uuid = initSessionUuid($user, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
+    $uuid = initSessionUuid($user, $oeuvre);
 
     $bytes = random_bytes(32);
 
@@ -54,8 +54,8 @@ test('a CRC32 mismatch returns 422 and does not advance the received mask', func
 
 test('a chunk sent to an expired session returns 410', function () {
     $user = failureAuthorUser();
-    $work = Work::factory()->create(['author_id' => $user->id]);
-    $uuid = initSessionUuid($user, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
+    $uuid = initSessionUuid($user, $oeuvre);
 
     UploadSession::where('uuid', $uuid)->update(['expires_at' => Carbon::now()->subMinute()]);
 
@@ -72,8 +72,8 @@ test('a chunk sent to an expired session returns 410', function () {
 
 test('a multipart chunk body is rejected with 415', function () {
     $user = failureAuthorUser();
-    $work = Work::factory()->create(['author_id' => $user->id]);
-    $uuid = initSessionUuid($user, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
+    $uuid = initSessionUuid($user, $oeuvre);
 
     $response = $this->actingAs($user)->call('POST', "/uploads/{$uuid}/chunk/0", [], [], [], [
         'CONTENT_TYPE' => 'multipart/form-data; boundary=----XYZ',
@@ -85,8 +85,8 @@ test('a multipart chunk body is rejected with 415', function () {
 
 test('a chunk index outside the valid range is rejected with 422', function () {
     $user = failureAuthorUser();
-    $work = Work::factory()->create(['author_id' => $user->id]);
-    $uuid = initSessionUuid($user, $work); // 64 bytes => 2 chunks, indices 0-1
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
+    $uuid = initSessionUuid($user, $oeuvre); // 64 bytes => 2 chunks, indices 0-1
 
     $bytes = random_bytes(32);
 

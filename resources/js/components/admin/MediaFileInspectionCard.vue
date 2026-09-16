@@ -148,10 +148,10 @@ async function copyHash(): Promise<void> {
                         @click="showPreviewClip = true"
                     >
                         <Play class="size-3.5" />
-                        {{ t('admin.works.playPreview') }}
+                        {{ t('admin.oeuvres.playPreview') }}
                     </Button>
                     <p class="text-xs text-muted-foreground">
-                        {{ t('admin.works.watermarkNotice') }}
+                        {{ t('admin.oeuvres.watermarkNotice') }}
                     </p>
                 </div>
 
@@ -165,7 +165,7 @@ async function copyHash(): Promise<void> {
                         class="w-full rounded-md border border-border"
                     />
                     <p class="text-xs text-muted-foreground">
-                        {{ t('admin.works.watermarkNotice') }}
+                        {{ t('admin.oeuvres.watermarkNotice') }}
                     </p>
                 </div>
 
@@ -173,7 +173,7 @@ async function copyHash(): Promise<void> {
                     v-else
                     class="rounded-md border border-dashed border-border p-4 text-xs text-muted-foreground"
                 >
-                    {{ t('admin.works.noPreviewAvailable') }}
+                    {{ t('admin.oeuvres.noPreviewAvailable') }}
                 </p>
 
                 <Button
@@ -190,7 +190,7 @@ async function copyHash(): Promise<void> {
                     <p
                         class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                     >
-                        {{ t('admin.works.fingerprint') }}
+                        {{ t('admin.oeuvres.fingerprint') }}
                     </p>
                     <div class="mt-1 flex items-start gap-2">
                         <code
@@ -204,7 +204,7 @@ async function copyHash(): Promise<void> {
                             variant="ghost"
                             size="icon"
                             class="size-6 shrink-0"
-                            :title="t('admin.works.copyFingerprint')"
+                            :title="t('admin.oeuvres.copyFingerprint')"
                             @click="copyHash"
                         >
                             <Check v-if="copied" class="size-3.5" />
@@ -218,7 +218,7 @@ async function copyHash(): Promise<void> {
                         <p
                             class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                         >
-                            {{ t('admin.works.scanResult') }}
+                            {{ t('admin.oeuvres.scanResult') }}
                         </p>
                         <Badge
                             :variant="SCAN_VARIANTS[file.scan_result]"
@@ -231,13 +231,13 @@ async function copyHash(): Promise<void> {
                         <p
                             class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                         >
-                            {{ t('admin.works.macVerified') }}
+                            {{ t('admin.oeuvres.macVerified') }}
                         </p>
                         <p class="mt-1 text-xs">
                             <bdi dir="ltr">{{
                                 file.verified_at
                                     ? formatDate(file.verified_at, locale)
-                                    : t('admin.works.macCheckedOnRead')
+                                    : t('admin.oeuvres.macCheckedOnRead')
                             }}</bdi>
                         </p>
                     </div>
@@ -247,7 +247,7 @@ async function copyHash(): Promise<void> {
                     <p
                         class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                     >
-                        {{ t('admin.works.depositedOn') }}
+                        {{ t('admin.oeuvres.depositedOn') }}
                     </p>
                     <p class="mt-1 text-xs">
                         <bdi dir="ltr">{{

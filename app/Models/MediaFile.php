@@ -17,7 +17,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property string $uuid
- * @property int $work_id
+ * @property int $oeuvre_id
  * @property int $uploaded_by
  * @property string $original_name
  * @property string $extension
@@ -62,11 +62,11 @@ class MediaFile extends Model
     }
 
     /**
-     * @return BelongsTo<Work, $this>
+     * @return BelongsTo<Oeuvre, $this>
      */
-    public function work(): BelongsTo
+    public function oeuvre(): BelongsTo
     {
-        return $this->belongsTo(Work::class);
+        return $this->belongsTo(Oeuvre::class);
     }
 
     /**

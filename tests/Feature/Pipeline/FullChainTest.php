@@ -16,8 +16,8 @@ use App\Jobs\RecordDeposit;
 use App\Jobs\ScanForMalware;
 use App\Models\FileAccessLog;
 use App\Models\MediaFile;
+use App\Models\Oeuvre;
 use App\Models\User;
-use App\Models\Work;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
@@ -42,19 +42,19 @@ function fullChainFixturePath(): string
     return base_path('tests/fixtures/sample.mp4');
 }
 
-function fullChainUploadFixture(User $author, Work $work, ?string $filename = null): MediaFile
+function fullChainUploadFixture(User $author, Oeuvre $oeuvre, ?string $filename = null): MediaFile
 {
     $vault = app(VaultContract::class);
     $bytes = file_get_contents(fullChainFixturePath());
     $filename ??= 'sample-'.Str::random(8).'.mp4';
 
-    $session = $vault->beginUpload(new UploadIntent($work->id, $author->id, $filename, strlen($bytes)));
+    $session = $vault->beginUpload(new UploadIntent($oeuvre->id, $author->id, $filename, strlen($bytes)));
     $vault->writeChunk($session, 0, $bytes);
     $object = $vault->finalize($session->fresh());
 
     $mediaFile = new MediaFile;
     $mediaFile->uuid = (string) Str::uuid7();
-    $mediaFile->work_id = $work->id;
+    $mediaFile->oeuvre_id = $oeuvre->id;
     $mediaFile->uploaded_by = $author->id;
     $mediaFile->original_name = $filename;
     $mediaFile->extension = 'mp4';
@@ -82,8 +82,8 @@ function fullChainCleanupBytes(MediaFile $mediaFile): void
 
 test('sha256_plain is null before the chain and populated after', function () {
     $author = fullChainAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
-    $mediaFile = fullChainUploadFixture($author, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = fullChainUploadFixture($author, $oeuvre);
 
     expect($mediaFile->sha256_plain)->toBeNull();
 
@@ -98,8 +98,8 @@ test('sha256_plain is null before the chain and populated after', function () {
 
 test('the full chain on a small real MP4 fixture reaches ready', function () {
     $author = fullChainAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
-    $mediaFile = fullChainUploadFixture($author, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = fullChainUploadFixture($author, $oeuvre);
 
     ProcessMediaFile::dispatch($mediaFile->uuid);
 

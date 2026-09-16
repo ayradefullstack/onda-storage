@@ -45,12 +45,12 @@ export function useUploadQueue() {
 
     function selectFiles(
         fileList: FileList | File[],
-        workId: number,
+        oeuvreId: number,
     ): FileRejection[] {
         const rejections: FileRejection[] = [];
 
         for (const file of Array.from(fileList)) {
-            const result = store.enqueueFile(file, workId);
+            const result = store.enqueueFile(file, oeuvreId);
 
             if (!result.ok) {
                 rejections.push({ filename: file.name, reason: result.reason });

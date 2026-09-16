@@ -108,7 +108,7 @@ final class EncryptedLocalVault implements VaultContract
         // (out of this phase's ownership).
         $session = new UploadSession;
         $session->user_id = $intent->userId;
-        $session->work_id = $intent->workId;
+        $session->oeuvre_id = $intent->oeuvreId;
         $session->filename = $intent->filename;
         $session->size_bytes = $intent->sizeBytes;
         $session->chunk_size = $chunkSize;

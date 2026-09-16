@@ -11,7 +11,7 @@ use App\Domain\Vault\Value\StoredObject;
 use App\Domain\Vault\Value\UploadIntent;
 use App\Infrastructure\Tracker\DatabaseChunkTracker;
 use App\Infrastructure\Vault\EncryptedLocalVault;
-use App\Models\Work;
+use App\Models\Oeuvre;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -46,10 +46,10 @@ function cleanupStoredObject(?StoredObject $object): void
 
 test('a small file round-trips through beginUpload/writeChunk/finalize/readRange', function () {
     [$vault] = makeSmallVault();
-    $work = Work::factory()->create();
+    $oeuvre = Oeuvre::factory()->create();
     $plaintext = random_bytes(64); // 2 chunks of 32 bytes
 
-    $session = $vault->beginUpload(new UploadIntent($work->id, $work->author_id, 'file.bin', strlen($plaintext)));
+    $session = $vault->beginUpload(new UploadIntent($oeuvre->id, $oeuvre->author_id, 'file.bin', strlen($plaintext)));
 
     $vault->writeChunk($session, 0, substr($plaintext, 0, 32));
     $vault->writeChunk($session, 1, substr($plaintext, 32, 32));
@@ -66,10 +66,10 @@ test('a small file round-trips through beginUpload/writeChunk/finalize/readRange
 
 test('three chunks written out of order (2, 0, 1) produce a correct plaintext file', function () {
     [$vault] = makeSmallVault();
-    $work = Work::factory()->create();
+    $oeuvre = Oeuvre::factory()->create();
     $plaintext = random_bytes(96); // 3 chunks of 32 bytes
 
-    $session = $vault->beginUpload(new UploadIntent($work->id, $work->author_id, 'file.bin', strlen($plaintext)));
+    $session = $vault->beginUpload(new UploadIntent($oeuvre->id, $oeuvre->author_id, 'file.bin', strlen($plaintext)));
 
     $vault->writeChunk($session, 2, substr($plaintext, 64, 32));
     $vault->writeChunk($session, 0, substr($plaintext, 0, 32));
@@ -87,10 +87,10 @@ test('three chunks written out of order (2, 0, 1) produce a correct plaintext fi
 
 test('a range read spanning a MAC segment boundary returns exactly the right bytes', function () {
     [$vault] = makeSmallVault(chunkSize: 32, segmentSize: 16);
-    $work = Work::factory()->create();
+    $oeuvre = Oeuvre::factory()->create();
     $plaintext = random_bytes(64);
 
-    $session = $vault->beginUpload(new UploadIntent($work->id, $work->author_id, 'file.bin', strlen($plaintext)));
+    $session = $vault->beginUpload(new UploadIntent($oeuvre->id, $oeuvre->author_id, 'file.bin', strlen($plaintext)));
     $vault->writeChunk($session, 0, substr($plaintext, 0, 32));
     $vault->writeChunk($session, 1, substr($plaintext, 32, 32));
     $object = $vault->finalize($session->fresh());
@@ -108,10 +108,10 @@ test('a range read spanning a MAC segment boundary returns exactly the right byt
 
 test('a range read with an unaligned start returns correct bytes', function () {
     [$vault] = makeSmallVault(chunkSize: 32, segmentSize: 16);
-    $work = Work::factory()->create();
+    $oeuvre = Oeuvre::factory()->create();
     $plaintext = random_bytes(64);
 
-    $session = $vault->beginUpload(new UploadIntent($work->id, $work->author_id, 'file.bin', strlen($plaintext)));
+    $session = $vault->beginUpload(new UploadIntent($oeuvre->id, $oeuvre->author_id, 'file.bin', strlen($plaintext)));
     $vault->writeChunk($session, 0, substr($plaintext, 0, 32));
     $vault->writeChunk($session, 1, substr($plaintext, 32, 32));
     $object = $vault->finalize($session->fresh());
@@ -129,9 +129,9 @@ test('a range read with an unaligned start returns correct bytes', function () {
 
 test('finalize refuses to run while the tracker mask is incomplete', function () {
     [$vault] = makeSmallVault();
-    $work = Work::factory()->create();
+    $oeuvre = Oeuvre::factory()->create();
 
-    $session = $vault->beginUpload(new UploadIntent($work->id, $work->author_id, 'file.bin', 64));
+    $session = $vault->beginUpload(new UploadIntent($oeuvre->id, $oeuvre->author_id, 'file.bin', 64));
     $vault->writeChunk($session, 0, random_bytes(32));
     // Chunk 1 never arrives.
 
@@ -145,10 +145,10 @@ test('finalize refuses to run while the tracker mask is incomplete', function ()
 
 test('decryptToTemp produces a plaintext TempFile that is removed on destruction', function () {
     [$vault] = makeSmallVault();
-    $work = Work::factory()->create();
+    $oeuvre = Oeuvre::factory()->create();
     $plaintext = random_bytes(64);
 
-    $session = $vault->beginUpload(new UploadIntent($work->id, $work->author_id, 'file.bin', strlen($plaintext)));
+    $session = $vault->beginUpload(new UploadIntent($oeuvre->id, $oeuvre->author_id, 'file.bin', strlen($plaintext)));
     $vault->writeChunk($session, 0, substr($plaintext, 0, 32));
     $vault->writeChunk($session, 1, substr($plaintext, 32, 32));
     $object = $vault->finalize($session->fresh());

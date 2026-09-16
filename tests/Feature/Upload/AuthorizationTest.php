@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Models\Oeuvre;
 use App\Models\User;
-use App\Models\Work;
 use Spatie\Permission\Models\Role;
 
 function authTestAuthor(): User
@@ -22,10 +22,10 @@ beforeEach(function () {
 test('another author cannot read, write to, or abort someone else\'s upload session', function () {
     $owner = authTestAuthor();
     $stranger = authTestAuthor();
-    $work = Work::factory()->create(['author_id' => $owner->id]);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $owner->id]);
 
     $init = $this->actingAs($owner)->postJson('/uploads', [
-        'work_id' => $work->id,
+        'oeuvre_id' => $oeuvre->id,
         'filename' => 'movie.mp4',
         'size_bytes' => 64,
         'mime' => 'video/mp4',
@@ -53,10 +53,10 @@ test('another author cannot read, write to, or abort someone else\'s upload sess
 test('a user cannot init an upload against a work they do not own', function () {
     $owner = authTestAuthor();
     $stranger = authTestAuthor();
-    $work = Work::factory()->create(['author_id' => $owner->id]);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $owner->id]);
 
     $response = $this->actingAs($stranger)->postJson('/uploads', [
-        'work_id' => $work->id,
+        'oeuvre_id' => $oeuvre->id,
         'filename' => 'movie.mp4',
         'size_bytes' => 64,
         'mime' => 'video/mp4',

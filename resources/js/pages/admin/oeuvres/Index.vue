@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n';
 import EmptyState from '@/components/admin/EmptyState.vue';
 import Pagination from '@/components/admin/Pagination.vue';
 import StatusBadge from '@/components/admin/StatusBadge.vue';
+import { oeuvreLabel } from '@/components/oeuvre/label';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -17,11 +18,15 @@ import {
 import { formatBytes, formatDate } from '@/lib/format';
 import { dashboard } from '@/routes/admin';
 import { show as authorShow } from '@/routes/admin/authors';
-import { index as worksIndex, show as workShow } from '@/routes/admin/works';
+import {
+    index as oeuvresIndex,
+    show as oeuvreShow,
+} from '@/routes/admin/oeuvres';
 
-interface WorkRow {
+interface OeuvreRow {
     uuid: string;
-    title: string;
+    title: string | null;
+    college_name: string | null;
     status: string;
     author: { uuid: string; name: string } | null;
     files_count: number;
@@ -32,8 +37,8 @@ interface WorkRow {
 }
 
 const props = defineProps<{
-    works: {
-        data: WorkRow[];
+    oeuvres: {
+        data: OeuvreRow[];
         links: { url: string | null; label: string; active: boolean }[];
         from: number | null;
         to: number | null;
@@ -55,7 +60,7 @@ defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Admin', href: dashboard() },
-            { title: 'Works', href: worksIndex() },
+            { title: 'Works', href: oeuvresIndex() },
         ],
     },
 });
@@ -67,7 +72,7 @@ const to = ref(props.filters.to);
 
 function applyFilters(overrides: Record<string, string> = {}): void {
     router.get(
-        worksIndex.url({
+        oeuvresIndex.url({
             query: {
                 search: search.value,
                 author: author.value,
@@ -82,19 +87,19 @@ function applyFilters(overrides: Record<string, string> = {}): void {
     );
 }
 
-const hasResults = computed(() => props.works.data.length > 0);
+const hasResults = computed(() => props.oeuvres.data.length > 0);
 </script>
 
 <template>
-    <Head :title="t('admin.works.title')" />
+    <Head :title="t('admin.oeuvres.title')" />
 
     <div class="mx-auto w-full max-w-6xl space-y-6 p-4 md:p-6">
         <div>
             <h1 class="text-2xl font-semibold tracking-tight">
-                {{ t('admin.works.title') }}
+                {{ t('admin.oeuvres.title') }}
             </h1>
             <p class="mt-1 text-sm text-muted-foreground">
-                {{ t('admin.works.subtitle') }}
+                {{ t('admin.oeuvres.subtitle') }}
             </p>
         </div>
 
@@ -106,7 +111,7 @@ const hasResults = computed(() => props.works.data.length > 0);
                 <Input
                     v-model="search"
                     class="ps-9"
-                    :placeholder="t('admin.works.searchPlaceholder')"
+                    :placeholder="t('admin.oeuvres.searchPlaceholder')"
                     @keyup.enter="applyFilters()"
                     @blur="applyFilters()"
                 />
@@ -115,7 +120,7 @@ const hasResults = computed(() => props.works.data.length > 0);
             <Input
                 v-model="author"
                 class="w-48"
-                :placeholder="t('admin.works.authorPlaceholder')"
+                :placeholder="t('admin.oeuvres.authorPlaceholder')"
                 @keyup.enter="applyFilters()"
                 @blur="applyFilters()"
             />
@@ -127,18 +132,20 @@ const hasResults = computed(() => props.works.data.length > 0);
                 "
             >
                 <SelectTrigger class="w-48">
-                    <SelectValue :placeholder="t('admin.works.allStatuses')" />
+                    <SelectValue
+                        :placeholder="t('admin.oeuvres.allStatuses')"
+                    />
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="">{{
-                        t('admin.works.allStatuses')
+                        t('admin.oeuvres.allStatuses')
                     }}</SelectItem>
                     <SelectItem
                         v-for="status in statuses"
                         :key="status"
                         :value="status"
                     >
-                        {{ t(`works.status.${status}`) }}
+                        {{ t(`oeuvres.status.${status}`) }}
                     </SelectItem>
                 </SelectContent>
             </Select>
@@ -151,7 +158,7 @@ const hasResults = computed(() => props.works.data.length > 0);
                     @change="applyFilters()"
                 />
                 <span class="text-xs text-muted-foreground">{{
-                    t('admin.works.dateRangeTo')
+                    t('admin.oeuvres.dateRangeTo')
                 }}</span>
                 <Input
                     v-model="to"
@@ -164,8 +171,8 @@ const hasResults = computed(() => props.works.data.length > 0);
 
         <EmptyState
             v-if="!hasResults"
-            :title="t('admin.works.empty')"
-            :description="t('admin.works.emptyDescription')"
+            :title="t('admin.oeuvres.empty')"
+            :description="t('admin.oeuvres.emptyDescription')"
         />
 
         <div v-else class="overflow-x-auto rounded-lg border border-border">
@@ -175,84 +182,90 @@ const hasResults = computed(() => props.works.data.length > 0);
                         class="border-b border-border text-xs text-muted-foreground uppercase"
                     >
                         <th class="px-3 py-2 text-start font-medium">
-                            {{ t('admin.works.colTitle') }}
+                            {{ t('admin.oeuvres.colTitle') }}
                         </th>
                         <th class="px-3 py-2 text-start font-medium">
-                            {{ t('admin.works.colAuthor') }}
+                            {{ t('admin.oeuvres.colAuthor') }}
                         </th>
                         <th class="px-3 py-2 text-start font-medium">
-                            {{ t('admin.works.colStatus') }}
+                            {{ t('admin.oeuvres.colStatus') }}
                         </th>
                         <th class="px-3 py-2 text-start font-medium">
-                            {{ t('admin.works.colFiles') }}
+                            {{ t('admin.oeuvres.colFiles') }}
                         </th>
                         <th class="px-3 py-2 text-start font-medium">
-                            {{ t('admin.works.colSize') }}
+                            {{ t('admin.oeuvres.colSize') }}
                         </th>
                         <th class="px-3 py-2 text-start font-medium">
-                            {{ t('admin.works.colSubmitted') }}
+                            {{ t('admin.oeuvres.colSubmitted') }}
                         </th>
                         <th class="px-3 py-2 text-start font-medium">
-                            {{ t('admin.works.colReady') }}
+                            {{ t('admin.oeuvres.colReady') }}
                         </th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr
-                        v-for="work in works.data"
-                        :key="work.uuid"
+                        v-for="oeuvre in oeuvres.data"
+                        :key="oeuvre.uuid"
                         class="border-b border-border last:border-0 hover:bg-accent/50"
                     >
                         <td class="px-3 py-2">
                             <Link
-                                :href="workShow(work.uuid)"
+                                :href="oeuvreShow(oeuvre.uuid)"
                                 class="font-medium hover:underline"
                             >
-                                {{ work.title }}
+                                <bdi>{{
+                                    oeuvreLabel(
+                                        oeuvre,
+                                        locale,
+                                        t('oeuvres.untitled'),
+                                    )
+                                }}</bdi>
                             </Link>
                         </td>
                         <td class="px-3 py-2">
                             <Link
-                                v-if="work.author"
-                                :href="authorShow(work.author.uuid)"
+                                v-if="oeuvre.author"
+                                :href="authorShow(oeuvre.author.uuid)"
                                 class="hover:underline"
                             >
-                                {{ work.author.name }}
+                                {{ oeuvre.author.name }}
                             </Link>
                             <span v-else class="text-muted-foreground">—</span>
                         </td>
                         <td class="px-3 py-2">
                             <div class="flex items-center gap-1.5">
                                 <StatusBadge
-                                    kind="work"
-                                    :status="work.status"
+                                    kind="oeuvre"
+                                    :status="oeuvre.status"
                                 />
                                 <span
-                                    v-if="work.has_blocking_file"
+                                    v-if="oeuvre.has_blocking_file"
                                     class="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive"
-                                    :title="t('admin.works.hasBlockingFile')"
+                                    :title="t('admin.oeuvres.hasBlockingFile')"
                                 >
                                     <AlertTriangle class="size-3" />
-                                    {{ t('admin.works.hasBlockingFile') }}
+                                    {{ t('admin.oeuvres.hasBlockingFile') }}
                                 </span>
                             </div>
                         </td>
                         <td class="px-3 py-2">
-                            <bdi dir="ltr">{{ work.files_count }}</bdi>
+                            <bdi dir="ltr">{{ oeuvre.files_count }}</bdi>
                         </td>
                         <td class="px-3 py-2">
                             <bdi dir="ltr">{{
-                                formatBytes(work.files_size_bytes, locale)
+                                formatBytes(oeuvre.files_size_bytes, locale)
                             }}</bdi>
                         </td>
                         <td class="px-3 py-2 text-muted-foreground">
                             <bdi dir="ltr">{{
-                                formatDate(work.created_at, locale)
+                                formatDate(oeuvre.created_at, locale)
                             }}</bdi>
                         </td>
                         <td class="px-3 py-2">
                             <CheckCircle2
-                                v-if="work.all_ready"
+                                v-if="oeuvre.all_ready"
                                 class="size-4 text-primary"
                             />
                             <span v-else class="text-muted-foreground">—</span>
@@ -263,10 +276,10 @@ const hasResults = computed(() => props.works.data.length > 0);
         </div>
 
         <Pagination
-            :links="works.links"
-            :from="works.from"
-            :to="works.to"
-            :total="works.total"
+            :links="oeuvres.links"
+            :from="oeuvres.from"
+            :to="oeuvres.to"
+            :total="oeuvres.total"
         />
     </div>
 </template>

@@ -5,9 +5,9 @@ declare(strict_types=1);
 use App\Models\FileAccessLog;
 use App\Models\MediaFile;
 use App\Models\MediaVariant;
+use App\Models\Oeuvre;
 use App\Models\StorageQuota;
 use App\Models\UploadSession;
-use App\Models\Work;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -16,7 +16,7 @@ use Tests\TestCase;
 uses(TestCase::class, RefreshDatabase::class);
 
 dataset('uuid_models', [
-    'Work' => [Work::class],
+    'Oeuvre' => [Oeuvre::class],
     'MediaFile' => [MediaFile::class],
     'UploadSession' => [UploadSession::class],
     'MediaVariant' => [MediaVariant::class],
@@ -47,7 +47,7 @@ test('getRouteKeyName returns uuid', function (string $modelClass) {
 test('an explicitly assigned uuid is not overwritten', function () {
     $uuid = (string) Str::uuid7();
 
-    $work = Work::factory()->create(['uuid' => $uuid]);
+    $oeuvre = Oeuvre::factory()->create(['uuid' => $uuid]);
 
-    expect($work->uuid)->toBe($uuid);
+    expect($oeuvre->uuid)->toBe($uuid);
 });

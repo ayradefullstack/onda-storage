@@ -7,7 +7,7 @@ function makeUploadFile(
 ): UploadFileState {
     return {
         id: 'client-1',
-        workId: 1,
+        oeuvreId: 1,
         file: null,
         filename: 'reel.mp4',
         size: 1_000_000,
@@ -56,12 +56,12 @@ describe('mergeDepositEntries', () => {
      * The regression the incident recording exposes: a 2.4 GB upload runs
      * for hours before a `MediaFile` row exists, so an empty state gated
      * on `mediaFiles.length === 0` alone hides the file for that entire
-     * time. The page must merge in-flight uploads for this work into the
+     * time. The page must merge in-flight uploads for this oeuvre into the
      * same list it renders `mediaFiles` from, so a file is visible the
      * moment it's selected — long before `mediaFiles` has anything in it.
      */
     it('includes an in-flight upload while mediaFiles is still empty', () => {
-        const uploading = makeUploadFile({ workId: 42, status: 'uploading' });
+        const uploading = makeUploadFile({ oeuvreId: 42, status: 'uploading' });
 
         const entries = mergeDepositEntries([uploading], 42, [], new Set());
 
@@ -70,7 +70,7 @@ describe('mergeDepositEntries', () => {
     });
 
     it('excludes a completed upload — its MediaFile row supersedes it', () => {
-        const completed = makeUploadFile({ workId: 42, status: 'completed' });
+        const completed = makeUploadFile({ oeuvreId: 42, status: 'completed' });
 
         const entries = mergeDepositEntries([completed], 42, [], new Set());
 
@@ -79,16 +79,19 @@ describe('mergeDepositEntries', () => {
 
     /**
      * Guards the exact class of bug flagged as a suspect during
-     * diagnosis: `workId` must be compared as the same type on both
-     * sides (`work.id`, a number) — a string/number mismatch (e.g. a
+     * diagnosis: `oeuvreId` must be compared as the same type on both
+     * sides (`oeuvre.id`, a number) — a string/number mismatch (e.g. a
      * uuid compared against a numeric id) would silently exclude every
-     * upload for this work with no error, reproducing the same kind of
+     * upload for this oeuvre with no error, reproducing the same kind of
      * silent failure from a different cause.
      */
-    it('excludes an upload belonging to a different work', () => {
-        const otherWork = makeUploadFile({ workId: 7, status: 'uploading' });
+    it('excludes an upload belonging to a different oeuvre', () => {
+        const otherOeuvre = makeUploadFile({
+            oeuvreId: 7,
+            status: 'uploading',
+        });
 
-        const entries = mergeDepositEntries([otherWork], 42, [], new Set());
+        const entries = mergeDepositEntries([otherOeuvre], 42, [], new Set());
 
         expect(entries).toHaveLength(0);
     });
@@ -111,7 +114,7 @@ describe('mergeDepositEntries', () => {
     });
 
     it('places in-flight uploads before media rows', () => {
-        const uploading = makeUploadFile({ workId: 1 });
+        const uploading = makeUploadFile({ oeuvreId: 1 });
         const ready = makeMediaFile();
 
         const entries = mergeDepositEntries([uploading], 1, [ready], new Set());

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { router } from '@inertiajs/vue3';
 import {
     BookOpen,
     CheckCircle2,
@@ -20,6 +21,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Spinner from '@/components/ui/spinner/Spinner.vue';
+import { create } from '@/routes/oeuvres';
 
 const { t } = useI18n();
 
@@ -80,27 +82,18 @@ const handleNext = () => {
     }
 };
 
+// This modal never created anything — it emitted a fabricated deposit after
+// a timer. A real deposit starts on the classification page, so its final
+// step goes there instead of pretending to succeed.
 const submitDeposit = () => {
     isSubmitting.value = true;
-    setTimeout(() => {
-        isSubmitting.value = false;
-        depositSuccess.value = true;
-        emit('deposit-created', {
-            title: workTitle.value || 'Nouvel Enregistrement ONDA',
-            titleAr: workTitle.value || 'تسجيل جديد ONDA',
-            category: selectedCategory.value,
-            year: workYear.value,
-            fileSize: fileSize.value || '64.2 MB',
-        });
-        setTimeout(() => {
-            depositSuccess.value = false;
+    emit('update:open', false);
+    router.visit(create(), {
+        onFinish: () => {
+            isSubmitting.value = false;
             step.value = 1;
-            workTitle.value = '';
-            workDesc.value = '';
-            fileName.value = '';
-            emit('update:open', false);
-        }, 1800);
-    }, 1200);
+        },
+    });
 };
 </script>
 

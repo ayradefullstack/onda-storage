@@ -12,8 +12,8 @@ use App\Jobs\DecryptToTemp;
 use App\Jobs\GenerateVariants;
 use App\Models\MediaFile;
 use App\Models\MediaVariant;
+use App\Models\Oeuvre;
 use App\Models\User;
-use App\Models\Work;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
@@ -42,18 +42,18 @@ function variantEncryptionFixturePath(): string
     return base_path('tests/fixtures/sample.mp4');
 }
 
-function variantEncryptionUploadFixture(User $author, Work $work): MediaFile
+function variantEncryptionUploadFixture(User $author, Oeuvre $oeuvre): MediaFile
 {
     $vault = app(VaultContract::class);
     $bytes = file_get_contents(variantEncryptionFixturePath());
 
-    $session = $vault->beginUpload(new UploadIntent($work->id, $author->id, 'sample-'.Str::random(8).'.mp4', strlen($bytes)));
+    $session = $vault->beginUpload(new UploadIntent($oeuvre->id, $author->id, 'sample-'.Str::random(8).'.mp4', strlen($bytes)));
     $vault->writeChunk($session, 0, $bytes);
     $object = $vault->finalize($session->fresh());
 
     $mediaFile = new MediaFile;
     $mediaFile->uuid = (string) Str::uuid7();
-    $mediaFile->work_id = $work->id;
+    $mediaFile->oeuvre_id = $oeuvre->id;
     $mediaFile->uploaded_by = $author->id;
     $mediaFile->original_name = 'sample.mp4';
     $mediaFile->extension = 'mp4';
@@ -100,8 +100,8 @@ test('regenerating the same variant twice produces two different ciphertexts und
     }
 
     $author = variantEncryptionAuthor();
-    $work = Work::factory()->create(['author_id' => $author->id]);
-    $mediaFile = variantEncryptionUploadFixture($author, $work);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = variantEncryptionUploadFixture($author, $oeuvre);
 
     (new DecryptToTemp($mediaFile->uuid))->handle(app(VaultContract::class));
 

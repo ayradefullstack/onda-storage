@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import MediaFileInspectionCard from '@/components/admin/MediaFileInspectionCard.vue';
 import StatusBadge from '@/components/admin/StatusBadge.vue';
 import StreamOriginalDialog from '@/components/admin/StreamOriginalDialog.vue';
+import { oeuvreLabel } from '@/components/oeuvre/label';
 import { formatDate } from '@/lib/format';
 import { dashboard } from '@/routes/admin';
 import { show as authorShow } from '@/routes/admin/authors';
-import { index as worksIndex } from '@/routes/admin/works';
+import { index as oeuvresIndex } from '@/routes/admin/oeuvres';
 
 interface MediaFileDetail {
     uuid: string;
@@ -28,10 +29,11 @@ interface MediaFileDetail {
     variants: string[];
 }
 
-defineProps<{
-    work: {
+const props = defineProps<{
+    oeuvre: {
         uuid: string;
-        title: string;
+        title: string | null;
+        college_name: string | null;
         description: string | null;
         status: string;
         author: { uuid: string; name: string } | null;
@@ -47,10 +49,14 @@ defineOptions({
     layout: {
         breadcrumbs: [
             { title: 'Admin', href: dashboard() },
-            { title: 'Works', href: worksIndex() },
+            { title: 'Works', href: oeuvresIndex() },
         ],
     },
 });
+
+const label = computed(() =>
+    oeuvreLabel(props.oeuvre, locale.value, t('oeuvres.untitled')),
+);
 
 const streamDialogOpen = ref(false);
 const streamTarget = ref<MediaFileDetail | null>(null);
@@ -62,39 +68,39 @@ function openStreamDialog(file: MediaFileDetail): void {
 </script>
 
 <template>
-    <Head :title="work.title" />
+    <Head :title="label" />
 
     <div class="mx-auto w-full max-w-4xl space-y-6 p-4 md:p-6">
         <div>
             <div class="flex flex-wrap items-center gap-2">
                 <h1 class="text-2xl font-semibold tracking-tight">
-                    {{ work.title }}
+                    <bdi>{{ label }}</bdi>
                 </h1>
-                <StatusBadge kind="work" :status="work.status" />
+                <StatusBadge kind="oeuvre" :status="oeuvre.status" />
             </div>
             <p
-                v-if="work.description"
+                v-if="oeuvre.description"
                 class="mt-1 text-sm text-muted-foreground"
             >
-                {{ work.description }}
+                {{ oeuvre.description }}
             </p>
             <p class="mt-2 text-sm">
                 <Link
-                    v-if="work.author"
-                    :href="authorShow(work.author.uuid)"
+                    v-if="oeuvre.author"
+                    :href="authorShow(oeuvre.author.uuid)"
                     class="hover:underline"
                 >
-                    {{ work.author.name }}
+                    {{ oeuvre.author.name }}
                 </Link>
                 <span class="text-muted-foreground">
                     ·
                     <bdi dir="ltr">{{
-                        formatDate(work.created_at, locale)
+                        formatDate(oeuvre.created_at, locale)
                     }}</bdi>
-                    <template v-if="work.registered_at">
-                        · {{ t('admin.works.registeredOn') }}
+                    <template v-if="oeuvre.registered_at">
+                        · {{ t('admin.oeuvres.registeredOn') }}
                         <bdi dir="ltr">{{
-                            formatDate(work.registered_at, locale)
+                            formatDate(oeuvre.registered_at, locale)
                         }}</bdi>
                     </template>
                 </span>
@@ -103,11 +109,11 @@ function openStreamDialog(file: MediaFileDetail): void {
 
         <div class="space-y-4">
             <h2 class="text-sm font-medium">
-                {{ t('admin.works.filesTitle') }}
+                {{ t('admin.oeuvres.filesTitle') }}
             </h2>
 
             <p v-if="files.length === 0" class="text-sm text-muted-foreground">
-                {{ t('admin.works.noFiles') }}
+                {{ t('admin.oeuvres.noFiles') }}
             </p>
 
             <MediaFileInspectionCard

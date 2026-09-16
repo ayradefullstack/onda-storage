@@ -5,7 +5,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { dashboard as adminDashboard } from '@/routes/admin';
 import { index as authorsIndex } from '@/routes/admin/authors';
-import { index as worksIndex } from '@/routes/admin/works';
+import { index as oeuvresIndex } from '@/routes/admin/oeuvres';
 
 defineOptions({
     layout: {
@@ -50,14 +50,14 @@ const user = computed(() => page.props.auth.user);
                 </div>
             </Link>
             <Link
-                :href="worksIndex()"
+                :href="oeuvresIndex()"
                 class="flex items-center gap-3 rounded-lg border border-border bg-card p-4 hover:bg-accent/50"
             >
                 <FolderOpen class="size-5 text-muted-foreground" />
                 <div>
-                    <p class="font-medium">{{ t('admin.works.title') }}</p>
+                    <p class="font-medium">{{ t('admin.oeuvres.title') }}</p>
                     <p class="text-xs text-muted-foreground">
-                        {{ t('admin.works.subtitle') }}
+                        {{ t('admin.oeuvres.subtitle') }}
                     </p>
                 </div>
             </Link>

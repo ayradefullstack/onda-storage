@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\Admin\AuthorController;
 use App\Http\Controllers\Admin\MediaVariantController;
-use App\Http\Controllers\Admin\WorkController;
+use App\Http\Controllers\Admin\OeuvreController;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -18,9 +18,9 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         Route::get('/{user:uuid}', [AuthorController::class, 'show'])->name('show');
     });
 
-    Route::prefix('works')->name('works.')->group(function () {
-        Route::get('/', [WorkController::class, 'index'])->name('index');
-        Route::get('/{work:uuid}', [WorkController::class, 'show'])->name('show');
+    Route::prefix('oeuvres')->name('oeuvres.')->group(function () {
+        Route::get('/', [OeuvreController::class, 'index'])->name('index');
+        Route::get('/{oeuvre:uuid}', [OeuvreController::class, 'show'])->name('show');
     });
 
     // The review console's cheap preview path — see MediaVariantController's

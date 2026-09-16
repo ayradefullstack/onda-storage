@@ -7,6 +7,7 @@ import Pagination from '@/components/admin/Pagination.vue';
 import QuotaBar from '@/components/admin/QuotaBar.vue';
 import StatCard from '@/components/admin/StatCard.vue';
 import StatusBadge from '@/components/admin/StatusBadge.vue';
+import { oeuvreLabel } from '@/components/oeuvre/label';
 import { Badge } from '@/components/ui/badge';
 import {
     Select,
@@ -21,7 +22,7 @@ import {
     index as authorsIndex,
     show as authorShow,
 } from '@/routes/admin/authors';
-import { show as workShow } from '@/routes/admin/works';
+import { show as oeuvreShow } from '@/routes/admin/oeuvres';
 
 interface Author {
     uuid: string;
@@ -38,9 +39,10 @@ interface Author {
     created_at: string;
 }
 
-interface WorkRow {
+interface OeuvreRow {
     uuid: string;
-    title: string;
+    title: string | null;
+    college_name: string | null;
     status: string;
     files_count: number;
     files_size_bytes: number;
@@ -50,8 +52,8 @@ interface WorkRow {
 const props = defineProps<{
     author: Author;
     quota: { used_bytes: number; limit_bytes: number };
-    works: {
-        data: WorkRow[];
+    oeuvres: {
+        data: OeuvreRow[];
         links: { url: string | null; label: string; active: boolean }[];
         from: number | null;
         to: number | null;
@@ -96,7 +98,7 @@ const arabicName = computed(() => {
     return full === '' ? null : full;
 });
 
-const hasWorks = computed(() => props.works.data.length > 0);
+const hasOeuvres = computed(() => props.oeuvres.data.length > 0);
 </script>
 
 <template>
@@ -189,7 +191,7 @@ const hasWorks = computed(() => props.works.data.length > 0);
             <StatCard
                 v-for="status in STATUS_OPTIONS"
                 :key="status"
-                :label="t(`works.status.${status}`)"
+                :label="t(`oeuvres.status.${status}`)"
                 :value="activity.status_tally[status] ?? 0"
             />
         </div>
@@ -197,7 +199,7 @@ const hasWorks = computed(() => props.works.data.length > 0);
         <div>
             <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <h2 class="text-sm font-medium">
-                    {{ t('admin.authors.worksTitle') }}
+                    {{ t('admin.authors.oeuvresTitle') }}
                 </h2>
                 <Select
                     :model-value="filters.status"
@@ -207,28 +209,28 @@ const hasWorks = computed(() => props.works.data.length > 0);
                 >
                     <SelectTrigger class="w-48">
                         <SelectValue
-                            :placeholder="t('admin.works.allStatuses')"
+                            :placeholder="t('admin.oeuvres.allStatuses')"
                         />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="">{{
-                            t('admin.works.allStatuses')
+                            t('admin.oeuvres.allStatuses')
                         }}</SelectItem>
                         <SelectItem
                             v-for="status in STATUS_OPTIONS"
                             :key="status"
                             :value="status"
                         >
-                            {{ t(`works.status.${status}`) }}
+                            {{ t(`oeuvres.status.${status}`) }}
                         </SelectItem>
                     </SelectContent>
                 </Select>
             </div>
 
             <EmptyState
-                v-if="!hasWorks"
-                :title="t('admin.authors.noWorks')"
-                :description="t('admin.authors.noWorksDescription')"
+                v-if="!hasOeuvres"
+                :title="t('admin.authors.noOeuvres')"
+                :description="t('admin.authors.noOeuvresDescription')"
             />
 
             <div v-else class="overflow-x-auto rounded-lg border border-border">
@@ -238,53 +240,59 @@ const hasWorks = computed(() => props.works.data.length > 0);
                             class="border-b border-border text-xs text-muted-foreground uppercase"
                         >
                             <th class="px-3 py-2 text-start font-medium">
-                                {{ t('admin.works.colTitle') }}
+                                {{ t('admin.oeuvres.colTitle') }}
                             </th>
                             <th class="px-3 py-2 text-start font-medium">
-                                {{ t('admin.works.colStatus') }}
+                                {{ t('admin.oeuvres.colStatus') }}
                             </th>
                             <th class="px-3 py-2 text-start font-medium">
-                                {{ t('admin.works.colFiles') }}
+                                {{ t('admin.oeuvres.colFiles') }}
                             </th>
                             <th class="px-3 py-2 text-start font-medium">
-                                {{ t('admin.works.colSize') }}
+                                {{ t('admin.oeuvres.colSize') }}
                             </th>
                             <th class="px-3 py-2 text-start font-medium">
-                                {{ t('admin.works.colSubmitted') }}
+                                {{ t('admin.oeuvres.colSubmitted') }}
                             </th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr
-                            v-for="work in works.data"
-                            :key="work.uuid"
+                            v-for="oeuvre in oeuvres.data"
+                            :key="oeuvre.uuid"
                             class="border-b border-border last:border-0 hover:bg-accent/50"
                         >
                             <td class="px-3 py-2">
                                 <Link
-                                    :href="workShow(work.uuid)"
+                                    :href="oeuvreShow(oeuvre.uuid)"
                                     class="font-medium hover:underline"
                                 >
-                                    {{ work.title }}
+                                    <bdi>{{
+                                        oeuvreLabel(
+                                            oeuvre,
+                                            locale,
+                                            t('oeuvres.untitled'),
+                                        )
+                                    }}</bdi>
                                 </Link>
                             </td>
                             <td class="px-3 py-2">
                                 <StatusBadge
-                                    kind="work"
-                                    :status="work.status"
+                                    kind="oeuvre"
+                                    :status="oeuvre.status"
                                 />
                             </td>
                             <td class="px-3 py-2">
-                                <bdi dir="ltr">{{ work.files_count }}</bdi>
+                                <bdi dir="ltr">{{ oeuvre.files_count }}</bdi>
                             </td>
                             <td class="px-3 py-2">
                                 <bdi dir="ltr">{{
-                                    formatBytes(work.files_size_bytes, locale)
+                                    formatBytes(oeuvre.files_size_bytes, locale)
                                 }}</bdi>
                             </td>
                             <td class="px-3 py-2 text-muted-foreground">
                                 <bdi dir="ltr">{{
-                                    formatDate(work.created_at, locale)
+                                    formatDate(oeuvre.created_at, locale)
                                 }}</bdi>
                             </td>
                         </tr>
@@ -293,10 +301,10 @@ const hasWorks = computed(() => props.works.data.length > 0);
             </div>
 
             <Pagination
-                :links="works.links"
-                :from="works.from"
-                :to="works.to"
-                :total="works.total"
+                :links="oeuvres.links"
+                :from="oeuvres.from"
+                :to="oeuvres.to"
+                :total="oeuvres.total"
                 class="mt-3"
             />
         </div>

@@ -9,7 +9,7 @@ use App\Models\MediaFile;
 use App\Models\User;
 
 /**
- * Issued fresh on demand, not baked into the `works/Show` page props: the
+ * Issued fresh on demand, not baked into the `oeuvres/Show` page props: the
  * link is only valid 15 minutes, but a `ready` file stops the page's
  * polling loop, so a props-embedded link could easily go stale before the
  * author clicks "View". The frontend calls this right before opening a

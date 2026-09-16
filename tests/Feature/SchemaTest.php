@@ -7,18 +7,18 @@ use App\Models\Country;
 use App\Models\FileAccessLog;
 use App\Models\MediaFile;
 use App\Models\MediaVariant;
+use App\Models\Oeuvre;
 use App\Models\StorageQuota;
 use App\Models\UploadSession;
 use App\Models\User;
 use App\Models\Wilaya;
-use App\Models\Work;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Schema;
 
 dataset('vault_models', [
-    'Work' => [Work::class],
+    'Oeuvre' => [Oeuvre::class],
     'MediaFile' => [MediaFile::class],
     'UploadSession' => [UploadSession::class],
     'MediaVariant' => [MediaVariant::class],
@@ -46,7 +46,7 @@ test('file_access_logs has no deleted_at column and does not use SoftDeletes', f
 
 dataset('soft_deletable_tables', [
     'users' => ['users', User::class],
-    'works' => ['works', Work::class],
+    'oeuvres' => ['oeuvres', Oeuvre::class],
     'media_files' => ['media_files', MediaFile::class],
     'countries' => ['countries', Country::class],
     'wilayas' => ['wilayas', Wilaya::class],
@@ -74,7 +74,11 @@ test('deleted_at exists on exactly the classified soft-deletable tables', functi
         ->values()
         ->all();
 
-    expect($tablesWithDeletedAt)->toBe(['communes', 'countries', 'media_files', 'users', 'wilayas', 'works']);
+    expect($tablesWithDeletedAt)->toBe([
+        'communes', 'countries', 'media_files', 'oeuvres',
+        'register_role_auteurs', 'register_type_colleges', 'register_type_members', 'register_types',
+        'type_gestions', 'users', 'wilayas',
+    ]);
 });
 
 test('file_access_logs has no updated_at column usage', function () {

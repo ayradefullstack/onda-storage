@@ -277,7 +277,7 @@ async function copyFingerprint(): Promise<void> {
             <bdi v-if="dimensions" dir="ltr">{{ dimensions }}</bdi>
             <i18n-t
                 v-if="mediaFile.variant_count > 0"
-                keypath="works.show.variantCount"
+                keypath="oeuvres.show.variantCount"
             >
                 <template #count
                     ><bdi dir="ltr">{{
@@ -304,7 +304,7 @@ async function copyFingerprint(): Promise<void> {
                 />
                 <div class="min-w-0 space-y-1 text-xs">
                     <i18n-t
-                        keypath="works.show.depositedOn"
+                        keypath="oeuvres.show.depositedOn"
                         tag="p"
                         class="font-medium text-foreground"
                     >
@@ -319,7 +319,7 @@ async function copyFingerprint(): Promise<void> {
                         class="flex flex-wrap items-center gap-x-2 gap-y-1"
                     >
                         <span class="text-muted-foreground">{{
-                            t('works.show.fingerprint')
+                            t('oeuvres.show.fingerprint')
                         }}</span>
                         <bdi dir="ltr" class="font-mono">{{
                             abbreviatedHash
@@ -331,13 +331,13 @@ async function copyFingerprint(): Promise<void> {
                         >
                             {{
                                 fingerprintCopied
-                                    ? t('works.show.fingerprintCopied')
-                                    : t('works.show.copyFingerprint')
+                                    ? t('oeuvres.show.fingerprintCopied')
+                                    : t('oeuvres.show.copyFingerprint')
                             }}
                         </button>
                     </div>
                     <p class="text-muted-foreground">
-                        {{ t('works.show.auditNotice') }}
+                        {{ t('oeuvres.show.auditNotice') }}
                     </p>
                     <Button
                         v-if="isPreviewable"
@@ -346,7 +346,7 @@ async function copyFingerprint(): Promise<void> {
                         class="h-7 text-xs"
                         @click="previewOpen = true"
                     >
-                        {{ t('works.show.view') }}
+                        {{ t('oeuvres.show.view') }}
                     </Button>
                 </div>
             </div>
@@ -540,12 +540,12 @@ async function copyFingerprint(): Promise<void> {
                         uploadFile?.status === 'initializing'
                     "
                 >
-                    <p>{{ t('works.show.stage.queued') }}</p>
+                    <p>{{ t('oeuvres.show.stage.queued') }}</p>
                     <i18n-t
                         v-if="
                             showQuotaForFile && quotaForFileRemaining !== null
                         "
-                        keypath="works.show.quotaForFile"
+                        keypath="oeuvres.show.quotaForFile"
                         tag="p"
                         class="mt-0.5"
                     >
@@ -563,16 +563,16 @@ async function copyFingerprint(): Promise<void> {
                 </template>
 
                 <p v-else-if="uploadFile?.status === 'completing'">
-                    {{ t('works.show.stage.finishing') }}
+                    {{ t('oeuvres.show.stage.finishing') }}
                 </p>
                 <p v-else-if="mediaFile?.status === 'assembling'">
-                    {{ t('works.show.stage.finishing') }}
+                    {{ t('oeuvres.show.stage.finishing') }}
                 </p>
                 <p v-else-if="mediaFile?.status === 'scanning'">
-                    {{ t('works.show.stage.checking') }}
+                    {{ t('oeuvres.show.stage.checking') }}
                 </p>
                 <p v-else-if="mediaFile?.status === 'processing'">
-                    {{ t('works.show.stage.preparing') }}
+                    {{ t('oeuvres.show.stage.preparing') }}
                 </p>
             </div>
         </template>
