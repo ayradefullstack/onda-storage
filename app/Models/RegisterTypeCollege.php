@@ -125,6 +125,14 @@ class RegisterTypeCollege extends Model
     }
 
     /**
+     * @return HasMany<CollegeOeuvreFile, $this>
+     */
+    public function collegeOeuvreFiles(): HasMany
+    {
+        return $this->hasMany(CollegeOeuvreFile::class);
+    }
+
+    /**
      * @param  Builder<RegisterTypeCollege>  $query
      * @return Builder<RegisterTypeCollege>
      */

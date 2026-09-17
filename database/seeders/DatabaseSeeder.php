@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             WilayaSeeder::class,
             CommuneSeeder::class,
             MembershipTypeSeeder::class,
+            CollegeOeuvreFileSeeder::class,
             RoleAndUserSeeder::class,
             VaultDemoSeeder::class,
         ]);

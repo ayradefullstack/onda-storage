@@ -75,7 +75,7 @@ test('deleted_at exists on exactly the classified soft-deletable tables', functi
         ->all();
 
     expect($tablesWithDeletedAt)->toBe([
-        'communes', 'countries', 'media_files', 'oeuvres',
+        'college_oeuvre_files', 'communes', 'countries', 'media_files', 'oeuvres',
         'register_role_auteurs', 'register_type_colleges', 'register_type_members', 'register_types',
         'type_gestions', 'users', 'wilayas',
     ]);
