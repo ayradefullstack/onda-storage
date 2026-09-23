@@ -3,24 +3,17 @@ import {
     Award,
     BookOpen,
     Check,
-    CheckCircle2,
     ChevronLeft,
     ChevronRight,
     Clapperboard,
-    Clock,
     CodeXml,
     Copy,
-    Download,
-    Eye,
     FileCheck2,
-    Filter,
     Music,
     Search,
-    ShieldCheck,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -134,13 +127,18 @@ const filteredWorks = computed(() => {
     return works.value.filter((item) => {
         const matchesSearch =
             searchQuery.value.trim() === '' ||
-            item.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+            item.title
+                .toLowerCase()
+                .includes(searchQuery.value.toLowerCase()) ||
             item.titleAr.includes(searchQuery.value) ||
-            item.reference.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+            item.reference
+                .toLowerCase()
+                .includes(searchQuery.value.toLowerCase()) ||
             item.hash.toLowerCase().includes(searchQuery.value.toLowerCase());
 
         const matchesStatus =
-            selectedStatus.value === 'all' || item.status === selectedStatus.value;
+            selectedStatus.value === 'all' ||
+            item.status === selectedStatus.value;
 
         return matchesSearch && matchesStatus;
     });
@@ -219,28 +217,38 @@ const getStatusBadge = (status: Work['status']) => {
 </script>
 
 <template>
-    <div class="rounded-2xl border border-border/80 bg-card shadow-xs overflow-hidden">
+    <div
+        class="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xs"
+    >
         <!-- Table Header & Filter Toolbar -->
-        <div class="border-b border-border/70 p-4 sm:p-5 space-y-4">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="space-y-4 border-b border-border/70 p-4 sm:p-5">
+            <div
+                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <div>
-                    <h2 class="text-base sm:text-lg font-bold text-foreground tracking-tight flex items-center gap-2">
-                        <FileCheck2 class="size-5 text-onda-blue-600 dark:text-onda-blue-400" />
+                    <h2
+                        class="flex items-center gap-2 text-base font-bold tracking-tight text-foreground sm:text-lg"
+                    >
+                        <FileCheck2
+                            class="size-5 text-onda-blue-600 dark:text-onda-blue-400"
+                        />
                         {{ t('dashboard.table.title') }}
                     </h2>
-                    <p class="text-xs text-muted-foreground mt-0.5">
+                    <p class="mt-0.5 text-xs text-muted-foreground">
                         {{ t('dashboard.table.subtitle') }}
                     </p>
                 </div>
 
                 <!-- Search Input -->
                 <div class="relative w-full sm:w-72">
-                    <Search class="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Search
+                        class="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                    />
                     <Input
                         v-model="searchQuery"
                         type="text"
                         :placeholder="t('dashboard.table.searchPlaceholder')"
-                        class="h-9.5 ps-9 text-xs rounded-xl input-premium"
+                        class="input-premium h-9.5 rounded-xl ps-9 text-xs"
                     />
                 </div>
             </div>
@@ -250,9 +258,9 @@ const getStatusBadge = (status: Work['status']) => {
                 <button
                     type="button"
                     :class="[
-                        'px-3 py-1.5 rounded-lg font-medium transition-all shrink-0 cursor-pointer',
+                        'shrink-0 cursor-pointer rounded-lg px-3 py-1.5 font-medium transition-all',
                         selectedStatus === 'all'
-                            ? 'bg-onda-blue-600 text-white font-semibold shadow-xs dark:bg-onda-blue-500 dark:text-gray-950'
+                            ? 'bg-onda-blue-600 font-semibold text-white shadow-xs dark:bg-onda-blue-500 dark:text-gray-950'
                             : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground',
                     ]"
                     @click="selectedStatus = 'all'"
@@ -262,9 +270,9 @@ const getStatusBadge = (status: Work['status']) => {
                 <button
                     type="button"
                     :class="[
-                        'px-3 py-1.5 rounded-lg font-medium transition-all shrink-0 cursor-pointer',
+                        'shrink-0 cursor-pointer rounded-lg px-3 py-1.5 font-medium transition-all',
                         selectedStatus === 'approved'
-                            ? 'bg-onda-blue-600 text-white font-semibold shadow-xs dark:bg-onda-blue-500 dark:text-gray-950'
+                            ? 'bg-onda-blue-600 font-semibold text-white shadow-xs dark:bg-onda-blue-500 dark:text-gray-950'
                             : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground',
                     ]"
                     @click="selectedStatus = 'approved'"
@@ -274,9 +282,9 @@ const getStatusBadge = (status: Work['status']) => {
                 <button
                     type="button"
                     :class="[
-                        'px-3 py-1.5 rounded-lg font-medium transition-all shrink-0 cursor-pointer',
+                        'shrink-0 cursor-pointer rounded-lg px-3 py-1.5 font-medium transition-all',
                         selectedStatus === 'pending'
-                            ? 'bg-onda-blue-600 text-white font-semibold shadow-xs dark:bg-onda-blue-500 dark:text-gray-950'
+                            ? 'bg-onda-blue-600 font-semibold text-white shadow-xs dark:bg-onda-blue-500 dark:text-gray-950'
                             : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground',
                     ]"
                     @click="selectedStatus = 'pending'"
@@ -286,9 +294,9 @@ const getStatusBadge = (status: Work['status']) => {
                 <button
                     type="button"
                     :class="[
-                        'px-3 py-1.5 rounded-lg font-medium transition-all shrink-0 cursor-pointer',
+                        'shrink-0 cursor-pointer rounded-lg px-3 py-1.5 font-medium transition-all',
                         selectedStatus === 'distributed'
-                            ? 'bg-onda-blue-600 text-white font-semibold shadow-xs dark:bg-onda-blue-500 dark:text-gray-950'
+                            ? 'bg-onda-blue-600 font-semibold text-white shadow-xs dark:bg-onda-blue-500 dark:text-gray-950'
                             : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground',
                     ]"
                     @click="selectedStatus = 'distributed'"
@@ -300,25 +308,45 @@ const getStatusBadge = (status: Work['status']) => {
 
         <!-- Responsive Table -->
         <div class="overflow-x-auto">
-            <table class="w-full text-start text-xs border-collapse">
+            <table class="w-full border-collapse text-start text-xs">
                 <thead>
-                    <tr class="border-b border-border/70 bg-muted/40 text-muted-foreground font-semibold">
-                        <th class="py-3.5 px-4 text-start font-medium">{{ t('dashboard.table.colTitle') }}</th>
-                        <th class="py-3.5 px-4 text-start font-medium hidden md:table-cell">{{ t('dashboard.table.colRef') }}</th>
-                        <th class="py-3.5 px-4 text-start font-medium hidden sm:table-cell">{{ t('dashboard.table.colDate') }}</th>
-                        <th class="py-3.5 px-4 text-start font-medium hidden lg:table-cell">{{ t('dashboard.table.colHash') }}</th>
-                        <th class="py-3.5 px-4 text-start font-medium">{{ t('dashboard.table.colStatus') }}</th>
-                        <th class="py-3.5 px-4 text-end font-medium">{{ t('dashboard.table.colActions') }}</th>
+                    <tr
+                        class="border-b border-border/70 bg-muted/40 font-semibold text-muted-foreground"
+                    >
+                        <th class="px-4 py-3.5 text-start font-medium">
+                            {{ t('dashboard.table.colTitle') }}
+                        </th>
+                        <th
+                            class="hidden px-4 py-3.5 text-start font-medium md:table-cell"
+                        >
+                            {{ t('dashboard.table.colRef') }}
+                        </th>
+                        <th
+                            class="hidden px-4 py-3.5 text-start font-medium sm:table-cell"
+                        >
+                            {{ t('dashboard.table.colDate') }}
+                        </th>
+                        <th
+                            class="hidden px-4 py-3.5 text-start font-medium lg:table-cell"
+                        >
+                            {{ t('dashboard.table.colHash') }}
+                        </th>
+                        <th class="px-4 py-3.5 text-start font-medium">
+                            {{ t('dashboard.table.colStatus') }}
+                        </th>
+                        <th class="px-4 py-3.5 text-end font-medium">
+                            {{ t('dashboard.table.colActions') }}
+                        </th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border/60">
                     <tr
                         v-for="work in filteredWorks"
                         :key="work.id"
-                        class="hover:bg-accent/40 transition-colors group"
+                        class="group transition-colors hover:bg-accent/40"
                     >
                         <!-- Title & Domain -->
-                        <td class="py-3.5 px-4">
+                        <td class="px-4 py-3.5">
                             <div class="flex items-center gap-3">
                                 <div
                                     :class="[
@@ -326,13 +354,24 @@ const getStatusBadge = (status: Work['status']) => {
                                         getCategoryBadgeClass(work.category),
                                     ]"
                                 >
-                                    <component :is="getCategoryIcon(work.category)" class="size-4" />
+                                    <component
+                                        :is="getCategoryIcon(work.category)"
+                                        class="size-4"
+                                    />
                                 </div>
                                 <div class="min-w-0 space-y-0.5">
-                                    <p class="font-semibold text-foreground truncate max-w-[220px] sm:max-w-xs md:max-w-md">
-                                        {{ locale === 'ar' ? work.titleAr : work.title }}
+                                    <p
+                                        class="max-w-[220px] truncate font-semibold text-foreground sm:max-w-xs md:max-w-md"
+                                    >
+                                        {{
+                                            locale === 'ar'
+                                                ? work.titleAr
+                                                : work.title
+                                        }}
                                     </p>
-                                    <p class="text-[11px] text-muted-foreground">
+                                    <p
+                                        class="text-[11px] text-muted-foreground"
+                                    >
                                         {{ work.fileSize }} • {{ work.year }}
                                     </p>
                                 </div>
@@ -340,73 +379,99 @@ const getStatusBadge = (status: Work['status']) => {
                         </td>
 
                         <!-- Reference Number -->
-                        <td class="py-3.5 px-4 hidden md:table-cell">
-                            <span class="font-mono text-xs font-semibold text-foreground/90 bg-muted/60 px-2 py-1 rounded-md">
+                        <td class="hidden px-4 py-3.5 md:table-cell">
+                            <span
+                                class="rounded-md bg-muted/60 px-2 py-1 font-mono text-xs font-semibold text-foreground/90"
+                            >
                                 {{ work.reference }}
                             </span>
                         </td>
 
                         <!-- Date -->
-                        <td class="py-3.5 px-4 hidden sm:table-cell text-muted-foreground whitespace-nowrap">
+                        <td
+                            class="hidden px-4 py-3.5 whitespace-nowrap text-muted-foreground sm:table-cell"
+                        >
                             {{ work.date }}
                         </td>
 
                         <!-- SHA-256 Checksum -->
-                        <td class="py-3.5 px-4 hidden lg:table-cell">
+                        <td class="hidden px-4 py-3.5 lg:table-cell">
                             <button
                                 type="button"
-                                class="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted px-2 py-1 rounded-md transition-colors cursor-pointer"
+                                class="flex cursor-pointer items-center gap-1.5 rounded-md bg-muted/40 px-2 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                                 :title="work.hash"
                                 @click="copyHash(work.id, work.hash)"
                             >
-                                <span class="truncate max-w-[120px]">{{ work.hash.slice(0, 12) }}...{{ work.hash.slice(-6) }}</span>
+                                <span class="max-w-[120px] truncate"
+                                    >{{ work.hash.slice(0, 12) }}...{{
+                                        work.hash.slice(-6)
+                                    }}</span
+                                >
                                 <component
-                                    :is="copiedHashId === work.id ? Check : Copy"
+                                    :is="
+                                        copiedHashId === work.id ? Check : Copy
+                                    "
                                     :class="[
                                         'size-3 shrink-0',
-                                        copiedHashId === work.id ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground',
+                                        copiedHashId === work.id
+                                            ? 'text-emerald-600 dark:text-emerald-400'
+                                            : 'text-muted-foreground',
                                     ]"
                                 />
                             </button>
                         </td>
 
                         <!-- Status Badge -->
-                        <td class="py-3.5 px-4 whitespace-nowrap">
+                        <td class="px-4 py-3.5 whitespace-nowrap">
                             <span
                                 :class="[
-                                    'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border',
+                                    'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold',
                                     getStatusBadge(work.status).class,
                                 ]"
                             >
                                 <span
                                     v-if="getStatusBadge(work.status).pulse"
-                                    :class="['size-1.5 rounded-full animate-pulse', getStatusBadge(work.status).pulseClass]"
+                                    :class="[
+                                        'size-1.5 animate-pulse rounded-full',
+                                        getStatusBadge(work.status).pulseClass,
+                                    ]"
                                 />
                                 {{ getStatusBadge(work.status).label }}
                             </span>
                         </td>
 
                         <!-- Actions -->
-                        <td class="py-3.5 px-4 text-end whitespace-nowrap">
+                        <td class="px-4 py-3.5 text-end whitespace-nowrap">
                             <div class="flex items-center justify-end gap-1.5">
                                 <Button
                                     size="sm"
                                     variant="ghost"
-                                    class="h-8 gap-1.5 px-2 text-xs font-semibold text-onda-blue-600 hover:text-onda-blue-700 hover:bg-onda-blue-500/10 dark:text-onda-blue-400 cursor-pointer"
+                                    class="h-8 cursor-pointer gap-1.5 px-2 text-xs font-semibold text-onda-blue-600 hover:bg-onda-blue-500/10 hover:text-onda-blue-700 dark:text-onda-blue-400"
                                     @click="emit('view-certificate', work)"
                                 >
                                     <Award class="size-3.5" />
-                                    <span class="hidden sm:inline">{{ t('dashboard.table.viewCert') }}</span>
+                                    <span class="hidden sm:inline">{{
+                                        t('dashboard.table.viewCert')
+                                    }}</span>
                                 </Button>
                             </div>
                         </td>
                     </tr>
 
                     <tr v-if="filteredWorks.length === 0">
-                        <td colspan="6" class="py-12 text-center text-muted-foreground">
-                            <div class="flex flex-col items-center justify-center gap-2">
-                                <Search class="size-8 text-muted-foreground/50" />
-                                <p class="text-sm font-medium">{{ t('dashboard.table.noWorks') }}</p>
+                        <td
+                            colspan="6"
+                            class="py-12 text-center text-muted-foreground"
+                        >
+                            <div
+                                class="flex flex-col items-center justify-center gap-2"
+                            >
+                                <Search
+                                    class="size-8 text-muted-foreground/50"
+                                />
+                                <p class="text-sm font-medium">
+                                    {{ t('dashboard.table.noWorks') }}
+                                </p>
                             </div>
                         </td>
                     </tr>
@@ -415,15 +480,31 @@ const getStatusBadge = (status: Work['status']) => {
         </div>
 
         <!-- Table Footer Pagination bar -->
-        <div class="border-t border-border/70 px-4 py-3 flex items-center justify-between text-xs text-muted-foreground">
+        <div
+            class="flex items-center justify-between border-t border-border/70 px-4 py-3 text-xs text-muted-foreground"
+        >
             <span>{{ t('dashboard.table.page', { page: 1, total: 1 }) }}</span>
             <div class="flex items-center gap-1">
-                <Button variant="outline" size="sm" class="h-7 text-xs rounded-lg" disabled>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    class="h-7 rounded-lg text-xs"
+                    disabled
+                >
                     <ChevronLeft class="size-3 rtl:rotate-180" />
-                    <span class="hidden sm:inline">{{ t('dashboard.table.prev') }}</span>
+                    <span class="hidden sm:inline">{{
+                        t('dashboard.table.prev')
+                    }}</span>
                 </Button>
-                <Button variant="outline" size="sm" class="h-7 text-xs rounded-lg" disabled>
-                    <span class="hidden sm:inline">{{ t('dashboard.table.next') }}</span>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    class="h-7 rounded-lg text-xs"
+                    disabled
+                >
+                    <span class="hidden sm:inline">{{
+                        t('dashboard.table.next')
+                    }}</span>
                     <ChevronRight class="size-3 rtl:rotate-180" />
                 </Button>
             </div>

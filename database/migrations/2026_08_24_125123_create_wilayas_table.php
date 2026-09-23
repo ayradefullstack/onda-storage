@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('wilayas', function (Blueprint $table) {
-            $table->id();
+            $table->ondaKeys();
             $table->foreignId('country_id')->nullable()->constrained('countries')->nullOnDelete();
             $table->string('code', 10);
             $table->string('name_ar');
@@ -20,6 +20,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->boolean('is_visible')->default(true);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

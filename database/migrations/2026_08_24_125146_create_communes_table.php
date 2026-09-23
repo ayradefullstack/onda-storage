@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('communes', function (Blueprint $table) {
-            $table->id();
+            $table->ondaKeys();
             $table->foreignId('wilaya_id')->constrained('wilayas')->cascadeOnDelete();
             $table->string('post_code', 15)->nullable();
             $table->string('name_ar');
@@ -20,6 +20,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->boolean('is_visible')->default(true);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

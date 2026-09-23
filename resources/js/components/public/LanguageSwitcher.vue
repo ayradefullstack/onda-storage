@@ -8,7 +8,11 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { applyHtmlDirLang, persistLocaleCookie, withLocaleSegment } from '@/i18n';
+import {
+    applyHtmlDirLang,
+    persistLocaleCookie,
+    withLocaleSegment,
+} from '@/i18n';
 import type { SupportedLocale } from '@/i18n';
 import locale from '@/routes/locale';
 
@@ -34,7 +38,14 @@ const languages: { code: SupportedLocale; key: string }[] = [
  * redirects back to the current page.
  */
 function switchLocale(event: MouseEvent, code: SupportedLocale) {
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+    if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+    ) {
         return;
     }
 
@@ -49,7 +60,10 @@ function switchLocale(event: MouseEvent, code: SupportedLocale) {
     persistLocaleCookie(code);
 
     const target = withLocaleSegment(page.url, code);
-    const current = window.location.pathname + window.location.search + window.location.hash;
+    const current =
+        window.location.pathname +
+        window.location.search +
+        window.location.hash;
 
     if (target !== current) {
         window.history.replaceState(window.history.state, '', target);
@@ -57,23 +71,32 @@ function switchLocale(event: MouseEvent, code: SupportedLocale) {
 }
 
 function switchLocaleHref(code: SupportedLocale): string {
-    return locale.switch.url({ locale: code }, { query: { redirect: page.url } });
+    return locale.switch.url(
+        { locale: code },
+        { query: { redirect: page.url } },
+    );
 }
 </script>
 
 <template>
     <DropdownMenu>
         <DropdownMenuTrigger
-            class="inline-flex h-9 w-9 items-center justify-center rounded-md text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            class="inline-flex h-9 w-9 items-center justify-center rounded-md text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             :aria-label="t('common.languageSwitcher')"
         >
             <Globe class="size-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-            <DropdownMenuItem v-for="lang in languages" :key="lang.code" as-child>
+            <DropdownMenuItem
+                v-for="lang in languages"
+                :key="lang.code"
+                as-child
+            >
                 <a
                     :href="switchLocaleHref(lang.code)"
-                    :aria-current="activeLocale === lang.code ? 'page' : undefined"
+                    :aria-current="
+                        activeLocale === lang.code ? 'page' : undefined
+                    "
                     class="w-full aria-[current=page]:font-semibold aria-[current=page]:text-seal"
                     @click="switchLocale($event, lang.code)"
                 >

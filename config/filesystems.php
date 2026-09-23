@@ -60,6 +60,63 @@ return [
             'report' => false,
         ],
 
+        // ONDA vault disks. All four are rooted OUTSIDE the project directory,
+        // on one shared partition (rename() during upload complete() must be
+        // instant), 0700 dirs / 0600 files, and 'throw' so a failed write
+        // surfaces as an exception instead of a silently-false return value.
+        // Never `Storage::get()`/`storage:link` these — see CLAUDE.md.
+        'vault' => [
+            'driver' => 'local',
+            'root' => env('VAULT_DISK_ROOT'),
+            'visibility' => 'private',
+            'permissions' => [
+                'file' => ['private' => 0600],
+                'dir' => ['private' => 0700],
+            ],
+            'serve' => false,
+            'throw' => true,
+            'report' => false,
+        ],
+
+        'incoming' => [
+            'driver' => 'local',
+            'root' => env('INCOMING_DISK_ROOT'),
+            'visibility' => 'private',
+            'permissions' => [
+                'file' => ['private' => 0600],
+                'dir' => ['private' => 0700],
+            ],
+            'serve' => false,
+            'throw' => true,
+            'report' => false,
+        ],
+
+        'work' => [
+            'driver' => 'local',
+            'root' => env('WORK_DISK_ROOT'),
+            'visibility' => 'private',
+            'permissions' => [
+                'file' => ['private' => 0600],
+                'dir' => ['private' => 0700],
+            ],
+            'serve' => false,
+            'throw' => true,
+            'report' => false,
+        ],
+
+        'variants' => [
+            'driver' => 'local',
+            'root' => env('VARIANTS_DISK_ROOT'),
+            'visibility' => 'private',
+            'permissions' => [
+                'file' => ['private' => 0600],
+                'dir' => ['private' => 0700],
+            ],
+            'serve' => false,
+            'throw' => true,
+            'report' => false,
+        ],
+
     ],
 
     /*

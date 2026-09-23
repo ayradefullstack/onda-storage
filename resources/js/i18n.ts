@@ -85,7 +85,10 @@ export function persistLocaleCookie(locale: SupportedLocale): void {
  * Only the `home` route (`/{locale}`) has such a segment — every other URL
  * is returned unchanged, since its locale lives in the cookie, not the path.
  */
-export function withLocaleSegment(url: string, locale: SupportedLocale): string {
+export function withLocaleSegment(
+    url: string,
+    locale: SupportedLocale,
+): string {
     const parsed = new URL(url, 'http://localhost');
     const segments = parsed.pathname.split('/');
 

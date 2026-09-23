@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import {
     Bell,
-    CheckCircle2,
     Clock,
     FileCheck2,
     Info,
@@ -33,7 +32,8 @@ const notifications = ref<Notification[]>([
     {
         id: '1',
         title: 'Virement de redevances exécuté',
-        description: 'Un virement de 184,500 DZD a été crédité au titre des droits audiovisuels T2-2026.',
+        description:
+            'Un virement de 184,500 DZD a été crédité au titre des droits audiovisuels T2-2026.',
         time: 'Il y a 10 min',
         read: false,
         type: 'royalty',
@@ -41,7 +41,8 @@ const notifications = ref<Notification[]>([
     {
         id: '2',
         title: 'Attestation de dépôt validée',
-        description: 'Votre œuvre "Symphonie des Aurès" a été certifiée avec succès (Réf: DZ-2026-MUS-0814).',
+        description:
+            'Votre œuvre "Symphonie des Aurès" a été certifiée avec succès (Réf: DZ-2026-MUS-0814).',
         time: 'Il y a 2 heures',
         read: false,
         type: 'deposit',
@@ -49,7 +50,8 @@ const notifications = ref<Notification[]>([
     {
         id: '3',
         title: 'Horodatage souverain sécurisé',
-        description: 'Vérification cryptographique SHA-256 confirmée sur les serveurs institutionnels.',
+        description:
+            'Vérification cryptographique SHA-256 confirmée sur les serveurs institutionnels.',
         time: 'Hier',
         read: true,
         type: 'security',
@@ -57,7 +59,8 @@ const notifications = ref<Notification[]>([
     {
         id: '4',
         title: 'Campagne de déclaration 2026',
-        description: 'La session annuelle de dépôt et régularisation des œuvres littéraires est ouverte.',
+        description:
+            'La session annuelle de dépôt et régularisation des œuvres littéraires est ouverte.',
         time: 'Il y a 2 jours',
         read: true,
         type: 'announcement',
@@ -113,7 +116,7 @@ const getIconColor = (type: Notification['type']) => {
                 <Bell class="size-4" />
                 <span
                     v-if="unreadCount > 0"
-                    class="absolute -top-0.5 -end-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-onda-blue-600 px-1 text-[10px] font-bold text-white shadow-xs dark:bg-onda-teal-500 dark:text-gray-950 animate-pulse"
+                    class="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 animate-pulse items-center justify-center rounded-full bg-onda-blue-600 px-1 text-[10px] font-bold text-white shadow-xs dark:bg-onda-teal-500 dark:text-gray-950"
                 >
                     {{ unreadCount }}
                 </span>
@@ -122,9 +125,11 @@ const getIconColor = (type: Notification['type']) => {
 
         <DropdownMenuContent
             align="end"
-            class="w-80 sm:w-96 rounded-xl p-0 shadow-xl border border-border/80 bg-popover/95 backdrop-blur-md"
+            class="w-80 rounded-xl border border-border/80 bg-popover/95 p-0 shadow-xl backdrop-blur-md sm:w-96"
         >
-            <div class="flex items-center justify-between border-b border-border/60 px-4 py-3">
+            <div
+                class="flex items-center justify-between border-b border-border/60 px-4 py-3"
+            >
                 <div class="flex items-center gap-2">
                     <h4 class="text-sm font-semibold text-foreground">
                         {{ t('dashboard.notifications.title') }}
@@ -132,7 +137,7 @@ const getIconColor = (type: Notification['type']) => {
                     <Badge
                         v-if="unreadCount > 0"
                         variant="secondary"
-                        class="text-[10px] px-1.5 py-0 h-4 font-mono font-semibold bg-onda-blue-500/10 text-onda-blue-600 dark:text-onda-blue-400 border-onda-blue-500/20"
+                        class="h-4 border-onda-blue-500/20 bg-onda-blue-500/10 px-1.5 py-0 font-mono text-[10px] font-semibold text-onda-blue-600 dark:text-onda-blue-400"
                     >
                         {{ unreadCount }}
                     </Badge>
@@ -140,20 +145,22 @@ const getIconColor = (type: Notification['type']) => {
                 <button
                     v-if="unreadCount > 0"
                     @click="markAllAsRead"
-                    class="text-xs text-onda-blue-600 hover:text-onda-blue-700 dark:text-onda-blue-400 dark:hover:text-onda-blue-300 font-medium transition-colors cursor-pointer"
+                    class="cursor-pointer text-xs font-medium text-onda-blue-600 transition-colors hover:text-onda-blue-700 dark:text-onda-blue-400 dark:hover:text-onda-blue-300"
                 >
                     {{ t('dashboard.notifications.markAllRead') }}
                 </button>
             </div>
 
-            <div class="max-h-[380px] overflow-y-auto divide-y divide-border/40 p-1">
+            <div
+                class="max-h-[380px] divide-y divide-border/40 overflow-y-auto p-1"
+            >
                 <div
                     v-for="item in notifications"
                     :key="item.id"
                     :class="[
-                        'flex items-start gap-3 p-3 rounded-lg transition-colors cursor-pointer',
+                        'flex cursor-pointer items-start gap-3 rounded-lg p-3 transition-colors',
                         item.read
-                            ? 'hover:bg-accent/50 opacity-75 hover:opacity-100'
+                            ? 'opacity-75 hover:bg-accent/50 hover:opacity-100'
                             : 'bg-onda-blue-500/5 hover:bg-onda-blue-500/10 dark:bg-onda-blue-950/30 dark:hover:bg-onda-blue-950/50',
                     ]"
                     @click="item.read = true"
@@ -167,29 +174,35 @@ const getIconColor = (type: Notification['type']) => {
                         <component :is="getIcon(item.type)" class="size-4" />
                     </div>
 
-                    <div class="flex-1 min-w-0 space-y-1">
+                    <div class="min-w-0 flex-1 space-y-1">
                         <div class="flex items-center justify-between gap-1">
-                            <p class="text-xs font-semibold text-foreground truncate">
+                            <p
+                                class="truncate text-xs font-semibold text-foreground"
+                            >
                                 {{ item.title }}
                             </p>
-                            <span class="shrink-0 text-[10px] text-muted-foreground flex items-center gap-1">
+                            <span
+                                class="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground"
+                            >
                                 <Clock class="size-2.5" />
                                 {{ item.time }}
                             </span>
                         </div>
-                        <p class="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
+                        <p
+                            class="line-clamp-2 text-[11px] leading-relaxed text-muted-foreground"
+                        >
                             {{ item.description }}
                         </p>
                     </div>
 
                     <span
                         v-if="!item.read"
-                        class="size-1.5 rounded-full bg-onda-blue-600 dark:bg-onda-teal-400 shrink-0 self-center"
+                        class="size-1.5 shrink-0 self-center rounded-full bg-onda-blue-600 dark:bg-onda-teal-400"
                     />
                 </div>
             </div>
 
-            <div class="border-t border-border/60 p-2 text-center bg-muted/20">
+            <div class="border-t border-border/60 bg-muted/20 p-2 text-center">
                 <p class="text-[11px] text-muted-foreground">
                     {{ t('dashboard.sovereignBadge') }}
                 </p>

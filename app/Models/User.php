@@ -3,19 +3,25 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+
+use App\Concerns\HasUuidColumn;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Spatie\Permission\Traits\HasRoles;
 
 /**
  * @property int $id
+ * @property string $uuid
  * @property string|null $first_name
  * @property string|null $last_name
  * @property string|null $first_name_ar
@@ -37,24 +43,27 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $updated_at
  */
 #[Fillable([
-    'name', 
-    'first_name', 
-    'last_name', 
-    'first_name_ar', 
-    'last_name_ar', 
-    'email', 
-    'country_id', 
-    'wilaya_id', 
-    'commune_id', 
-    'city', 
-    'phone', 
-    'password'
+    'uuid',
+    'name',
+    'first_name',
+    'last_name',
+    'first_name_ar',
+    'last_name_ar',
+    'email',
+    'country_id',
+    'wilaya_id',
+    'commune_id',
+    'city',
+    'phone',
+    'password',
 ])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+
+    use HasRoles, HasUuidColumn, SoftDeletes;
 
     /**
      * Get the attributes that should be cast.
@@ -70,17 +79,26 @@ class User extends Authenticatable implements PasskeyUser
         ];
     }
 
-    public function country(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    /**
+     * @return BelongsTo<Country, $this>
+     */
+    public function country(): BelongsTo
     {
         return $this->belongsTo(Country::class);
     }
 
-    public function wilaya(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    /**
+     * @return BelongsTo<Wilaya, $this>
+     */
+    public function wilaya(): BelongsTo
     {
         return $this->belongsTo(Wilaya::class);
     }
 
-    public function commune(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    /**
+     * @return BelongsTo<Commune, $this>
+     */
+    public function commune(): BelongsTo
     {
         return $this->belongsTo(Commune::class);
     }

@@ -1,0 +1,550 @@
+<script setup lang="ts">
+import { router } from '@inertiajs/vue3';
+import { AlertTriangle, Info, Pencil } from '@lucide/vue';
+import { ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import EmptyState from '@/components/admin/EmptyState.vue';
+import LockedField from '@/components/admin/LockedField.vue';
+import Pagination from '@/components/admin/Pagination.vue';
+import ReferentielShell from '@/components/admin/ReferentielShell.vue';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { documents as documentsRoute } from '@/routes/admin/referentiel';
+import { impact, update } from '@/routes/admin/referentiel/documents';
+
+interface DocumentRow {
+    uuid: string;
+    document_key: string;
+    title: string;
+    title_ar: string | null;
+    title_en: string | null;
+    college: string | null;
+    code_college: string | null;
+    extensions: string[];
+    is_required: boolean;
+    display_order: number;
+    max_size_kb: number | null;
+    allows_multiple: boolean;
+    needs_review: boolean;
+    has_conditions: boolean;
+}
+
+const props = defineProps<{
+    tabs: Array<{ key: string; route: string; count: number }>;
+    rows: {
+        data: DocumentRow[];
+        links: Array<{ url: string | null; label: string; active: boolean }>;
+        from: number | null;
+        to: number | null;
+        total: number;
+    };
+    filters: { search: string; college: number | null; needs_review: boolean };
+    colleges: Array<{ id: number; name: string }>;
+}>();
+
+const { t } = useI18n();
+
+const editing = ref<DocumentRow | null>(null);
+const saving = ref(false);
+const affectedDrafts = ref<number | null>(null);
+
+const form = ref({
+    title_ar: '',
+    title_en: '',
+    /** Edited as a comma-separated string; split and normalised on save. */
+    extensions: '',
+    is_required: false,
+    display_order: 1,
+    max_size_kb: '' as string,
+    allows_multiple: true,
+});
+
+const open = (row: DocumentRow) => {
+    editing.value = row;
+    affectedDrafts.value = null;
+    form.value = {
+        title_ar: row.title_ar ?? '',
+        title_en: row.title_en ?? '',
+        extensions: row.extensions.join(', '),
+        is_required: row.is_required,
+        display_order: row.display_order,
+        max_size_kb: row.max_size_kb === null ? '' : String(row.max_size_kb),
+        allows_multiple: row.allows_multiple,
+    };
+};
+
+/**
+ * Turning `is_required` on makes existing drafts un-submittable until
+ * their authors upload this file. The officer sees how many before saving,
+ * not afterwards from support calls.
+ */
+watch(
+    () => form.value.is_required,
+    async (required) => {
+        if (editing.value === null || !required || editing.value.is_required) {
+            affectedDrafts.value = null;
+
+            return;
+        }
+
+        try {
+            const response = await fetch(impact(editing.value.uuid).url, {
+                headers: { Accept: 'application/json' },
+            });
+            const payload = await response.json();
+            affectedDrafts.value = payload.affected_drafts ?? null;
+        } catch {
+            // A failed count must not block the edit; the warning simply
+            // does not appear.
+            affectedDrafts.value = null;
+        }
+    },
+);
+
+const save = () => {
+    if (editing.value === null) {
+        return;
+    }
+
+    saving.value = true;
+
+    router.patch(
+        update(editing.value.uuid).url,
+        {
+            title_ar: form.value.title_ar.trim() || null,
+            title_en: form.value.title_en.trim() || null,
+            // Lowercased and de-dotted here so an officer pasting ".PDF"
+            // is helped rather than rejected; anything still malformed
+            // (MIME strings, spaces) fails validation with a message.
+            extensions: form.value.extensions
+                .split(',')
+                .map((e) => e.trim().replace(/^\./, '').toLowerCase())
+                .filter((e) => e !== ''),
+            is_required: form.value.is_required,
+            display_order: form.value.display_order,
+            max_size_kb:
+                form.value.max_size_kb.trim() === ''
+                    ? null
+                    : Number(form.value.max_size_kb),
+            allows_multiple: form.value.allows_multiple,
+        },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                saving.value = false;
+                editing.value = null;
+            },
+        },
+    );
+};
+
+const applyFilter = (key: 'college' | 'needs_review', value: string) => {
+    router.get(
+        documentsRoute().url,
+        {
+            ...(props.filters.search ? { search: props.filters.search } : {}),
+            ...(props.filters.college && key !== 'college'
+                ? { college: props.filters.college }
+                : {}),
+            ...(props.filters.needs_review && key !== 'needs_review'
+                ? { needs_review: 1 }
+                : {}),
+            ...(value !== 'all' && value !== '0' ? { [key]: value } : {}),
+        },
+        { preserveState: true, preserveScroll: true, replace: true },
+    );
+};
+</script>
+
+<template>
+    <ReferentielShell
+        :tabs="tabs"
+        active="documents"
+        :index-url="documentsRoute().url"
+        :search="filters.search"
+    >
+        <template #filters>
+            <Select
+                :model-value="String(filters.college ?? 'all')"
+                @update:model-value="applyFilter('college', String($event))"
+            >
+                <SelectTrigger class="h-9 w-56 text-sm">
+                    <SelectValue
+                        :placeholder="t('admin.referentiel.allColleges')"
+                    />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">{{
+                        t('admin.referentiel.allColleges')
+                    }}</SelectItem>
+                    <SelectItem
+                        v-for="college in colleges"
+                        :key="college.id"
+                        :value="String(college.id)"
+                        >{{ college.name }}</SelectItem
+                    >
+                </SelectContent>
+            </Select>
+
+            <Button
+                size="sm"
+                :variant="filters.needs_review ? 'default' : 'outline'"
+                class="h-9 cursor-pointer gap-1.5 text-xs"
+                @click="
+                    applyFilter('needs_review', filters.needs_review ? '0' : '1')
+                "
+            >
+                <AlertTriangle class="size-3.5" />
+                {{ t('admin.referentiel.needsReviewFilter') }}
+            </Button>
+        </template>
+
+        <EmptyState
+            v-if="rows.data.length === 0"
+            :title="t('admin.referentiel.empty')"
+            :description="t('admin.referentiel.emptyDescription')"
+        />
+
+        <div
+            v-else
+            class="overflow-hidden rounded-lg border border-border bg-card"
+        >
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse text-xs">
+                    <thead>
+                        <tr
+                            class="border-b border-border bg-muted/40 text-muted-foreground"
+                        >
+                            <th class="px-3 py-2.5 text-start font-medium">
+                                {{ t('admin.referentiel.col.key') }}
+                            </th>
+                            <th class="px-3 py-2.5 text-start font-medium">
+                                {{ t('admin.referentiel.col.title') }}
+                            </th>
+                            <th
+                                class="hidden px-3 py-2.5 text-start font-medium lg:table-cell"
+                            >
+                                {{ t('admin.referentiel.col.college') }}
+                            </th>
+                            <th class="px-3 py-2.5 text-start font-medium">
+                                {{ t('admin.referentiel.col.extensions') }}
+                            </th>
+                            <th class="px-3 py-2.5 text-end font-medium">
+                                {{ t('admin.referentiel.col.order') }}
+                            </th>
+                            <th class="px-3 py-2.5 text-start font-medium">
+                                {{ t('admin.referentiel.col.rules') }}
+                            </th>
+                            <th class="px-3 py-2.5 text-end font-medium">
+                                {{ t('admin.referentiel.col.actions') }}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border/70">
+                        <tr
+                            v-for="row in rows.data"
+                            :key="row.uuid"
+                            :class="[
+                                'transition-colors hover:bg-accent/30',
+                                row.needs_review
+                                    ? 'bg-amber-500/[0.04] dark:bg-amber-500/[0.06]'
+                                    : '',
+                            ]"
+                        >
+                            <td
+                                class="px-3 py-2 font-mono text-[11px] whitespace-nowrap text-muted-foreground"
+                            >
+                                <bdi>{{ row.document_key }}</bdi>
+                            </td>
+                            <td class="max-w-[16rem] px-3 py-2">
+                                <bdi class="block truncate font-medium">{{
+                                    row.title
+                                }}</bdi>
+                                <bdi
+                                    v-if="row.title_ar"
+                                    class="block truncate text-[11px] text-muted-foreground"
+                                    >{{ row.title_ar }}</bdi
+                                >
+                            </td>
+                            <td
+                                class="hidden max-w-[12rem] px-3 py-2 lg:table-cell"
+                            >
+                                <bdi
+                                    class="block truncate text-muted-foreground"
+                                    >{{ row.college ?? '—' }}</bdi
+                                >
+                            </td>
+                            <td class="px-3 py-2">
+                                <div class="flex flex-wrap gap-1">
+                                    <span
+                                        v-for="ext in row.extensions"
+                                        :key="ext"
+                                        class="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
+                                        ><bdi>{{ ext }}</bdi></span
+                                    >
+                                </div>
+                            </td>
+                            <td
+                                class="px-3 py-2 text-end font-mono text-muted-foreground"
+                            >
+                                <bdi>{{ row.display_order }}</bdi>
+                            </td>
+                            <td class="px-3 py-2 whitespace-nowrap">
+                                <div class="flex flex-wrap items-center gap-1">
+                                    <span
+                                        v-if="row.is_required"
+                                        class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+                                        >{{
+                                            t('admin.referentiel.col.required')
+                                        }}</span
+                                    >
+                                    <span
+                                        v-if="row.allows_multiple"
+                                        class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                                        >{{
+                                            t('admin.referentiel.col.multiple')
+                                        }}</span
+                                    >
+                                    <!-- A conditional requirement never
+                                         blocks submission — the officer
+                                         judges it at review time. -->
+                                    <span
+                                        v-if="row.has_conditions"
+                                        class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                                        :title="
+                                            t('admin.referentiel.col.conditionalHelp')
+                                        "
+                                        >{{
+                                            t(
+                                                'admin.referentiel.col.conditional',
+                                            )
+                                        }}</span
+                                    >
+                                    <span
+                                        v-if="row.needs_review"
+                                        class="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400"
+                                        >{{
+                                            t('admin.referentiel.col.needsReview')
+                                        }}</span
+                                    >
+                                </div>
+                            </td>
+                            <td class="px-3 py-2 text-end">
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    class="h-7 cursor-pointer gap-1.5 px-2 text-xs"
+                                    @click="open(row)"
+                                >
+                                    <Pencil class="size-3" />
+                                    {{ t('admin.referentiel.edit') }}
+                                </Button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="px-3 pb-3">
+                <Pagination
+                    :links="rows.links"
+                    :from="rows.from"
+                    :to="rows.to"
+                    :total="rows.total"
+                />
+            </div>
+        </div>
+
+        <Dialog
+            :open="editing !== null"
+            @update:open="(o) => !o && (editing = null)"
+        >
+            <DialogContent class="sm:max-w-xl">
+                <DialogHeader>
+                    <DialogTitle>{{
+                        t('admin.referentiel.editDocument')
+                    }}</DialogTitle>
+                    <DialogDescription>
+                        <bdi>{{ editing?.title }}</bdi>
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <LockedField
+                        :label="t('admin.referentiel.col.key')"
+                        :value="editing?.document_key ?? null"
+                        reason="documentKey"
+                    />
+                    <LockedField
+                        :label="t('admin.referentiel.col.college')"
+                        :value="editing?.college ?? null"
+                        reason="documentCollege"
+                    />
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div class="space-y-1.5">
+                        <Label for="title_ar" class="text-xs">{{
+                            t('admin.referentiel.col.titleAr')
+                        }}</Label>
+                        <Input
+                            id="title_ar"
+                            v-model="form.title_ar"
+                            dir="rtl"
+                            class="h-9 text-sm"
+                        />
+                    </div>
+                    <div class="space-y-1.5">
+                        <Label for="title_en" class="text-xs">{{
+                            t('admin.referentiel.col.titleEn')
+                        }}</Label>
+                        <Input
+                            id="title_en"
+                            v-model="form.title_en"
+                            dir="ltr"
+                            class="h-9 text-sm"
+                        />
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <Label for="extensions" class="text-xs">{{
+                        t('admin.referentiel.col.extensions')
+                    }}</Label>
+                    <Input
+                        id="extensions"
+                        v-model="form.extensions"
+                        dir="ltr"
+                        placeholder="pdf, jpg, png"
+                        class="h-9 font-mono text-sm"
+                    />
+                    <p class="text-[11px] leading-relaxed text-muted-foreground">
+                        {{ t('admin.referentiel.extensionsHelp') }}
+                    </p>
+                    <!-- Tightening a rule does not reach back in time, and
+                         must not: a file already deposited was valid when
+                         it was deposited. -->
+                    <p
+                        class="flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground"
+                    >
+                        <Info class="mt-0.5 size-3 shrink-0" />
+                        {{ t('admin.referentiel.notRetroactive') }}
+                    </p>
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div class="space-y-1.5">
+                        <Label for="display_order" class="text-xs">{{
+                            t('admin.referentiel.col.order')
+                        }}</Label>
+                        <Input
+                            id="display_order"
+                            v-model.number="form.display_order"
+                            type="number"
+                            min="1"
+                            class="h-9 text-sm"
+                        />
+                    </div>
+                    <div class="space-y-1.5">
+                        <Label for="max_size_kb" class="text-xs">{{
+                            t('admin.referentiel.col.maxSize')
+                        }}</Label>
+                        <Input
+                            id="max_size_kb"
+                            v-model="form.max_size_kb"
+                            type="number"
+                            min="1"
+                            :placeholder="t('admin.referentiel.noLimit')"
+                            class="h-9 text-sm"
+                        />
+                    </div>
+                </div>
+
+                <div class="space-y-3 rounded-lg border border-border/80 p-3">
+                    <label class="flex items-start gap-2.5 text-xs">
+                        <Checkbox v-model="form.is_required" />
+                        <span>
+                            <span class="block font-medium">{{
+                                t('admin.referentiel.col.required')
+                            }}</span>
+                            <span class="text-muted-foreground">{{
+                                t('admin.referentiel.requiredHelp')
+                            }}</span>
+                        </span>
+                    </label>
+
+                    <label class="flex items-start gap-2.5 text-xs">
+                        <Checkbox v-model="form.allows_multiple" />
+                        <span>
+                            <span class="block font-medium">{{
+                                t('admin.referentiel.col.multiple')
+                            }}</span>
+                            <span class="text-muted-foreground">{{
+                                t('admin.referentiel.multipleHelp')
+                            }}</span>
+                        </span>
+                    </label>
+                </div>
+
+                <!-- How many drafts this would block, asked before saving. -->
+                <div
+                    v-if="affectedDrafts !== null && affectedDrafts > 0"
+                    class="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs"
+                >
+                    <p
+                        class="flex items-center gap-1.5 font-medium text-foreground"
+                    >
+                        <AlertTriangle
+                            class="size-3.5 text-amber-600 dark:text-amber-400"
+                        />
+                        {{
+                            t('admin.referentiel.requiredImpact', {
+                                count: affectedDrafts,
+                            })
+                        }}
+                    </p>
+                </div>
+
+                <p
+                    v-if="editing?.needs_review"
+                    class="rounded-lg border border-border/80 bg-muted/40 p-3 text-[11px] leading-relaxed text-muted-foreground"
+                >
+                    {{ t('admin.referentiel.needsReviewClears') }}
+                </p>
+
+                <DialogFooter class="gap-2 sm:gap-2">
+                    <Button
+                        variant="outline"
+                        class="cursor-pointer"
+                        :disabled="saving"
+                        @click="editing = null"
+                        >{{ t('admin.referentiel.cancel') }}</Button
+                    >
+                    <Button
+                        class="cursor-pointer"
+                        :disabled="saving"
+                        @click="save"
+                        >{{ t('admin.referentiel.save') }}</Button
+                    >
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    </ReferentielShell>
+</template>

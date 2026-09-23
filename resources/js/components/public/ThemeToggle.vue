@@ -25,7 +25,10 @@ const currentIcon = computed(
 );
 const currentLabel = computed(() =>
     t('theme.current', {
-        theme: t(options.find((o) => o.value === appearance.value)?.key ?? 'theme.system'),
+        theme: t(
+            options.find((o) => o.value === appearance.value)?.key ??
+                'theme.system',
+        ),
     }),
 );
 </script>
@@ -33,7 +36,7 @@ const currentLabel = computed(() =>
 <template>
     <DropdownMenu>
         <DropdownMenuTrigger
-            class="inline-flex h-9 w-9 items-center justify-center rounded-md text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            class="inline-flex h-9 w-9 items-center justify-center rounded-md text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             :aria-label="currentLabel"
         >
             <component :is="currentIcon" class="size-4" />
