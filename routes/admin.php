@@ -3,6 +3,12 @@
 use App\Http\Controllers\Admin\AuthorController;
 use App\Http\Controllers\Admin\MediaVariantController;
 use App\Http\Controllers\Admin\OeuvreController;
+use App\Http\Controllers\Admin\OeuvreReviewController;
+use App\Http\Controllers\Admin\Referentiel\CollegeController;
+use App\Http\Controllers\Admin\Referentiel\DocumentController;
+use App\Http\Controllers\Admin\Referentiel\GestionController;
+use App\Http\Controllers\Admin\Referentiel\MemberController;
+use App\Http\Controllers\Admin\Referentiel\TypeController;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -21,6 +27,45 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
     Route::prefix('oeuvres')->name('oeuvres.')->group(function () {
         Route::get('/', [OeuvreController::class, 'index'])->name('index');
         Route::get('/{oeuvre:uuid}', [OeuvreController::class, 'show'])->name('show');
+
+        // The three decisions. Every rule about which of them is legal
+        // right now lives in OeuvreStatusMachine, not in this file and not
+        // in the controller.
+        Route::post('/{oeuvre:uuid}/review', [OeuvreReviewController::class, 'review'])->name('review');
+        Route::post('/{oeuvre:uuid}/approve', [OeuvreReviewController::class, 'approve'])->name('approve');
+        Route::post('/{oeuvre:uuid}/reject', [OeuvreReviewController::class, 'reject'])->name('reject');
+    });
+
+    /**
+     * Reference data — the five seeded classification tables.
+     *
+     * A route per tab, not client-side tabs over one payload: a deep link
+     * has to work, a refresh has to stay on the same tab, and each table
+     * carries its own pagination, search and filters.
+     *
+     * There is deliberately NO destroy route on any of them. A college
+     * with deposits filed under it must never disappear, and soft-deleting
+     * one would leave those oeuvres pointing at a trashed parent —
+     * retiring is `status` / `is_disabled`.
+     */
+    Route::prefix('referentiel')->name('referentiel.')->group(function () {
+        Route::get('types', [TypeController::class, 'index'])->name('types');
+        Route::patch('types/{registerType:uuid}', [TypeController::class, 'update'])->name('types.update');
+
+        Route::get('gestions', [GestionController::class, 'index'])->name('gestions');
+        Route::patch('gestions/{typeGestion:uuid}', [GestionController::class, 'update'])->name('gestions.update');
+
+        Route::get('colleges', [CollegeController::class, 'index'])->name('colleges');
+        Route::patch('colleges/{college:uuid}', [CollegeController::class, 'update'])->name('colleges.update');
+
+        Route::get('membres', [MemberController::class, 'index'])->name('membres');
+        Route::patch('membres/{registerTypeMember:uuid}', [MemberController::class, 'update'])->name('membres.update');
+
+        Route::get('documents', [DocumentController::class, 'index'])->name('documents');
+        Route::patch('documents/{document:uuid}', [DocumentController::class, 'update'])->name('documents.update');
+        // Asked from the edit dialog before `is_required` is turned on, so
+        // the officer sees how many drafts it would block.
+        Route::get('documents/{document:uuid}/impact', [DocumentController::class, 'impact'])->name('documents.impact');
     });
 
     // The review console's cheap preview path — see MediaVariantController's

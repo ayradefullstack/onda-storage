@@ -29,9 +29,9 @@ test('works index renders the author\'s works', function () {
         ->get(route('oeuvres.index'))
         ->assertInertia(fn (Assert $page) => $page
             ->component('author/oeuvres/Index')
-            ->has('oeuvres', 1)
-            ->where('oeuvres.0.title', 'Aurès Symphony')
-            ->where('oeuvres.0.media_files_count', 1),
+            ->has('oeuvres.data', 1)
+            ->where('oeuvres.data.0.title', 'Aurès Symphony')
+            ->where('oeuvres.data.0.media_files_count', 1),
         );
 });
 
@@ -44,7 +44,7 @@ test('works index only lists the authenticated author\'s own works', function ()
         ->get(route('oeuvres.index'))
         ->assertInertia(fn (Assert $page) => $page
             ->component('author/oeuvres/Index')
-            ->has('oeuvres', 0),
+            ->has('oeuvres.data', 0),
         );
 });
 

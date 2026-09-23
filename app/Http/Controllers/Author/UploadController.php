@@ -33,6 +33,7 @@ final class UploadController extends Controller
             filename: (string) $request->validated('filename'),
             sizeBytes: (int) $request->validated('size_bytes'),
             mime: (string) $request->validated('mime'),
+            collegeOeuvreFileId: $request->validated('college_oeuvre_file_id') === null ? null : (int) $request->validated('college_oeuvre_file_id'),
         );
 
         return response()->json([

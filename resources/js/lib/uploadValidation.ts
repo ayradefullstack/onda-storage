@@ -1,3 +1,5 @@
+import type { UploadRequirement } from '@/types/upload';
+
 /**
  * Mirrors `App\Actions\Upload\InitUpload::ALLOWED` — client-side validation
  * is a UX courtesy (fail fast, before any request), not the source of
@@ -41,6 +43,34 @@ export function validateFile(file: File): FileValidationResult {
     }
 
     if (file.size <= 0 || file.size > MAX_FILE_SIZE_BYTES) {
+        return { ok: false, reason: 'size', extension };
+    }
+
+    return { ok: true };
+}
+
+/**
+ * Mirrors InitUpload's per-slot check for a classified oeuvre: the slot's own
+ * extension list (compared case-insensitively — `IMG_0967.MOV`), its own
+ * size cap where it sets one, and the global ceiling either way.
+ */
+export function validateFileForRequirement(
+    file: File,
+    requirement: UploadRequirement,
+): FileValidationResult {
+    const extension = extensionOf(file.name);
+    const accepted = requirement.extensions.map((e) => e.toLowerCase());
+
+    if (!accepted.includes(extension)) {
+        return { ok: false, reason: 'extension', extension };
+    }
+
+    const limit = Math.min(
+        requirement.maxSizeBytes ?? MAX_FILE_SIZE_BYTES,
+        MAX_FILE_SIZE_BYTES,
+    );
+
+    if (file.size <= 0 || file.size > limit) {
         return { ok: false, reason: 'size', extension };
     }
 

@@ -19,6 +19,25 @@ use RuntimeException;
  * Idempotent and never deletes. Colleges are resolved by `code_college`,
  * never by ONDA's numeric ids; an unknown code aborts the whole run.
  *
+ * ---------------------------------------------------------------------
+ * THIS SEEDER AND THE ADMIN REFERENCE-DATA UI SHARE THIS TABLE.
+ * ---------------------------------------------------------------------
+ * `/admin/referentiel/documents` lets an officer edit these rows, so the
+ * two own different columns:
+ *
+ *   SEEDER-OWNED (the UI renders these read-only)
+ *     document_key, register_type_college_id, title, conditions
+ *
+ *   UI-OWNED (create-only here, so a re-run never reverts an officer)
+ *     title_ar, title_en, extensions, is_required, max_size_kb,
+ *     allows_multiple, display_order, needs_review
+ *
+ * `document_key` is frozen into `media_files.document_key_snapshot`, which
+ * is why it is not editable anywhere. `needs_review` is UI-owned because
+ * clearing it IS the officer's review: re-asserting it here would re-flag
+ * rows an officer has already dealt with.
+ * ---------------------------------------------------------------------
+ *
  * Choices made against the matrix:
  * - `extensions` is ONDA's server rule, not its client `extension` hint.
  *   `mimetypes:application/pdf,image/jpeg,image/png` reads as pdf/jpg/jpeg/
@@ -73,10 +92,30 @@ class CollegeOeuvreFileSeeder extends Seeder
                     // withTrashed: the unique index covers retired rows too, so
                     // a retired document is updated in place, never duplicated
                     // — and stays retired.
-                    CollegeOeuvreFile::withTrashed()->updateOrCreate(
-                        ['register_type_college_id' => $colleges[$code], 'document_key' => $document['document_key']],
-                        [...$document, 'display_order' => $index + 1],
-                    );
+                    $identity = [
+                        'register_type_college_id' => $colleges[$code],
+                        'document_key' => $document['document_key'],
+                    ];
+
+                    // Seeder-owned vs UI-owned — see the class docblock.
+                    $seederOwned = [
+                        'title' => $document['title'],
+                        'conditions' => $document['conditions'],
+                    ];
+
+                    $existing = CollegeOeuvreFile::withTrashed()->where($identity)->first();
+
+                    if ($existing instanceof CollegeOeuvreFile) {
+                        $existing->update($seederOwned);
+
+                        continue;
+                    }
+
+                    CollegeOeuvreFile::query()->create([
+                        ...$identity,
+                        ...$document,
+                        'display_order' => $index + 1,
+                    ]);
                 }
             }
         });

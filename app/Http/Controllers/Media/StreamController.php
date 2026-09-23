@@ -14,6 +14,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MediaFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -81,9 +82,20 @@ final class StreamController extends Controller
             $request->header('Range'),
         );
 
+        // These are author-supplied bytes, so they are never rendered as a
+        // document on this origin: `nosniff` stops a browser from promoting
+        // e.g. text/plain to HTML, and `attachment` stops a top-level
+        // navigation from rendering it inline. <video>/<audio>/<img> ignore
+        // Content-Disposition, so in-page playback is unaffected.
         $headers = [
             'Content-Type' => $mediaFile->mime,
             'Content-Length' => (string) $contentLength,
+            'Content-Disposition' => HeaderUtils::makeDisposition(
+                HeaderUtils::DISPOSITION_ATTACHMENT,
+                $mediaFile->original_name,
+                self::asciiFilenameFallback($mediaFile),
+            ),
+            'X-Content-Type-Options' => 'nosniff',
             'Accept-Ranges' => 'bytes',
             'Cache-Control' => 'private, no-store',
         ];
@@ -102,5 +114,16 @@ final class StreamController extends Controller
             $range !== null ? 206 : 200,
             $headers,
         );
+    }
+
+    /**
+     * The `filename=` fallback must be printable ASCII without `%`, `/` or
+     * `\`; the real (possibly Arabic) name travels in `filename*`.
+     */
+    private static function asciiFilenameFallback(MediaFile $mediaFile): string
+    {
+        $fallback = preg_replace('/[^\x20-\x7E]|[%\/\\\\"]/', '_', $mediaFile->original_name) ?? '';
+
+        return trim($fallback) === '' ? $mediaFile->uuid.'.'.$mediaFile->extension : $fallback;
     }
 }

@@ -8,6 +8,7 @@ use App\Models\FileAccessLog;
 use App\Models\MediaFile;
 use App\Models\MediaVariant;
 use App\Models\Oeuvre;
+use App\Models\OeuvreReview;
 use App\Models\StorageQuota;
 use App\Models\UploadSession;
 use App\Models\User;
@@ -42,6 +43,21 @@ test('upload_sessions has no deleted_at column and does not use SoftDeletes', fu
 test('file_access_logs has no deleted_at column and does not use SoftDeletes', function () {
     expect(Schema::hasColumn('file_access_logs', 'deleted_at'))->toBeFalse()
         ->and(in_array(SoftDeletes::class, class_uses_recursive(FileAccessLog::class), true))->toBeFalse();
+});
+
+test('oeuvre_reviews is append-only: no deleted_at, no SoftDeletes, no updated_at', function () {
+    expect(Schema::hasColumn('oeuvre_reviews', 'deleted_at'))->toBeFalse()
+        ->and(Schema::hasColumn('oeuvre_reviews', 'updated_at'))->toBeFalse()
+        ->and(in_array(SoftDeletes::class, class_uses_recursive(OeuvreReview::class), true))->toBeFalse();
+
+    // Written once: the model must not even try to stamp an update.
+    $review = OeuvreReview::factory()->create();
+
+    expect($review->updated_at)->toBeNull();
+});
+
+test('notifications is framework infrastructure and carries no deleted_at', function () {
+    expect(Schema::hasColumn('notifications', 'deleted_at'))->toBeFalse();
 });
 
 dataset('soft_deletable_tables', [

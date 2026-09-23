@@ -37,6 +37,36 @@ use Illuminate\Support\Str;
  * its `type_gestion`. Other types' colleges keep it null: type_gestions holds
  * Auteur's labels only.
  *
+ * ---------------------------------------------------------------------
+ * THIS SEEDER AND THE ADMIN REFERENCE-DATA UI SHARE THESE TABLES.
+ * ---------------------------------------------------------------------
+ * `/admin/referentiel` lets an officer edit reference rows. The two can
+ * only coexist if they own DIFFERENT columns, so they do:
+ *
+ *   SEEDER-OWNED (identity and structure — the UI renders these read-only)
+ *     colleges : name, code_college, code_dv, type_gestion, type_gestion_id,
+ *                register_type_id
+ *     members  : name, code_qlt, register_type_college_id
+ *
+ *   UI-OWNED (behaviour and presentation — moved OUT of the updateOrCreate
+ *   update payload below, so they are written on CREATE only and a re-run
+ *   never reverts an officer's decision)
+ *     colleges : is_disabled, status, adhesion, name_ar, name_en
+ *     members  : available_in_registration, is_disabled, status
+ *
+ * Why identity stays here: this seeder NULLs every `code_college` before
+ * re-assigning (see run()), and matches colleges on
+ * (register_type_id, name, type_gestion). A college renamed through the UI
+ * would therefore not match, would be left with code_college = NULL
+ * permanently, and a duplicate would be created — orphaning its
+ * `college_oeuvre_files` and turning every `oeuvres.code_college_snapshot`
+ * into a dangling reference. So `name` is not editable in the UI.
+ *
+ * If you add a column here, decide which side owns it and put it in the
+ * matching list. Anything in the update payload WILL be reverted on the
+ * next run.
+ * ---------------------------------------------------------------------
+ *
  * The data sits in private methods with declared return shapes rather than
  * in run()'s locals, so the spec's defensive branches (the isset checks,
  * PROTECTION_SAMPLE, the fallback member) read as the general guards they
@@ -100,18 +130,14 @@ class MembershipTypeSeeder extends Seeder
                     // register_type_id IN (3, 4) => Artiste-Interprete + Producteur = Droits Voisins (DV).
                     $codeDv = in_array($typeId, [1, 2], true) ? null : $code;
 
-                    $registerTypeCollege = RegisterTypeCollege::updateOrCreate(
-                        [
-                            'register_type_id' => $registerType->id,
-                            'name' => $collegeData[0],
-                            'type_gestion' => $collegeData[1],
-                        ],
-                        [
-                            'type_gestion_id' => $typeGestionIds[$typeId][$collegeData[1]] ?? null,
-                            'code_college' => $code,
-                            'code_dv' => $codeDv,
-                            'is_disabled' => $isDisabled,
-                        ]
+                    $registerTypeCollege = $this->syncCollege(
+                        registerTypeId: $registerType->id,
+                        name: $collegeData[0],
+                        typeGestion: $collegeData[1],
+                        typeGestionId: $typeGestionIds[$typeId][$collegeData[1]] ?? null,
+                        code: $code,
+                        codeDv: $codeDv,
+                        isDisabled: $isDisabled,
                     );
 
                     if (isset($rolesByCode[$code])) {
@@ -146,18 +172,14 @@ class MembershipTypeSeeder extends Seeder
 
                     $codeDv = in_array($typeId, [1, 2], true) ? null : $code;
 
-                    $registerTypeCollege = RegisterTypeCollege::updateOrCreate(
-                        [
-                            'register_type_id' => $registerType->id,
-                            'name' => $collegeData[0],
-                            'type_gestion' => $collegeData[1],
-                        ],
-                        [
-                            'type_gestion_id' => $typeGestionIds[$typeId][$collegeData[1]] ?? null,
-                            'code_college' => $code,
-                            'code_dv' => $codeDv,
-                            'is_disabled' => $isDisabled,
-                        ]
+                    $registerTypeCollege = $this->syncCollege(
+                        registerTypeId: $registerType->id,
+                        name: $collegeData[0],
+                        typeGestion: $collegeData[1],
+                        typeGestionId: $typeGestionIds[$typeId][$collegeData[1]] ?? null,
+                        code: $code,
+                        codeDv: $codeDv,
+                        isDisabled: $isDisabled,
                     );
 
                     $memberDefs = $membersByCode[$code] ?? [];
@@ -182,6 +204,47 @@ class MembershipTypeSeeder extends Seeder
 
         $end = microtime(true);
         $this->command->info('Register types have been loaded in '.round($end - $start, 2).' seconds.');
+    }
+
+    /**
+     * Upsert a college, splitting seeder-owned identity from the UI-owned
+     * `is_disabled` flag — see the class docblock. `is_disabled` is a
+     * create-only default: once the row exists, only an officer changes it.
+     */
+    private function syncCollege(
+        int $registerTypeId,
+        string $name,
+        int $typeGestion,
+        ?int $typeGestionId,
+        string $code,
+        ?string $codeDv,
+        bool $isDisabled,
+    ): RegisterTypeCollege {
+        $identity = [
+            'register_type_id' => $registerTypeId,
+            'name' => $name,
+            'type_gestion' => $typeGestion,
+        ];
+
+        $structure = [
+            'type_gestion_id' => $typeGestionId,
+            'code_college' => $code,
+            'code_dv' => $codeDv,
+        ];
+
+        $existing = RegisterTypeCollege::query()->where($identity)->first();
+
+        if ($existing instanceof RegisterTypeCollege) {
+            $existing->update($structure);
+
+            return $existing;
+        }
+
+        return RegisterTypeCollege::query()->create([
+            ...$identity,
+            ...$structure,
+            'is_disabled' => $isDisabled,
+        ]);
     }
 
     /**
@@ -637,21 +700,24 @@ class MembershipTypeSeeder extends Seeder
             $existing = (clone $base)->where('name', $name)->first();
         }
 
-        $payload = [
+        // Identity only. `available_in_registration` is UI-owned (see the
+        // class docblock): seeded as a default when the row is first
+        // created, never written back over an officer's change.
+        $identity = [
             'name' => $name,
             'code_qlt' => $codeQlt,
-            'available_in_registration' => $available,
         ];
 
         if ($existing instanceof RegisterTypeMember) {
-            $existing->update($payload);
+            $existing->update($identity);
 
             return;
         }
 
         RegisterTypeMember::query()->create([
             'register_type_college_id' => $collegeId,
-            ...$payload,
+            ...$identity,
+            'available_in_registration' => $available,
         ]);
     }
 }

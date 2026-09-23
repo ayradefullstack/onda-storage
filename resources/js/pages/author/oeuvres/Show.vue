@@ -1,18 +1,24 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { computed, onBeforeUnmount, onMounted, watch } from 'vue';
+import { LockIcon, ShieldCheckIcon } from '@lucide/vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ClassificationCard from '@/components/oeuvre/ClassificationCard.vue';
 import type { OeuvreClassification } from '@/components/oeuvre/ClassificationCard.vue';
 import { oeuvreLabel } from '@/components/oeuvre/label';
+import OeuvreSubmitDialog from '@/components/oeuvre/OeuvreSubmitDialog.vue';
+import SubmitArea from '@/components/oeuvre/SubmitArea.vue';
 import { Card, CardContent } from '@/components/ui/card';
 import DepositCard from '@/components/upload/DepositCard.vue';
 import type { DepositEntry } from '@/components/upload/depositJourney';
 import {
     entryKey,
+    groupEntriesByRequirement,
     mergeDepositEntries,
 } from '@/components/upload/depositJourney';
 import Dropzone from '@/components/upload/Dropzone.vue';
+import type { RequirementSlot } from '@/components/upload/requirement';
+import RequirementSlotCard from '@/components/upload/RequirementSlotCard.vue';
 import ResumeBanner from '@/components/upload/ResumeBanner.vue';
 import { useUploadQueue } from '@/composables/useUploadQueue';
 import { formatBytes } from '@/lib/format';
@@ -21,6 +27,7 @@ import {
     MAX_FILE_SIZE_BYTES,
 } from '@/lib/uploadValidation';
 import { index } from '@/routes/oeuvres';
+import { destroy as destroyFile } from '@/routes/oeuvres/files';
 import type { MediaFileStatus, MediaFileSummary } from '@/types/upload';
 
 interface OeuvreDetail {
@@ -32,6 +39,27 @@ interface OeuvreDetail {
     description: string | null;
     status: string;
     created_at: string;
+    submitted_at: string | null;
+    /** OeuvrePolicy's answer, not the template's guess. */
+    can: { edit: boolean; delete: boolean };
+}
+
+/** One blocker or advisory from SubmissionGate. */
+interface SubmissionReason {
+    code: string;
+    params: Record<string, string | number | null>;
+    /** English source string — the UI renders `code` instead. */
+    message: string;
+}
+
+interface Submission {
+    can_submit: boolean;
+    /** Every reason at once, never just the first one found. */
+    blockers: SubmissionReason[];
+    /** Empty CONDITIONAL required slots. Advisory; they never block. */
+    advisories: SubmissionReason[];
+    /** False once the deposit is frozen — neither button nor blockers apply. */
+    is_open: boolean;
 }
 
 interface Quota {
@@ -39,11 +67,23 @@ interface Quota {
     limit_bytes: number;
 }
 
+/** `Oeuvre::requiredDocumentsProgress()` — counts only files at `ready`. */
+interface RequiredDocumentsProgress {
+    satisfied: number;
+    total: number;
+    /** Unsatisfied required slots whose (unevaluated) condition may exclude them. */
+    conditional: number;
+}
+
 const props = defineProps<{
     oeuvre: OeuvreDetail;
     classification: OeuvreClassification | null;
     mediaFiles: MediaFileSummary[];
     quota: Quota;
+    /** One upload slot per required document; empty for an unclassified oeuvre. */
+    requirements: RequirementSlot[];
+    progress: RequiredDocumentsProgress;
+    submission: Submission;
 }>();
 
 const { t, locale } = useI18n();
@@ -56,6 +96,26 @@ defineOptions({
         breadcrumbs: [{ title: 'Works', href: index() }],
     },
 });
+
+// --- the submit area. `editable` is the policy's answer, carried on the
+// oeuvre prop; everything the page offers keys off it, and the server
+// refuses regardless (OeuvrePolicy, InitUpload's status guard).
+const editable = computed(() => props.oeuvre.can.edit);
+
+const submitDialogFor = ref<{ uuid: string; label: string } | null>(null);
+
+const openSubmitDialog = () => {
+    submitDialogFor.value = { uuid: props.oeuvre.uuid, label: label.value };
+};
+
+/**
+ * Taking a file off the deposit. The confirmation already happened inside
+ * DepositCard; this only issues the request. `preserveScroll` so a long
+ * slot list does not jump back to the top on every removal.
+ */
+const removeFile = (uuid: string) => {
+    router.delete(destroyFile(uuid).url, { preserveScroll: true });
+};
 
 // A deposit that was already `ready` when this page loaded collapses to
 // just the seal — its journey isn't news. One reached during this visit
@@ -73,7 +133,9 @@ const readyAtLoadUuids = new Set(
 // included every time — a partial reload only refreshes the props named
 // here, so a figure completed uploads charge against would otherwise go
 // stale until a full page reload.
-const RELOAD_PROPS = ['mediaFiles', 'quota'] as const;
+// `progress` rides along: it only moves when a file reaches `ready`, which
+// is exactly what these reloads detect.
+const RELOAD_PROPS = ['mediaFiles', 'quota', 'progress'] as const;
 const TERMINAL_STATUSES: MediaFileStatus[] = ['ready', 'failed', 'quarantined'];
 const POLL_INTERVALS_MS = [2000, 5000, 15000];
 
@@ -148,6 +210,29 @@ const entries = computed<DepositEntry[]>(() =>
     ),
 );
 
+// Step 2: a classified oeuvre gets one card per required document; an
+// unclassified one keeps the single dropzone and flat list below.
+const hasRequirements = computed(() => props.requirements.length > 0);
+
+const grouped = computed(() =>
+    groupEntriesByRequirement(
+        entries.value,
+        props.requirements.map((requirement) => requirement.id),
+    ),
+);
+
+const progressPercent = computed(() =>
+    props.progress.total === 0
+        ? 0
+        : Math.round((props.progress.satisfied / props.progress.total) * 100),
+);
+
+// Collège, classification and requirement titles are resolved server-side in
+// the request locale.
+watch(locale, () => {
+    router.reload({ only: ['classification', 'requirements'] });
+});
+
 const pendingResumesForOeuvre = computed(() =>
     queue.pendingResumes.value.filter((f) => f.oeuvreId === props.oeuvre.id),
 );
@@ -168,6 +253,19 @@ const label = computed(() =>
 const quotaRemaining = computed(() =>
     Math.max(0, props.quota.limit_bytes - props.quota.used_bytes),
 );
+
+/**
+ * A gate reason, rendered in the reader's language. The gate emits a
+ * stable `code` plus parameters rather than a sentence — this project has
+ * no server-side `lang/`, so the prose lives in the locale files and the
+ * server stays language-agnostic (see SubmissionReason).
+ */
+const reasonText = (reason: SubmissionReason) =>
+    t(`oeuvres.gate.${reason.code}`, {
+        name: String(reason.params.name ?? ''),
+        status: t(`media.status.${String(reason.params.status ?? 'failed')}`),
+    });
+
 </script>
 
 <template>
@@ -191,80 +289,241 @@ const quotaRemaining = computed(() =>
             :classification="classification"
         />
 
-        <Card>
-            <CardContent class="space-y-3 py-6">
-                <div class="flex items-center justify-between gap-3">
-                    <h2 class="text-sm font-medium">
-                        {{ t('oeuvres.show.addFiles') }}
-                    </h2>
-                    <i18n-t
-                        keypath="oeuvres.show.quota"
-                        tag="span"
-                        class="text-xs text-muted-foreground"
+        <template v-if="hasRequirements">
+            <Card>
+                <CardContent class="space-y-3 py-6">
+                    <div
+                        class="flex flex-wrap items-baseline justify-between gap-3"
                     >
-                        <template #used
-                            ><bdi dir="ltr">{{
-                                formatBytes(quota.used_bytes, locale)
-                            }}</bdi></template
+                        <h2 class="text-sm font-medium">
+                            {{ t('oeuvres.step2.title') }}
+                        </h2>
+                        <i18n-t
+                            keypath="oeuvres.show.quota"
+                            tag="span"
+                            class="text-xs text-muted-foreground"
                         >
-                        <template #limit
-                            ><bdi dir="ltr">{{
-                                formatBytes(quota.limit_bytes, locale)
-                            }}</bdi></template
-                        >
-                        <template #remaining
-                            ><bdi dir="ltr">{{
-                                formatBytes(quotaRemaining, locale)
-                            }}</bdi></template
-                        >
-                    </i18n-t>
-                </div>
-                <Dropzone :oeuvre-id="oeuvre.id" />
-            </CardContent>
-        </Card>
+                            <template #used
+                                ><bdi dir="ltr">{{
+                                    formatBytes(quota.used_bytes, locale)
+                                }}</bdi></template
+                            >
+                            <template #limit
+                                ><bdi dir="ltr">{{
+                                    formatBytes(quota.limit_bytes, locale)
+                                }}</bdi></template
+                            >
+                            <template #remaining
+                                ><bdi dir="ltr">{{
+                                    formatBytes(quotaRemaining, locale)
+                                }}</bdi></template
+                            >
+                        </i18n-t>
+                    </div>
 
-        <div>
-            <h2 class="mb-3 text-sm font-medium">
-                {{ t('oeuvres.show.filesTitle') }}
-            </h2>
+                    <div class="space-y-2" data-test="required-progress">
+                        <p class="text-sm">
+                            <span class="font-semibold tabular-nums">{{
+                                t('oeuvres.step2.progress', {
+                                    satisfied: progress.satisfied,
+                                    total: progress.total,
+                                })
+                            }}</span>
+                            <span
+                                v-if="progress.conditional > 0"
+                                class="text-muted-foreground"
+                            >
+                                —
+                                {{
+                                    t(
+                                        'oeuvres.step2.mayNotApply',
+                                        { count: progress.conditional },
+                                        progress.conditional,
+                                    )
+                                }}</span
+                            >
+                        </p>
+                        <div
+                            class="h-2 overflow-hidden rounded-full bg-muted"
+                            role="progressbar"
+                            :aria-valuenow="progress.satisfied"
+                            aria-valuemin="0"
+                            :aria-valuemax="progress.total"
+                        >
+                            <div
+                                class="h-full rounded-full bg-primary transition-[width] duration-500"
+                                :style="{ width: progressPercent + '%' }"
+                            />
+                        </div>
+                        <p class="text-xs text-muted-foreground">
+                            {{ t('oeuvres.step2.intro') }}
+                        </p>
+                    </div>
+
+                    <div class="space-y-1 text-xs text-muted-foreground">
+                        <p class="flex items-center gap-1.5">
+                            <LockIcon class="size-3.5 shrink-0" />
+                            {{ t('upload.trust.encrypted') }}
+                        </p>
+                        <p class="flex items-center gap-1.5">
+                            <ShieldCheckIcon class="size-3.5 shrink-0" />
+                            {{ t('upload.trust.fingerprint') }}
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
 
             <ResumeBanner
                 :files="pendingResumesForOeuvre"
                 @reselect="onReselect"
             />
 
-            <Card v-if="entries.length === 0">
-                <CardContent class="py-10 text-center text-sm">
-                    <i18n-t
-                        keypath="oeuvres.show.noFiles"
-                        tag="p"
-                        class="text-muted-foreground"
-                    >
-                        <template #size
-                            ><bdi dir="ltr">{{
-                                formatBytes(MAX_FILE_SIZE_BYTES, locale)
-                            }}</bdi></template
-                        >
-                        <template #extensions
-                            ><bdi dir="ltr">{{
-                                allowedExtensionList().join(', ')
-                            }}</bdi></template
-                        >
-                    </i18n-t>
-                </CardContent>
-            </Card>
-
-            <ul v-else class="space-y-3">
-                <li v-for="entry in entries" :key="entryKey(entry)">
-                    <DepositCard
-                        :entry="entry"
+            <ol class="space-y-4">
+                <li
+                    v-for="(requirement, position) in requirements"
+                    :key="requirement.id"
+                >
+                    <RequirementSlotCard
+                        :requirement="requirement"
+                        :position="position + 1"
+                        :oeuvre-id="oeuvre.id"
+                        :entries="grouped.bySlot.get(requirement.id) ?? []"
                         :quota="quota"
+                        :editable="editable"
                         @pause="queue.pauseFile"
                         @resume="queue.resumeFile"
                         @cancel="queue.cancelFile"
+                        @remove="removeFile"
                     />
                 </li>
-            </ul>
-        </div>
+            </ol>
+
+            <SubmitArea
+                :submission="submission"
+                :status="oeuvre.status"
+                :editable="editable"
+                :reason-text="reasonText"
+                @submit="openSubmitDialog"
+            />
+
+            <div v-if="grouped.unassigned.length > 0">
+                <h2 class="text-sm font-medium">
+                    {{ t('oeuvres.step2.otherFiles') }}
+                </h2>
+                <p class="mb-3 text-xs text-muted-foreground">
+                    {{ t('oeuvres.step2.otherFilesHint') }}
+                </p>
+                <ul class="space-y-3">
+                    <li
+                        v-for="entry in grouped.unassigned"
+                        :key="entryKey(entry)"
+                    >
+                        <DepositCard
+                            :entry="entry"
+                            :quota="quota"
+                            :editable="editable"
+                            @pause="queue.pauseFile"
+                            @resume="queue.resumeFile"
+                            @cancel="queue.cancelFile"
+                            @remove="removeFile"
+                        />
+                    </li>
+                </ul>
+            </div>
+        </template>
+
+        <template v-else>
+            <Card>
+                <CardContent class="space-y-3 py-6">
+                    <div class="flex items-center justify-between gap-3">
+                        <h2 class="text-sm font-medium">
+                            {{ t('oeuvres.show.addFiles') }}
+                        </h2>
+                        <i18n-t
+                            keypath="oeuvres.show.quota"
+                            tag="span"
+                            class="text-xs text-muted-foreground"
+                        >
+                            <template #used
+                                ><bdi dir="ltr">{{
+                                    formatBytes(quota.used_bytes, locale)
+                                }}</bdi></template
+                            >
+                            <template #limit
+                                ><bdi dir="ltr">{{
+                                    formatBytes(quota.limit_bytes, locale)
+                                }}</bdi></template
+                            >
+                            <template #remaining
+                                ><bdi dir="ltr">{{
+                                    formatBytes(quotaRemaining, locale)
+                                }}</bdi></template
+                            >
+                        </i18n-t>
+                    </div>
+                    <Dropzone v-if="editable" :oeuvre-id="oeuvre.id" />
+                </CardContent>
+            </Card>
+
+            <div>
+                <h2 class="mb-3 text-sm font-medium">
+                    {{ t('oeuvres.show.filesTitle') }}
+                </h2>
+
+                <ResumeBanner
+                    :files="pendingResumesForOeuvre"
+                    @reselect="onReselect"
+                />
+
+                <Card v-if="entries.length === 0">
+                    <CardContent class="py-10 text-center text-sm">
+                        <i18n-t
+                            keypath="oeuvres.show.noFiles"
+                            tag="p"
+                            class="text-muted-foreground"
+                        >
+                            <template #size
+                                ><bdi dir="ltr">{{
+                                    formatBytes(MAX_FILE_SIZE_BYTES, locale)
+                                }}</bdi></template
+                            >
+                            <template #extensions
+                                ><bdi dir="ltr">{{
+                                    allowedExtensionList().join(', ')
+                                }}</bdi></template
+                            >
+                        </i18n-t>
+                    </CardContent>
+                </Card>
+
+                <ul v-else class="space-y-3">
+                    <li v-for="entry in entries" :key="entryKey(entry)">
+                        <DepositCard
+                            :entry="entry"
+                            :quota="quota"
+                            :editable="editable"
+                            @pause="queue.pauseFile"
+                            @resume="queue.resumeFile"
+                            @cancel="queue.cancelFile"
+                            @remove="removeFile"
+                        />
+                    </li>
+                </ul>
+
+                <SubmitArea
+                    class="mt-6"
+                    :submission="submission"
+                    :status="oeuvre.status"
+                    :editable="editable"
+                    :reason-text="reasonText"
+                    @submit="openSubmitDialog"
+                />
+            </div>
+        </template>
+
+        <OeuvreSubmitDialog
+            :oeuvre="submitDialogFor"
+            @close="submitDialogFor = null"
+        />
     </div>
 </template>

@@ -40,6 +40,71 @@ export function mergeDepositEntries(
     return [...uploadEntries, ...mediaEntries];
 }
 
+/**
+ * Splits the merged deposit list by required-document slot, keeping each
+ * slot's order. An in-flight upload is placed by the slot it was queued
+ * into, a `MediaFile` by its stored `college_oeuvre_file_id` — so a file
+ * never jumps slots as it crosses from one state machine to the other.
+ *
+ * `unassigned` holds files with no slot (deposited before per-requirement
+ * uploads) or whose slot is not among `requirementIds` (retired since): they
+ * are still deposits of this oeuvre and must still be shown.
+ */
+export function groupEntriesByRequirement(
+    entries: DepositEntry[],
+    requirementIds: readonly number[],
+): { bySlot: Map<number, DepositEntry[]>; unassigned: DepositEntry[] } {
+    const bySlot = new Map<number, DepositEntry[]>(
+        requirementIds.map((id) => [id, []]),
+    );
+    const unassigned: DepositEntry[] = [];
+
+    for (const entry of entries) {
+        const slotId =
+            entry.kind === 'upload'
+                ? entry.file.requirementId
+                : entry.file.college_oeuvre_file_id;
+        const slot = slotId === null ? undefined : bySlot.get(slotId);
+
+        if (slot) {
+            slot.push(entry);
+        } else {
+            unassigned.push(entry);
+        }
+    }
+
+    return { bySlot, unassigned };
+}
+
+export type SlotState = 'deposited' | 'inProgress' | 'awaiting' | 'optional';
+
+/**
+ * A slot is `deposited` only once a file in it reaches `ready` — the same
+ * rule as the server's completion count. A failed, expired or quarantined
+ * file satisfies nothing and does not make the slot look busy; its alert
+ * stays visible on its own card.
+ */
+export function slotStateOf(
+    entries: DepositEntry[],
+    isRequired: boolean,
+): SlotState {
+    if (entries.some((e) => e.kind === 'media' && e.file.status === 'ready')) {
+        return 'deposited';
+    }
+
+    const busy = entries.some((e) =>
+        e.kind === 'upload'
+            ? !['failed', 'expired', 'quota_exceeded'].includes(e.file.status)
+            : !['ready', 'failed', 'quarantined'].includes(e.file.status),
+    );
+
+    if (busy) {
+        return 'inProgress';
+    }
+
+    return isRequired ? 'awaiting' : 'optional';
+}
+
 export interface UploadEntry {
     kind: 'upload';
     file: UploadFileState;

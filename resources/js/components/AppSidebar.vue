@@ -5,6 +5,7 @@ import {
     FolderOpen,
     Headphones,
     LayoutGrid,
+    Library,
     Users,
 } from '@lucide/vue';
 import { computed } from 'vue';
@@ -32,6 +33,7 @@ import { toUrl } from '@/lib/utils';
 import { dashboard as adminDashboard } from '@/routes/admin';
 import { index as adminAuthorsIndex } from '@/routes/admin/authors';
 import { index as adminOeuvresIndex } from '@/routes/admin/oeuvres';
+import { colleges as adminReferentielColleges } from '@/routes/admin/referentiel';
 import { dashboard as authorDashboard } from '@/routes/author';
 import { index as oeuvresIndex } from '@/routes/oeuvres';
 
@@ -89,6 +91,14 @@ const adminNavItems = computed(() => [
         href: adminOeuvresIndex(),
         icon: FolderOpen,
         active: isActive(adminOeuvresIndex()),
+    },
+    {
+        // Colleges is the tab an officer wants most often, so it is the
+        // section's landing point; the tab bar reaches the other four.
+        title: t('admin.referentiel.title'),
+        href: adminReferentielColleges(),
+        icon: Library,
+        active: page.url.startsWith('/admin/referentiel'),
     },
 ]);
 

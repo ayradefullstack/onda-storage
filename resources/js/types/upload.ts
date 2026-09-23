@@ -48,6 +48,11 @@ export interface UploadChunk {
 export interface UploadFileState {
     id: string;
     oeuvreId: number;
+    /**
+     * The required-document slot (`college_oeuvre_files.id`) this file is
+     * uploaded into; null on an unclassified oeuvre's single dropzone.
+     */
+    requirementId: number | null;
     file: File | null;
     filename: string;
     size: number;
@@ -67,6 +72,14 @@ export interface UploadFileState {
     expiresAt: string | null;
     mediaFileUuid: string | null;
     needsFileReselect: boolean;
+}
+
+/** What the client needs to validate a file for one required-document slot. */
+export interface UploadRequirement {
+    id: number;
+    extensions: readonly string[];
+    /** Null when the slot sets no cap of its own (the global ceiling applies). */
+    maxSizeBytes: number | null;
 }
 
 export interface InitUploadResponse {
@@ -139,6 +152,8 @@ export interface PersistedUpload {
     oeuvreId: number;
     /** Pre-rename field name — read only as a fallback, never written. */
     workId?: number;
+    /** Absent on records written before per-requirement uploads. */
+    requirementId?: number | null;
     sessionUuid: string;
     filename: string;
     size: number;
@@ -161,6 +176,16 @@ export type MediaFileStatus =
 
 export interface MediaFileSummary {
     uuid: string;
+    /**
+     * Whether the remove control applies to this file: the oeuvre must
+     * still be the author's to edit AND this file's pipeline must have
+     * finished with it. Computed by the server (RemovalGate), never
+     * inferred from `status` in the template — the two conditions are
+     * independent and only one of them is visible here.
+     */
+    can_remove: boolean;
+    /** Null for a file deposited before per-requirement uploads. */
+    college_oeuvre_file_id: number | null;
     original_name: string;
     extension: string;
     mime: string;

@@ -188,3 +188,19 @@ test('an author cannot reach the admin variant preview endpoint', function () {
 
     adminMediaTestCleanup($mediaFile);
 });
+
+test('a variant preview stays inline but is never sniffed', function () {
+    $admin = User::factory()->withRole('admin')->create();
+    $author = adminMediaTestAuthor();
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = adminMediaTestFile($author, $oeuvre);
+    adminMediaTestPosterVariant($mediaFile);
+
+    $response = $this->actingAs($admin)->get(route('admin.media.variant', ['mediaFile' => $mediaFile, 'kind' => 'poster']));
+
+    $response->assertOk()
+        ->assertHeader('X-Content-Type-Options', 'nosniff')
+        ->assertHeaderMissing('Content-Disposition');
+
+    adminMediaTestCleanup($mediaFile);
+});

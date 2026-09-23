@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -42,12 +43,20 @@ import {
 const props = defineProps<{
     entry: DepositEntry;
     quota?: { used_bytes: number; limit_bytes: number } | null;
+    /**
+     * Whether this oeuvre is still the author's to change. False for a
+     * submitted, under-review or registered deposit, which renders its
+     * files read-only. The server enforces it either way — this only
+     * decides whether to draw the control.
+     */
+    editable?: boolean;
 }>();
 
 const emit = defineEmits<{
     pause: [id: string];
     resume: [id: string];
     cancel: [id: string];
+    remove: [uuid: string];
 }>();
 
 const { t, locale } = useI18n();
@@ -159,6 +168,19 @@ const quotaForFileRemaining = computed(() => {
     );
 });
 
+// --- remove: taking a deposited file off the oeuvre. Confirmed, like
+// cancel, and for a reason cancel does not have — the bytes stay on disk
+// and the quota does not come back today, which the dialog says.
+const removeConfirmOpen = ref(false);
+
+const onRemoveConfirm = () => {
+    if (mediaFile.value !== null) {
+        emit('remove', mediaFile.value.uuid);
+    }
+
+    removeConfirmOpen.value = false;
+};
+
 // --- cancel: pause is safe and instant; cancel is destructive once bytes
 // have actually been sent, so it asks first and names what would be lost.
 const cancelConfirmOpen = ref(false);
@@ -260,6 +282,31 @@ async function copyFingerprint(): Promise<void> {
                     size="icon-sm"
                     :aria-label="t('upload.actions.cancel')"
                     @click="onCancelClick"
+                >
+                    <Trash2Icon />
+                </Button>
+            </div>
+
+            <!-- A deposited file. The control is drawn whenever the oeuvre
+                 is editable, and merely disabled while this file's pipeline
+                 is still running over it — "not yet, and here is why" is
+                 more use than a control that silently is not there. -->
+            <div
+                v-else-if="mediaFile && editable"
+                class="flex shrink-0 items-center gap-1"
+            >
+                <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    class="text-rose-600 hover:bg-rose-500/10 hover:text-rose-700 dark:text-rose-400"
+                    :disabled="!mediaFile.can_remove"
+                    :aria-label="t('oeuvres.files.remove')"
+                    :title="
+                        mediaFile.can_remove
+                            ? t('oeuvres.files.remove')
+                            : t('oeuvres.files.removeBusy')
+                    "
+                    @click="removeConfirmOpen = true"
                 >
                     <Trash2Icon />
                 </Button>
@@ -576,6 +623,50 @@ async function copyFingerprint(): Promise<void> {
                 </p>
             </div>
         </template>
+
+        <Dialog v-model:open="removeConfirmOpen">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>{{
+                        t('oeuvres.files.removeTitle')
+                    }}</DialogTitle>
+                    <DialogDescription>
+                        <i18n-t keypath="oeuvres.files.removeBody" tag="span">
+                            <template #name>
+                                <bdi class="font-semibold text-foreground">{{
+                                    filename
+                                }}</bdi>
+                            </template>
+                        </i18n-t>
+                    </DialogDescription>
+                </DialogHeader>
+
+                <!-- Same two facts as deleting a whole oeuvre: the bytes
+                     stay, and the quota does not come back today. -->
+                <p
+                    class="rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-xs leading-relaxed text-muted-foreground"
+                >
+                    {{ t('oeuvres.files.removeBytes') }}
+                </p>
+
+                <DialogFooter class="gap-2 sm:gap-2">
+                    <Button
+                        variant="outline"
+                        class="cursor-pointer"
+                        @click="removeConfirmOpen = false"
+                    >
+                        {{ t('oeuvres.files.removeCancel') }}
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        class="cursor-pointer"
+                        @click="onRemoveConfirm"
+                    >
+                        {{ t('oeuvres.files.removeConfirm') }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
         <Dialog v-model:open="cancelConfirmOpen">
             <DialogContent class="sm:max-w-sm">

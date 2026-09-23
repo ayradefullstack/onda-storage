@@ -4,18 +4,29 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Author;
 
+use App\Actions\Oeuvre\DeleteOeuvre;
+use App\Domain\Deposit\Exceptions\RemovalRefused;
+use App\Domain\Deposit\OeuvreStatus;
+use App\Domain\Deposit\RemovalGate;
+use App\Domain\Deposit\SlotProgressQuery;
+use App\Domain\Deposit\SubmissionGate;
 use App\Domain\Quota\QuotaPolicy;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Author\StoreOeuvreRequest;
+use App\Models\CollegeOeuvreFile;
+use App\Models\MediaFile;
 use App\Models\Oeuvre;
+use App\Models\OeuvreReview;
 use App\Models\RegisterType;
 use App\Models\RegisterTypeCollege;
 use App\Models\RegisterTypeMember;
 use App\Models\StorageQuota;
 use App\Models\TypeGestion;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,28 +38,179 @@ use Inertia\Response;
  */
 final class OeuvreController extends Controller
 {
-    public function index(Request $request): Response
+    private const PER_PAGE = 15;
+
+    /**
+     * Every status an author's own shelf can show, in queue order. Unlike
+     * the admin console, `draft` belongs here: it is the author's own
+     * working state.
+     *
+     * @var list<string>
+     */
+    private const STATUSES = [
+        OeuvreStatus::DRAFT,
+        OeuvreStatus::SUBMITTED,
+        OeuvreStatus::UNDER_REVIEW,
+        OeuvreStatus::REGISTERED,
+        OeuvreStatus::REJECTED,
+    ];
+
+    /** @var list<string> */
+    private const SORTS = ['newest', 'oldest', 'title', 'files'];
+
+    /**
+     * The works table. Search, status filter, sort and pagination all run
+     * on the server: the page renders one page of rows, so a client-side
+     * filter would only ever be filtering the page it can already see.
+     *
+     * Query budget — this method issues a FIXED number of queries whatever
+     * the page size (OeuvresTableTest asserts it):
+     *   1. the paginator's count(*)
+     *   2. the page itself — `withCount('mediaFiles')` and the aggregate
+     *      subquery below fold into that same statement
+     *   3. eager-load registerTypeCollege
+     *   4+5. SlotProgressQuery, for the whole page at once
+     *   6. the status counts behind the filter tabs
+     * Nothing is computed per row. `Oeuvre::requiredDocumentsProgress()` is
+     * deliberately NOT called here: it costs two queries per oeuvre, which
+     * on a 15-row table is thirty.
+     */
+    public function index(Request $request, SlotProgressQuery $slotProgress): Response
     {
+        $user = $request->user();
+        $search = trim((string) $request->string('search'));
+        $status = (string) $request->string('status');
+        $sort = (string) $request->string('sort');
+
         $oeuvres = Oeuvre::query()
-            ->where('author_id', $request->user()->id)
+            ->where('author_id', $user->id)
             ->with('registerTypeCollege')
             ->withCount('mediaFiles')
-            ->latest()
-            ->get()
-            ->map(fn (Oeuvre $oeuvre): array => [
+            // Any file not at `ready` blocks submission — either its
+            // pipeline is still running or it failed. A subquery inside the
+            // page statement, not a question asked once per row.
+            ->selectRaw(
+                '(select case when count(*) > 0 then 1 else 0 end from media_files mf '.
+                "where mf.oeuvre_id = oeuvres.id and mf.deleted_at is null and mf.status != 'ready') as has_unready_file"
+            )
+            ->when($search !== '', fn ($query) => $query->where(
+                fn ($q) => $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('uuid', 'like', "%{$search}%")
+                    ->orWhereHas('registerTypeCollege', fn ($college) => $college
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('name_ar', 'like', "%{$search}%")
+                        ->orWhere('name_en', 'like', "%{$search}%"))
+            ))
+            ->when(in_array($status, self::STATUSES, true), fn ($query) => $query->where('status', $status))
+            ->tap(fn (Builder $query) => $this->applySort($query, $sort))
+            ->paginate(self::PER_PAGE)
+            ->withQueryString();
+
+        $progress = $slotProgress->forPage($oeuvres->getCollection());
+
+        return Inertia::render('author/oeuvres/Index', [
+            'oeuvres' => $oeuvres->through(fn (Oeuvre $oeuvre): array => [
                 'id' => $oeuvre->id,
                 'uuid' => $oeuvre->uuid,
                 'title' => $oeuvre->title,
                 'description' => $oeuvre->description,
                 'status' => $oeuvre->status,
                 'created_at' => $oeuvre->created_at,
+                'submitted_at' => $oeuvre->submitted_at,
                 'media_files_count' => (int) $oeuvre['media_files_count'],
                 'college_name' => self::collegeName($oeuvre),
-            ]);
-
-        return Inertia::render('author/oeuvres/Index', [
-            'oeuvres' => $oeuvres,
+                'documents' => $progress[$oeuvre->id],
+                // What the row may offer. `edit` and `delete` mirror the
+                // policy exactly, and the policy is what actually enforces
+                // them — a hidden button is not a permission.
+                //
+                // `submit` is ADVISORY: the cheap, page-wide approximation
+                // of SubmissionGate, so the button can be greyed without
+                // running the real gate once per row. The real gate runs on
+                // POST and is what decides; this only decides whether to
+                // offer the button.
+                'can' => [
+                    'edit' => $user->can('update', $oeuvre),
+                    'delete' => $user->can('delete', $oeuvre),
+                    'submit' => $user->can('submit', $oeuvre)
+                        && (int) $oeuvre['media_files_count'] > 0
+                        && ! (bool) $oeuvre['has_unready_file']
+                        && $progress[$oeuvre->id]['satisfied'] + $progress[$oeuvre->id]['conditional'] >= $progress[$oeuvre->id]['total'],
+                ],
+            ]),
+            'filters' => [
+                'search' => $search,
+                'status' => in_array($status, self::STATUSES, true) ? $status : '',
+                'sort' => in_array($sort, self::SORTS, true) ? $sort : self::SORTS[0],
+            ],
+            'statuses' => self::STATUSES,
+            'sorts' => self::SORTS,
+            // One grouped query for the filter tabs. Counted over the
+            // author's whole shelf, not the current page — a tab reading
+            // "(3)" must not change when you turn the page.
+            'counts' => self::statusCounts($user->id),
         ]);
+    }
+
+    /**
+     * The whole deposit, with its files. Soft delete; the vault bytes and
+     * the author's quota are untouched — see DeleteOeuvre.
+     */
+    public function destroy(Request $request, Oeuvre $oeuvre, DeleteOeuvre $delete): RedirectResponse
+    {
+        Gate::forUser($request->user())->authorize('delete', $oeuvre);
+
+        try {
+            $delete->handle($oeuvre);
+        } catch (RemovalRefused $e) {
+            // 422, not 403: the author is allowed to delete this deposit —
+            // just not while one of its files is mid-pipeline.
+            throw ValidationException::withMessages(['oeuvre' => [$e->getMessage()]]);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('The work has been deleted.')]);
+
+        return to_route('oeuvres.index');
+    }
+
+    /**
+     * @param  Builder<Oeuvre>  $query
+     */
+    private function applySort(Builder $query, string $sort): void
+    {
+        match (in_array($sort, self::SORTS, true) ? $sort : self::SORTS[0]) {
+            // `title` sorts by the stored title with untitled rows last:
+            // the label the table displays is built client-side from the
+            // collège and the creation date, so the database cannot order
+            // by it. The secondary key keeps untitled rows in a stable
+            // order rather than an arbitrary one.
+            'title' => $query->orderByRaw('(title is null or title = ?) asc', [''])->orderBy('title')->orderByDesc('id'),
+            'files' => $query->orderByDesc('media_files_count')->orderByDesc('id'),
+            'oldest' => $query->orderBy('created_at')->orderBy('id'),
+            default => $query->orderByDesc('created_at')->orderByDesc('id'),
+        };
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private static function statusCounts(int $authorId): array
+    {
+        $counts = Oeuvre::query()
+            ->where('author_id', $authorId)
+            ->groupBy('status')
+            ->selectRaw('status, count(*) as total')
+            ->pluck('total', 'status');
+
+        $byStatus = [];
+
+        foreach (self::STATUSES as $status) {
+            $byStatus[$status] = (int) ($counts[$status] ?? 0);
+        }
+
+        $byStatus['all'] = array_sum($byStatus);
+
+        return $byStatus;
     }
 
     public function create(): Response
@@ -63,7 +225,7 @@ final class OeuvreController extends Controller
         $oeuvre = new Oeuvre;
         $oeuvre->author_id = $request->user()->id;
         $oeuvre->fill($request->classification());
-        $oeuvre->status = 'draft';
+        $oeuvre->status = OeuvreStatus::DRAFT;
         $oeuvre->save();
 
         return to_route('oeuvres.show', $oeuvre);
@@ -75,9 +237,14 @@ final class OeuvreController extends Controller
      * a backing-off interval rather than a bespoke JSON endpoint — it's the
      * same data, and Inertia already knows how to fetch just that prop.
      */
-    public function show(Request $request, Oeuvre $oeuvre): Response
+    public function show(Request $request, Oeuvre $oeuvre, SubmissionGate $gate, RemovalGate $removalGate): Response
     {
         Gate::forUser($request->user())->authorize('view', $oeuvre);
+
+        // The one question that decides whether step 2 renders management
+        // controls at all. Asked once, from the policy, and passed to the
+        // page — a frozen deposit shows its files read-only.
+        $editable = $request->user()->can('update', $oeuvre);
 
         // withTrashed: a reference row an admin retired after filing is still
         // part of this deposit's record, so the card keeps showing it.
@@ -96,10 +263,39 @@ final class OeuvreController extends Controller
             // a page prop, not a URL, so it doesn't touch the
             // never-expose-sequential-ids-in-URLs rule.
             'oeuvre' => [
-                ...$oeuvre->only(['id', 'uuid', 'title', 'description', 'status', 'created_at', 'code_college_snapshot']),
+                ...$oeuvre->only(['id', 'uuid', 'title', 'description', 'status', 'created_at', 'code_college_snapshot', 'submitted_at', 'reviewed_at', 'registered_at']),
                 'college_name' => self::collegeName($oeuvre),
+                // Adding files, removing them, submitting, deleting: all
+                // four are the policy's answer, not the template's guess.
+                'can' => [
+                    'edit' => $editable,
+                    'delete' => $request->user()->can('delete', $oeuvre),
+                ],
             ],
             'classification' => self::classificationSummary($oeuvre),
+            // Step 2: one upload slot per required document of the collège,
+            // in display order. Empty for an unclassified oeuvre, which keeps
+            // the single dropzone.
+            'requirements' => self::requirementSlots($oeuvre),
+            // Reloaded with mediaFiles on every poll: it only moves when a
+            // file reaches `ready`.
+            'progress' => fn (): array => $oeuvre->requiredDocumentsProgress(),
+            // The submission gate's whole verdict, not just a boolean: the
+            // page lists every blocker at once, and shows the empty
+            // *conditional* slots as advisory rather than as blockers (see
+            // SubmissionGate's docblock for why those do not block).
+            // Recomputed on every poll alongside mediaFiles, since a file
+            // reaching `ready` is exactly what unblocks it.
+            'submission' => fn (): array => [
+                ...$gate->evaluate($oeuvre)->toArray(),
+                // The gate answers "is it ready"; the policy answers "may
+                // this author still act on it at all". A submitted oeuvre
+                // is frozen, so neither the button nor the blockers apply.
+                'is_open' => $oeuvre->isAuthorEditable(),
+            ],
+            // The decision history, so a rejected author sees the officer's
+            // reason on the page and not only in the bell.
+            'reviews' => self::reviewHistory($oeuvre),
             // Read-only: lets the upload UI show remaining quota before a
             // file consumes it. No row yet means the same "unlimited until
             // the default allocation" convention QuotaPolicy already uses.
@@ -110,8 +306,16 @@ final class OeuvreController extends Controller
             'mediaFiles' => $oeuvre->mediaFiles()
                 ->orderBy('created_at')
                 ->get()
-                ->map(fn ($mediaFile) => [
+                ->map(fn (MediaFile $mediaFile) => [
                     'uuid' => $mediaFile->uuid,
+                    // Whether the remove control applies to this file. Two
+                    // separate questions, deliberately kept apart: the
+                    // deposit must still be the author's to edit, and this
+                    // file's pipeline must have finished with it. A file
+                    // that is merely mid-pipeline shows the control
+                    // disabled with a reason, rather than not at all.
+                    'can_remove' => $editable && $removalGate->isFileRemovable($mediaFile),
+                    'college_oeuvre_file_id' => $mediaFile->college_oeuvre_file_id,
                     'original_name' => $mediaFile->original_name,
                     'extension' => $mediaFile->extension,
                     'mime' => $mediaFile->mime,
@@ -128,6 +332,33 @@ final class OeuvreController extends Controller
     }
 
     /**
+     * The append-only decision history, oldest first. The officer's name is
+     * included for the admin console; the author's page shows only the
+     * decision and its reason.
+     *
+     * `withTrashed` on the actor: `users` is soft-deleted, and a decision
+     * must still name its officer after that account is retired.
+     *
+     * @return array<int, array{uuid: string, from_status: string, to_status: string, reason: string|null, actor: string|null, created_at: string|null}>
+     */
+    public static function reviewHistory(Oeuvre $oeuvre): array
+    {
+        return $oeuvre->oeuvreReviews()
+            ->with(['actor' => fn ($query) => $query->withTrashed()])
+            ->get()
+            ->map(fn (OeuvreReview $review): array => [
+                'uuid' => $review->uuid,
+                'from_status' => $review->from_status,
+                'to_status' => $review->to_status,
+                'reason' => $review->reason,
+                'actor' => $review->actor?->name,
+                'created_at' => $review->created_at?->toIso8601String(),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
      * The college's name in the request locale (falling back to French), for
      * the display label of an oeuvre that has no title yet.
      */
@@ -136,6 +367,37 @@ final class OeuvreController extends Controller
         $college = $oeuvre->registerTypeCollege;
 
         return $college === null ? null : trim($college->name_global);
+    }
+
+    /**
+     * The collège's required documents as upload slots. Titles in the request
+     * locale, falling back to French.
+     *
+     * `conditions` is passed raw, for display only: the declaration fields it
+     * tests do not exist yet, so nothing evaluates it — the page marks such a
+     * slot as possibly not applying rather than hiding it.
+     *
+     * @return array<int, array{id: int, document_key: string, title: string, extensions: list<string>, is_required: bool, max_size_kb: int|null, allows_multiple: bool, conditions: array<string, mixed>|null}>
+     */
+    private static function requirementSlots(Oeuvre $oeuvre): array
+    {
+        if ($oeuvre->register_type_college_id === null) {
+            return [];
+        }
+
+        return $oeuvre->requirements()->get()
+            ->map(fn (CollegeOeuvreFile $requirement): array => [
+                'id' => $requirement->id,
+                'document_key' => $requirement->document_key,
+                'title' => trim($requirement->title_global),
+                'extensions' => $requirement->extensions,
+                'is_required' => $requirement->is_required,
+                'max_size_kb' => $requirement->max_size_kb,
+                'allows_multiple' => $requirement->allows_multiple,
+                'conditions' => $requirement->conditions,
+            ])
+            ->values()
+            ->all();
     }
 
     /**

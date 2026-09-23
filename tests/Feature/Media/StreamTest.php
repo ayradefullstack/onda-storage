@@ -219,3 +219,34 @@ test('media.link issues a url only for a ready deposit the requester owns', func
 
     streamTestCleanup($notReady);
 });
+
+test('author-supplied bytes are served as an attachment and never sniffed', function () {
+    $author = streamTestAuthor();
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = streamTestMediaFile($author, $oeuvre);
+
+    $response = $this->actingAs($author)->get(SignedMediaUrl::forStreaming($mediaFile, $author));
+
+    $response->assertOk()
+        ->assertHeader('X-Content-Type-Options', 'nosniff')
+        ->assertHeader('Content-Disposition', 'attachment; filename=sample.mp4');
+
+    streamTestCleanup($mediaFile);
+});
+
+test('a non-ASCII original name keeps an ASCII fallback and the real name in filename*', function () {
+    $author = streamTestAuthor();
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
+    $mediaFile = streamTestMediaFile($author, $oeuvre);
+    $mediaFile->forceFill(['original_name' => 'نشيد.mp4'])->save();
+
+    $disposition = $this->actingAs($author)
+        ->get(SignedMediaUrl::forStreaming($mediaFile, $author))
+        ->assertOk()
+        ->headers->get('Content-Disposition');
+
+    expect($disposition)->toStartWith('attachment; filename=')
+        ->and($disposition)->toContain("filename*=utf-8''".rawurlencode('نشيد.mp4'));
+
+    streamTestCleanup($mediaFile);
+});

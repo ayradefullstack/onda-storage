@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Author\MediaFileController;
 use App\Http\Controllers\Author\OeuvreController;
+use App\Http\Controllers\Author\OeuvreSubmissionController;
 use App\Http\Controllers\Author\UploadController;
 use Illuminate\Support\Facades\Route;
 
@@ -17,6 +19,22 @@ Route::middleware(['auth', 'verified', 'role:author'])->prefix('author/oeuvres')
     Route::get('/create', [OeuvreController::class, 'create'])->name('create');
     Route::post('/', [OeuvreController::class, 'store'])->name('store');
     Route::get('/{oeuvre:uuid}', [OeuvreController::class, 'show'])->name('show');
+    Route::delete('/{oeuvre:uuid}', [OeuvreController::class, 'destroy'])->name('destroy');
+
+    // Removing a file from a deposit. Under /author/oeuvres because that
+    // is the only place it is ever reached from; the binding is the file's
+    // own uuid, so nothing has to trust an oeuvre id from the request.
+    // There is deliberately no counterpart that edits an oeuvre's
+    // classification — see OeuvrePolicy::update()'s doc comment.
+    Route::delete('/files/{mediaFile:uuid}', [MediaFileController::class, 'destroy'])->name('files.destroy');
+});
+
+// Named `author.oeuvres.submit` as the deposit brief specifies, which is
+// why it sits in its own group rather than alongside the `oeuvres.*` page
+// routes above (those predate the brief and keep their unprefixed names —
+// see the comment on that group).
+Route::middleware(['auth', 'verified', 'role:author'])->prefix('author/oeuvres')->name('author.oeuvres.')->group(function () {
+    Route::post('/{oeuvre:uuid}/submit', [OeuvreSubmissionController::class, 'store'])->name('submit');
 });
 
 // JSON endpoints inside the Inertia session — not an API, no Sanctum/tokens.

@@ -18,6 +18,8 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property string $uuid
  * @property int $oeuvre_id
+ * @property int|null $college_oeuvre_file_id
+ * @property string|null $document_key_snapshot
  * @property int $uploaded_by
  * @property string $original_name
  * @property string $extension
@@ -67,6 +69,18 @@ class MediaFile extends Model
     public function oeuvre(): BelongsTo
     {
         return $this->belongsTo(Oeuvre::class);
+    }
+
+    /**
+     * The required-document slot this file satisfies. Null for files deposited
+     * before per-requirement uploads; `document_key_snapshot` holds the key as
+     * of the upload even if this row is later re-keyed or retired.
+     *
+     * @return BelongsTo<CollegeOeuvreFile, $this>
+     */
+    public function collegeOeuvreFile(): BelongsTo
+    {
+        return $this->belongsTo(CollegeOeuvreFile::class);
     }
 
     /**

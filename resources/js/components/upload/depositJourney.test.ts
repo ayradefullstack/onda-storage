@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { MediaFileSummary, UploadFileState } from '@/types/upload';
-import { mergeDepositEntries } from './depositJourney';
+import type { DepositEntry } from './depositJourney';
+import {
+    groupEntriesByRequirement,
+    mergeDepositEntries,
+    slotStateOf,
+} from './depositJourney';
 
 function makeUploadFile(
     overrides: Partial<UploadFileState> = {},
@@ -8,6 +13,7 @@ function makeUploadFile(
     return {
         id: 'client-1',
         oeuvreId: 1,
+        requirementId: null,
         file: null,
         filename: 'reel.mp4',
         size: 1_000_000,
@@ -36,6 +42,8 @@ function makeMediaFile(
 ): MediaFileSummary {
     return {
         uuid: 'media-1',
+        can_remove: true,
+        college_oeuvre_file_id: null,
         original_name: 'reel.mp4',
         extension: 'mp4',
         mime: 'video/mp4',
@@ -120,5 +128,71 @@ describe('mergeDepositEntries', () => {
         const entries = mergeDepositEntries([uploading], 1, [ready], new Set());
 
         expect(entries.map((e) => e.kind)).toEqual(['upload', 'media']);
+    });
+});
+
+describe('groupEntriesByRequirement', () => {
+    const upload = (
+        id: string,
+        requirementId: number | null,
+    ): DepositEntry => ({
+        kind: 'upload',
+        file: makeUploadFile({ id, requirementId }),
+    });
+    const media = (uuid: string, slot: number | null): DepositEntry => ({
+        kind: 'media',
+        file: makeMediaFile({ uuid, college_oeuvre_file_id: slot }),
+        collapsedReady: false,
+    });
+
+    it('places uploads by their queued slot and media by their stored slot, in order', () => {
+        const { bySlot, unassigned } = groupEntriesByRequirement(
+            [upload('u1', 2), media('m1', 1), media('m2', 2)],
+            [1, 2, 3],
+        );
+
+        expect(bySlot.get(1)?.map((e) => e.kind)).toEqual(['media']);
+        expect(bySlot.get(2)?.map((e) => e.kind)).toEqual(['upload', 'media']);
+        expect(bySlot.get(3)).toEqual([]);
+        expect(unassigned).toEqual([]);
+    });
+
+    it('keeps files with no slot, or a retired slot, visible as unassigned', () => {
+        const { unassigned } = groupEntriesByRequirement(
+            [media('legacy', null), media('retired', 99)],
+            [1],
+        );
+
+        expect(unassigned).toHaveLength(2);
+    });
+});
+
+describe('slotStateOf', () => {
+    const media = (status: MediaFileSummary['status']): DepositEntry => ({
+        kind: 'media',
+        file: makeMediaFile({ status }),
+        collapsedReady: false,
+    });
+    const upload = (status: UploadFileState['status']): DepositEntry => ({
+        kind: 'upload',
+        file: makeUploadFile({ status }),
+    });
+
+    it('is deposited only once a file is ready', () => {
+        expect(slotStateOf([media('scanning')], true)).toBe('inProgress');
+        expect(slotStateOf([media('processing')], true)).toBe('inProgress');
+        expect(slotStateOf([media('scanning'), media('ready')], true)).toBe(
+            'deposited',
+        );
+    });
+
+    it('treats failed and quarantined files as satisfying nothing', () => {
+        expect(slotStateOf([media('quarantined')], true)).toBe('awaiting');
+        expect(slotStateOf([media('failed')], false)).toBe('optional');
+        expect(slotStateOf([upload('failed')], true)).toBe('awaiting');
+    });
+
+    it('shows an in-flight upload as in progress', () => {
+        expect(slotStateOf([upload('uploading')], true)).toBe('inProgress');
     });
 });

@@ -6,7 +6,7 @@
  */
 import { computed } from 'vue';
 import { useUploadStore } from '@/stores/uploads';
-import type { UploadFileState } from '@/types/upload';
+import type { UploadFileState, UploadRequirement } from '@/types/upload';
 
 let beforeUnloadRegistered = false;
 
@@ -46,11 +46,12 @@ export function useUploadQueue() {
     function selectFiles(
         fileList: FileList | File[],
         oeuvreId: number,
+        requirement: UploadRequirement | null = null,
     ): FileRejection[] {
         const rejections: FileRejection[] = [];
 
         for (const file of Array.from(fileList)) {
-            const result = store.enqueueFile(file, oeuvreId);
+            const result = store.enqueueFile(file, oeuvreId, requirement);
 
             if (!result.ok) {
                 rejections.push({ filename: file.name, reason: result.reason });

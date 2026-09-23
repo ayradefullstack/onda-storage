@@ -26,7 +26,11 @@ import {
     UploadHttpError,
     uploadChunk,
 } from '@/lib/uploadClient';
-import { extensionOf, validateFile } from '@/lib/uploadValidation';
+import {
+    extensionOf,
+    validateFile,
+    validateFileForRequirement,
+} from '@/lib/uploadValidation';
 // `?worker&inline` (not `new Worker(new URL(...), { type: 'module' })`):
 // this app's outer HTML is served by Laravel, not by Vite itself, so in dev
 // the page's own origin and the Vite dev server's asset origin differ —
@@ -45,6 +49,7 @@ import type {
     UploadChunk,
     UploadErrorCode,
     UploadFileState,
+    UploadRequirement,
     WorkerResponse,
     WorkerSliceRequest,
 } from '@/types/upload';
@@ -314,6 +319,7 @@ function persist(fileState: UploadFileState): void {
     map[fileState.id] = {
         id: fileState.id,
         oeuvreId: fileState.oeuvreId,
+        requirementId: fileState.requirementId,
         sessionUuid: fileState.sessionUuid,
         filename: fileState.filename,
         size: fileState.size,
@@ -378,6 +384,9 @@ function restorePersistedUploads(): void {
             // `workId`; without the fallback a tab that was mid-upload at
             // deploy time would restore an entry no page ever matches.
             oeuvreId: persistedUpload.oeuvreId ?? persistedUpload.workId,
+            // Restored so a resumed file reappears in its own slot, not
+            // slot-less while the server session still carries the slot.
+            requirementId: persistedUpload.requirementId ?? null,
             file: null,
             filename: persistedUpload.filename,
             size: persistedUpload.size,
@@ -671,6 +680,7 @@ async function startFile(fileState: UploadFileState): Promise<void> {
             filename: fileState.filename,
             size_bytes: fileState.size,
             mime: fileState.mime,
+            college_oeuvre_file_id: fileState.requirementId,
         });
         applyInitResponse(fileState, response);
         persist(fileState);
@@ -732,8 +742,11 @@ function pumpQueue(): void {
 function enqueueFile(
     file: File,
     oeuvreId: number,
+    requirement: UploadRequirement | null = null,
 ): { ok: true; id: string } | { ok: false; reason: 'extension' | 'size' } {
-    const validation = validateFile(file);
+    const validation = requirement
+        ? validateFileForRequirement(file, requirement)
+        : validateFile(file);
 
     if (!validation.ok) {
         return { ok: false, reason: validation.reason };
@@ -744,6 +757,7 @@ function enqueueFile(
     const fileState: UploadFileState = {
         id,
         oeuvreId,
+        requirementId: requirement?.id ?? null,
         file,
         filename: file.name,
         size: file.size,

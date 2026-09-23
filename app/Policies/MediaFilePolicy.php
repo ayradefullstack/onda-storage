@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
+use App\Domain\Deposit\OeuvreStatus;
 use App\Models\MediaFile;
 use App\Models\User;
 
@@ -11,8 +12,6 @@ use App\Models\User;
  * Ownership traces through the owning `Oeuvre`, not `uploaded_by` — the
  * copyright holder (the work's author) controls the deposit even when a
  * future co-author or staff member is the one who performed the upload.
- * Not yet wired to a route in P3 (read paths land in P4); registered now so
- * `Gate::policy()` resolution is in place ahead of that phase.
  */
 final class MediaFilePolicy
 {
@@ -33,8 +32,21 @@ final class MediaFilePolicy
         return $user->id === $mediaFile->oeuvre->author_id;
     }
 
+    /**
+     * Removing a file from a deposit. Gated on the *oeuvre's* status, not
+     * the file's: a file belonging to a submitted or registered deposit is
+     * part of a record under review, whatever state the file itself is in.
+     * An admin is deliberately not admitted — an officer reviews a deposit,
+     * they do not edit it.
+     *
+     * Whether this particular file can be removed right now (its pipeline
+     * may still be running over it) is RemovalGate's question, asked
+     * separately so a refusal can name the file rather than collapse into
+     * a 403.
+     */
     public function delete(User $user, MediaFile $mediaFile): bool
     {
-        return $user->id === $mediaFile->oeuvre->author_id;
+        return $user->id === $mediaFile->oeuvre->author_id
+            && OeuvreStatus::isAuthorEditable($mediaFile->oeuvre->status);
     }
 }

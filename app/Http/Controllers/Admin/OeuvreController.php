@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Deposit\OeuvreStatus;
+use App\Domain\Deposit\SubmissionGate;
 use App\Http\Controllers\Author\OeuvreController as AuthorOeuvreController;
 use App\Http\Controllers\Controller;
 use App\Models\MediaFile;
@@ -31,7 +33,12 @@ final class OeuvreController extends Controller
      *
      * @var list<string>
      */
-    private const REVIEWABLE_STATUSES = ['submitted', 'under_review', 'registered', 'rejected'];
+    private const REVIEWABLE_STATUSES = [
+        OeuvreStatus::SUBMITTED,
+        OeuvreStatus::UNDER_REVIEW,
+        OeuvreStatus::REGISTERED,
+        OeuvreStatus::REJECTED,
+    ];
 
     public function index(Request $request): Response
     {
@@ -62,7 +69,11 @@ final class OeuvreController extends Controller
             ))
             ->when($from !== '', fn ($query) => $query->whereDate('created_at', '>=', $from))
             ->when($to !== '', fn ($query) => $query->whereDate('created_at', '<=', $to))
-            ->latest()
+            // The queue is ordered by when a deposit last entered it,
+            // not by when the author created the record — a draft filed
+            // in January and submitted today belongs at the top.
+            ->orderByDesc('submitted_at')
+            ->orderByDesc('id')
             ->paginate(self::PER_PAGE)
             ->withQueryString();
 
@@ -73,6 +84,7 @@ final class OeuvreController extends Controller
                 'college_name' => AuthorOeuvreController::collegeName($oeuvre),
                 'status' => $oeuvre->status,
                 'author' => $oeuvre->author?->only(['uuid', 'name']),
+                'submitted_at' => $oeuvre->submitted_at,
                 'files_count' => (int) $oeuvre['media_files_count'],
                 'files_size_bytes' => (int) $oeuvre['files_size_bytes'],
                 'all_ready' => (bool) $oeuvre['all_ready'],
@@ -90,11 +102,11 @@ final class OeuvreController extends Controller
         ]);
     }
 
-    public function show(Oeuvre $oeuvre): Response
+    public function show(Request $request, Oeuvre $oeuvre, SubmissionGate $gate): Response
     {
-        abort_if($oeuvre->status === 'draft', 404);
+        abort_if($oeuvre->status === OeuvreStatus::DRAFT, 404);
 
-        $oeuvre->load(['author:id,uuid,name,first_name,last_name', 'registerTypeCollege']);
+        $oeuvre->load(['author:id,uuid,name,first_name,last_name', 'registerTypeCollege', 'reviewer:id,uuid,name']);
 
         $files = $oeuvre->mediaFiles()
             ->orderBy('created_at')
@@ -128,9 +140,28 @@ final class OeuvreController extends Controller
                 'status' => $oeuvre->status,
                 'author' => $oeuvre->author?->only(['uuid', 'name']),
                 'created_at' => $oeuvre->created_at,
+                'submitted_at' => $oeuvre->submitted_at,
+                'reviewed_at' => $oeuvre->reviewed_at,
                 'registered_at' => $oeuvre->registered_at,
             ],
             'files' => $files,
+            // Who holds this deposit right now, and whether that is the
+            // officer reading the page. The page offers an explicit
+            // take-over rather than silently letting a second officer
+            // decide — see OeuvreStatusMachine's concurrency note.
+            'holder' => $oeuvre->reviewer === null ? null : [
+                'uuid' => $oeuvre->reviewer->uuid,
+                'name' => $oeuvre->reviewer->name,
+                'is_you' => $oeuvre->reviewed_by === $request->user()->id,
+            ],
+            // The officer's call: these are the required documents whose
+            // `conditions` were never evaluated, so the author was told
+            // they might not apply and was allowed to submit without them.
+            // See SubmissionGate.
+            'advisories' => $gate->evaluate($oeuvre)->toArray()['advisories'],
+            // Why it was rejected last time. An officer looking at a
+            // resubmission needs that before reading a single file.
+            'reviews' => AuthorOeuvreController::reviewHistory($oeuvre),
         ]);
     }
 

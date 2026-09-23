@@ -216,6 +216,73 @@ describe('upload store — chunk path (worker slicing + request hand-off)', () =
         expect(logged).toContain('session-uuid');
     });
 
+    it('carries the requirement slot into init and into the resume record', async () => {
+        const storage = new Map<string, string>();
+        vi.stubGlobal('sessionStorage', {
+            getItem: (key: string) => storage.get(key) ?? null,
+            setItem: (key: string, value: string) => storage.set(key, value),
+            removeItem: (key: string) => storage.delete(key),
+        });
+
+        const { useUploadStore } = await import('./uploads');
+        initUpload.mockResolvedValue(initResponse());
+        // Never resolves: the upload stays in flight, so its record persists.
+        uploadChunk.mockReturnValue(new Promise(() => {}));
+
+        const store = useUploadStore();
+        const result = store.enqueueFile(makePdfFile(), 70, {
+            id: 42,
+            extensions: ['pdf', 'jpg'],
+            maxSizeBytes: null,
+        });
+        expect(result.ok).toBe(true);
+
+        await flushMicrotasks();
+
+        expect(initUpload).toHaveBeenCalledTimes(1);
+        expect(
+            (initUpload.mock.calls[0] as [Record<string, unknown>])[0],
+        ).toMatchObject({ oeuvre_id: 70, college_oeuvre_file_id: 42 });
+
+        const persisted = Object.values(
+            JSON.parse(storage.get('onda.uploads.v1') ?? '{}') as Record<
+                string,
+                { requirementId?: number | null }
+            >,
+        );
+        expect(persisted).toHaveLength(1);
+        expect(persisted[0].requirementId).toBe(42);
+
+        // A page refresh: a fresh module restores the entry into its slot.
+        vi.resetModules();
+        const reloaded = await import('./uploads');
+        const restored = reloaded
+            .useUploadStore()
+            .files.value.find((f) => f.filename === 'test.pdf');
+
+        expect(restored?.requirementId).toBe(42);
+        expect(restored?.needsFileReselect).toBe(true);
+    });
+
+    it('validates against the slot, case-insensitively, before any request', async () => {
+        const { useUploadStore } = await import('./uploads');
+        initUpload.mockReturnValue(new Promise(() => {}));
+        const store = useUploadStore();
+        const slot = { id: 7, extensions: ['mp3'], maxSizeBytes: null };
+
+        expect(store.enqueueFile(makePdfFile(), 70, slot)).toEqual({
+            ok: false,
+            reason: 'extension',
+        });
+
+        const upper = new File([new Uint8Array(4)], 'MASTER.MP3');
+        expect(store.enqueueFile(upper, 70, slot).ok).toBe(true);
+
+        await flushMicrotasks();
+
+        expect(initUpload).toHaveBeenCalledTimes(1);
+    });
+
     it('a worker-reported slice error surfaces as workerError, not unknown', async () => {
         workerBehavior = 'workerError';
         const { useUploadStore } = await import('./uploads');

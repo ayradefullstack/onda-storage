@@ -3,6 +3,7 @@
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\Media\StreamController;
 use App\Http\Controllers\Media\StreamLinkController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\VaultDoctorController;
 use App\Http\Middleware\SetLocale;
 use App\Models\Wilaya;
@@ -51,6 +52,16 @@ Route::middleware(['auth', 'verified', 'role:author|admin'])->group(function () 
     Route::get('/media/{mediaFile:uuid}/stream', StreamController::class)
         ->middleware('signed')
         ->name('media.stream');
+});
+
+// The header bell, for both roles — an author and an admin each read
+// their own `notifications` rows, so this belongs in neither
+// routes/admin.php nor routes/author.php. No role gate beyond `auth`:
+// every notification query is scoped to `$request->user()`.
+Route::middleware(['auth'])->prefix('notifications')->name('notifications.')->group(function () {
+    Route::get('/', [NotificationController::class, 'index'])->name('index');
+    Route::post('/read-all', [NotificationController::class, 'readAll'])->name('read-all');
+    Route::post('/{notification}/read', [NotificationController::class, 'read'])->name('read');
 });
 
 Route::get('/_vault-doctor', VaultDoctorController::class)->name('vault-doctor');

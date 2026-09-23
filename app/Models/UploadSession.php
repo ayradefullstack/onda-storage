@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
  * @property string $uuid
  * @property int $user_id
  * @property int $oeuvre_id
+ * @property int|null $college_oeuvre_file_id
  * @property string $filename
  * @property int $size_bytes
  * @property int $chunk_size
@@ -63,5 +64,16 @@ class UploadSession extends Model
     public function oeuvre(): BelongsTo
     {
         return $this->belongsTo(Oeuvre::class);
+    }
+
+    /**
+     * The required-document slot the upload is for, set by InitUpload and
+     * copied onto the MediaFile by CompleteUpload.
+     *
+     * @return BelongsTo<CollegeOeuvreFile, $this>
+     */
+    public function collegeOeuvreFile(): BelongsTo
+    {
+        return $this->belongsTo(CollegeOeuvreFile::class);
     }
 }

@@ -30,6 +30,9 @@ final class InitUploadRequest extends FormRequest
             'filename' => ['required', 'string', 'max:255'],
             'size_bytes' => ['required', 'integer', 'min:1', 'max:'.config('vault.max_file_size')],
             'mime' => ['required', 'string', 'max:128'],
+            // Shape only — whether it belongs to the oeuvre's collège is
+            // InitUpload's check.
+            'college_oeuvre_file_id' => ['nullable', 'integer'],
         ];
     }
 }

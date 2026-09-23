@@ -71,6 +71,20 @@ class CollegeOeuvreFile extends Model
     }
 
     /**
+     * Rows whose `extensions` list was a guess rather than a rule read off
+     * ONDA's source — see CollegeOeuvreFileSeeder. An officer confirming or
+     * correcting the list is the review this flag asks for, so saving
+     * extensions clears it.
+     *
+     * @param  Builder<CollegeOeuvreFile>  $query
+     * @return Builder<CollegeOeuvreFile>
+     */
+    public function scopeNeedsReview(Builder $query): Builder
+    {
+        return $query->where('needs_review', true);
+    }
+
+    /**
      * @return BelongsTo<RegisterTypeCollege, $this>
      */
     public function registerTypeCollege(): BelongsTo

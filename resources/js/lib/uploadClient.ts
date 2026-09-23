@@ -67,6 +67,8 @@ export interface InitUploadPayload {
     filename: string;
     size_bytes: number;
     mime: string;
+    /** Required for a classified oeuvre; InitUpload checks it server-side. */
+    college_oeuvre_file_id: number | null;
 }
 
 export async function initUpload(

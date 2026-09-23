@@ -7,6 +7,7 @@ namespace App\Actions\Upload;
 use App\Domain\Quota\QuotaPolicy;
 use App\Domain\Vault\Contracts\ChunkTracker;
 use App\Domain\Vault\Contracts\VaultContract;
+use App\Models\CollegeOeuvreFile;
 use App\Models\MediaFile;
 use App\Models\StorageQuota;
 use App\Models\UploadSession;
@@ -47,6 +48,13 @@ final class CompleteUpload
             $mediaFile = new MediaFile;
             $mediaFile->uuid = (string) Str::uuid7();
             $mediaFile->oeuvre_id = $session->oeuvre_id;
+            // The requirement slot InitUpload validated, and its key as of
+            // this upload. withTrashed: a requirement retired mid-upload still
+            // names the slot the file was deposited against.
+            $mediaFile->college_oeuvre_file_id = $session->college_oeuvre_file_id;
+            $mediaFile->document_key_snapshot = $session->college_oeuvre_file_id === null
+                ? null
+                : CollegeOeuvreFile::withTrashed()->whereKey($session->college_oeuvre_file_id)->value('document_key');
             $mediaFile->uploaded_by = $session->user_id;
             $mediaFile->original_name = $session->filename;
             $mediaFile->extension = $extension;

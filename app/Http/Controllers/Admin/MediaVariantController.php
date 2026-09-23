@@ -88,6 +88,9 @@ final class MediaVariantController extends Controller
         return response($watermarked, 200, [
             'Content-Type' => self::MIME_BY_KIND[$kind],
             'Content-Length' => (string) strlen($watermarked),
+            // Server-generated preview (poster, waveform, clip): stays inline,
+            // but never sniffed into another type.
+            'X-Content-Type-Options' => 'nosniff',
             'Cache-Control' => 'private, no-store',
         ]);
     }

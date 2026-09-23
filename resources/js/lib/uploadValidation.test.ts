@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { extensionOf, validateFile } from './uploadValidation';
+import {
+    extensionOf,
+    MAX_FILE_SIZE_BYTES,
+    validateFile,
+    validateFileForRequirement,
+} from './uploadValidation';
 
 function makeFile(name: string): File {
     return new File([new Uint8Array(1)], name);
@@ -34,5 +39,52 @@ describe('validateFile', () => {
             reason: 'extension',
             extension: 'zip',
         });
+    });
+});
+
+describe('validateFileForRequirement', () => {
+    const slot = {
+        id: 1,
+        extensions: ['pdf', 'jpg', 'jpeg', 'png'],
+        maxSizeBytes: null,
+    };
+
+    it.each(['scan.PDF', 'IMG_0967.JPG', 'photo.Jpeg', 'x.png'])(
+        'accepts %s against the slot list regardless of case',
+        (filename) => {
+            expect(
+                validateFileForRequirement(makeFile(filename), slot).ok,
+            ).toBe(true);
+        },
+    );
+
+    it('rejects an extension the global whitelist allows but the slot does not', () => {
+        expect(validateFileForRequirement(makeFile('clip.mp4'), slot)).toEqual({
+            ok: false,
+            reason: 'extension',
+            extension: 'mp4',
+        });
+    });
+
+    it('accepts an extension the slot allows but the global whitelist does not', () => {
+        expect(validateFile(makeFile('photo.jpg')).ok).toBe(false);
+        expect(validateFileForRequirement(makeFile('photo.jpg'), slot).ok).toBe(
+            true,
+        );
+    });
+
+    it('applies the slot size cap, and the global ceiling when there is none', () => {
+        const big = new File([new Uint8Array(4)], 'toile.png');
+
+        expect(
+            validateFileForRequirement(big, { ...slot, maxSizeBytes: 3 }),
+        ).toEqual({ ok: false, reason: 'size', extension: 'png' });
+        expect(validateFileForRequirement(big, slot).ok).toBe(true);
+        expect(
+            validateFileForRequirement(big, {
+                ...slot,
+                maxSizeBytes: MAX_FILE_SIZE_BYTES * 2,
+            }).ok,
+        ).toBe(true);
     });
 });

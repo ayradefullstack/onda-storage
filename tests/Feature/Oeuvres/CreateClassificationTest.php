@@ -212,8 +212,8 @@ test('the index and show pages label an untitled oeuvre by its college', functio
     $oeuvre = Oeuvre::firstOrFail();
 
     $this->get(route('oeuvres.index'))->assertInertia(fn (Assert $page) => $page
-        ->where('oeuvres.0.title', null)
-        ->where('oeuvres.0.college_name', 'Logiciel'));
+        ->where('oeuvres.data.0.title', null)
+        ->where('oeuvres.data.0.college_name', 'Logiciel'));
 
     $this->get(route('oeuvres.show', $oeuvre))->assertInertia(fn (Assert $page) => $page
         ->where('oeuvre.college_name', 'Logiciel')

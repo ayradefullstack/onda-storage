@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Concerns\HasUuidColumn;
+use App\Domain\Deposit\OeuvreStatus;
 use Database\Factories\RegisterTypeCollegeFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -131,6 +132,34 @@ class RegisterTypeCollege extends Model
     {
         return $this->hasMany(CollegeOeuvreFile::class);
     }
+
+    /**
+     * Deposits filed under this college. Read-only from the reference side:
+     * nothing here may touch an oeuvre, and retiring a college must leave
+     * every one of these intact — which is precisely why the admin console
+     * shows this count before letting anyone disable it.
+     *
+     * @return HasMany<Oeuvre, $this>
+     */
+    public function oeuvres(): HasMany
+    {
+        return $this->hasMany(Oeuvre::class);
+    }
+
+    /**
+     * Deposits still in flight under this college — an author is filling
+     * one in, or an officer is reading one. Disabling the college does NOT
+     * break them (existing oeuvres keep their classification and stay
+     * reviewable), but whoever disables it should be told the number
+     * first. `registered` is excluded: those are finished and untouchable.
+     *
+     * @var list<string>
+     */
+    public const IN_FLIGHT_OEUVRE_STATUSES = [
+        OeuvreStatus::DRAFT,
+        OeuvreStatus::SUBMITTED,
+        OeuvreStatus::UNDER_REVIEW,
+    ];
 
     /**
      * @param  Builder<RegisterTypeCollege>  $query
