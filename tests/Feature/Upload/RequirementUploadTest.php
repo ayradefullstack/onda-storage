@@ -139,7 +139,14 @@ test('a full upload through the real pipeline reaches ready with the requirement
     $author = slotAuthor();
     $oeuvre = slotOeuvre($author, 'MUSIQUE');
     $requirement = slotRequirement('MUSIQUE', 'justificatif_exploitation');
-    $bytes = random_bytes(90);
+
+    // A REAL PDF, not random bytes: the chain now includes
+    // VerifyContentType, which reads the actual content and refuses
+    // anything libmagic cannot identify as a type the slot accepts. Random
+    // bytes named .PDF are exactly what that job exists to reject, so this
+    // fixture is what keeps the test end-to-end rather than weakening the
+    // check to let it through.
+    $bytes = file_get_contents(base_path('tests/fixtures/formats/sample.pdf'));
 
     $this->actingAs($author);
     // No Bus::fake(): QUEUE_CONNECTION=sync runs the whole P5 chain.

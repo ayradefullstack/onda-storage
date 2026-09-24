@@ -9,6 +9,7 @@ use App\Http\Requests\Admin\Referentiel\UpdateDocumentRequest;
 use App\Models\CollegeOeuvreFile;
 use App\Models\Oeuvre;
 use App\Models\RegisterTypeCollege;
+use App\Support\FileFormats;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -63,6 +64,9 @@ final class DocumentController extends ReferentielController
                 'college' => $document->registerTypeCollege?->name_global,
                 'code_college' => $document->registerTypeCollege?->code_college,
                 'extensions' => $document->extensions,
+                // Derived, read-only. Sent so the admin sees exactly what
+                // the pipeline will accept for this slot.
+                'mime_types' => $document->mime_types,
                 'is_required' => $document->is_required,
                 'display_order' => $document->display_order,
                 'max_size_kb' => $document->max_size_kb,
@@ -84,6 +88,11 @@ final class DocumentController extends ReferentielController
                 ->orderBy('name')
                 ->get(['id', 'name', 'name_ar', 'name_en'])
                 ->map(fn (RegisterTypeCollege $c): array => ['id' => $c->id, 'name' => trim($c->name_global)]),
+            // The format registry, grouped by category, for the
+            // multi-select. Sent from the server so there is exactly ONE
+            // list — a second copy in TypeScript would drift the first time
+            // a format is added.
+            'formats' => FileFormats::grouped(),
         ]);
     }
 

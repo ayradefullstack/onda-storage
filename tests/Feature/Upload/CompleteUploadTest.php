@@ -7,6 +7,7 @@ use App\Models\Oeuvre;
 use App\Models\StorageQuota;
 use App\Models\UploadSession;
 use App\Models\User;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Testing\TestResponse;
 use Spatie\Permission\Models\Role;
 
@@ -129,6 +130,12 @@ test('an upload within quota is allowed to init', function () {
 });
 
 test('two sequential completes leave used_bytes equal to the exact sum of both file sizes', function () {
+    // Bus::fake(): these assert quota arithmetic, not the pipeline. Without
+    // it the sync queue runs the chain inline and VerifyContentType refuses
+    // the synthetic payload, which is correct behaviour but not what this
+    // test is about.
+    Bus::fake();
+
     $user = completeTestAuthor();
     $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
 
@@ -146,6 +153,12 @@ test('two sequential completes leave used_bytes equal to the exact sum of both f
 });
 
 test('completing an upload for a user with no quota row creates one from the default', function () {
+    // Bus::fake(): these assert quota arithmetic, not the pipeline. Without
+    // it the sync queue runs the chain inline and VerifyContentType refuses
+    // the synthetic payload, which is correct behaviour but not what this
+    // test is about.
+    Bus::fake();
+
     $user = completeTestAuthor();
     $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
 

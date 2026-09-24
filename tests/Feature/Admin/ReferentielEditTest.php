@@ -11,6 +11,7 @@ use App\Models\ReferenceDataChange;
 use App\Models\RegisterTypeCollege;
 use App\Models\RegisterTypeMember;
 use App\Models\User;
+use App\Support\FileFormats;
 use Database\Seeders\CollegeOeuvreFileSeeder;
 use Database\Seeders\MembershipTypeSeeder;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -318,5 +319,57 @@ test('the colleges page sends the codes it renders read-only', function () {
             ->where('rows.data.0.code_college', 'MUSIQUE')
             ->has('rows.data.0.oeuvres_count')
             ->has('rows.data.0.in_flight_oeuvres_count')
+        );
+});
+
+// --- the format registry governs what may be saved -----------------------
+
+test('an extension outside the registry is rejected, even by a direct request', function (string $extension) {
+    $document = CollegeOeuvreFile::where('document_key', 'justificatif_exploitation')->firstOrFail();
+    $original = $document->extensions;
+
+    $this->actingAs(editAdmin())
+        ->patch(route('admin.referentiel.documents.update', $document), [
+            'extensions' => ['pdf', $extension],
+        ])
+        ->assertInvalid('extensions.1');
+
+    expect($document->fresh()->extensions)->toBe($original);
+})->with([
+    // Executables and scripts are absent from the registry, and absence is
+    // refusal — there is no blocklist to keep in step.
+    'exe' => ['exe'],
+    'php' => ['php'],
+    'js' => ['js'],
+    'sh' => ['sh'],
+    'bat' => ['bat'],
+    'jar' => ['jar'],
+    // And anything simply invented.
+    'unknown' => ['foo'],
+]);
+
+test('a valid selection stores a lowercase, dot-free list and derives its mime types', function () {
+    $document = CollegeOeuvreFile::where('document_key', 'justificatif_exploitation')->firstOrFail();
+
+    $this->actingAs(editAdmin())
+        ->patch(route('admin.referentiel.documents.update', $document), [
+            'extensions' => ['mp3', 'wav', 'flac'],
+        ])
+        ->assertRedirect();
+
+    $document->refresh();
+
+    expect($document->extensions)->toBe(['mp3', 'wav', 'flac'])
+        ->and($document->mime_types)->toBe(FileFormats::mimeTypesFor(['mp3', 'wav', 'flac']))
+        // Measured on this machine — the old hardcoded map said audio/wav.
+        ->and($document->mime_types)->toContain('audio/x-wav');
+});
+
+test('the documents page sends the registry and each row\'s derived mime types', function () {
+    $this->actingAs(editAdmin())
+        ->get(route('admin.referentiel.documents', ['search' => 'justificatif_exploitation']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('formats')
+            ->where('rows.data.0.mime_types', ['application/pdf', 'image/jpeg', 'image/png'])
         );
 });

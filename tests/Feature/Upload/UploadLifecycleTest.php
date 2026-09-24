@@ -13,6 +13,7 @@ use App\Jobs\GenerateVariants;
 use App\Jobs\ProcessMediaFile;
 use App\Jobs\RecordDeposit;
 use App\Jobs\ScanForMalware;
+use App\Jobs\VerifyContentType;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\UploadSession;
@@ -128,6 +129,11 @@ test('a full 3-chunk lifecycle round-trips the exact source bytes', function () 
     $chainClasses = array_map(fn (object $job): string => $job::class, ProcessMediaFile::chainJobs($mediaFile->uuid));
     expect($chainClasses)->toBe([
         DecryptToTemp::class,
+        // Content verification runs immediately after the decrypt, before
+        // anything expensive: finfo reads only the first bytes, so a file
+        // whose content is not what its slot accepts fails before it is
+        // hashed, deduplicated or scanned.
+        VerifyContentType::class,
         ComputeContentHash::class,
         DeduplicateFile::class,
         ScanForMalware::class,
@@ -146,6 +152,18 @@ test('a full 3-chunk lifecycle round-trips the exact source bytes', function () 
 });
 
 test('chunks arriving out of order still assemble the correct file', function () {
+    // This test is about chunk assembly and offset correctness, so its
+    // payload is random_bytes — deliberately not a real MP4, because the
+    // assertion is that the decrypted bytes come back IDENTICAL.
+    //
+    // Bus::fake() keeps the pipeline out of it. Without the fake the sync
+    // queue runs the chain inline inside complete(), VerifyContentType
+    // correctly refuses to identify 96 random bytes named movie.mp4, and
+    // the exception surfaces as a 500 on the HTTP response. Production
+    // never does that: the queue driver is `database`, so the chain runs
+    // in a worker and a content mismatch marks the file failed instead.
+    Bus::fake();
+
     useSmallChunks();
     $user = authorUser();
     $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
