@@ -70,7 +70,7 @@ const { t } = useI18n();
                         dir="ltr"
                         autocomplete="email"
                         placeholder="author@onda.dz"
-                        class="input-premium h-11 ps-4 pe-4 text-left text-sm"
+                        class="text-left"
                     />
                 </div>
                 <InputError :message="errors.email" />
@@ -80,7 +80,7 @@ const { t } = useI18n();
             <div class="pt-2">
                 <Button
                     type="submit"
-                    class="h-12 w-full cursor-pointer rounded-xl bg-gradient-to-r from-onda-blue-600 to-onda-blue-700 text-sm font-semibold text-white shadow-lg shadow-onda-blue-600/25 transition-all hover:-translate-y-0.5 hover:from-onda-blue-700 hover:to-onda-blue-800 hover:shadow-onda-blue-600/40 active:translate-y-0 dark:from-onda-blue-500 dark:to-onda-blue-600 dark:hover:from-onda-blue-400 dark:hover:to-onda-blue-500"
+                    class="h-10 w-full cursor-pointer rounded-lg text-sm font-semibold shadow-xs"
                     :disabled="processing"
                     data-test="email-password-reset-link-button"
                 >

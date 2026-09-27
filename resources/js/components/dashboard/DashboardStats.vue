@@ -84,10 +84,7 @@ const stats = computed<StatItem[]>(() => [
         <div
             v-for="stat in stats"
             :key="stat.id"
-            :class="[
-                'group relative overflow-hidden rounded-2xl border border-border/80 bg-card p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:bg-card/95',
-                stat.glowColor,
-            ]"
+            class="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-xs transition-colors hover:border-border/80"
         >
             <!-- Card Header: Title & Icon -->
             <div class="flex items-center justify-between gap-2">
@@ -98,7 +95,7 @@ const stats = computed<StatItem[]>(() => [
                 </span>
                 <div
                     :class="[
-                        'flex size-10 items-center justify-center rounded-xl shadow-2xs transition-transform duration-300 group-hover:scale-110',
+                        'flex size-10 items-center justify-center rounded-lg shadow-2xs',
                         stat.iconColor,
                     ]"
                 >
@@ -110,13 +107,13 @@ const stats = computed<StatItem[]>(() => [
             <div class="mt-4 space-y-1">
                 <div class="flex items-baseline justify-between gap-2">
                     <h3
-                        class="font-mono text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl"
+                        class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
                     >
                         {{ stat.value }}
                     </h3>
                     <span
                         v-if="stat.trend"
-                        class="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400"
+                        class="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400"
                     >
                         <ArrowUpRight class="size-3 rtl:rotate-90" />
                         {{ stat.trend }}

@@ -66,7 +66,7 @@ const inputEmail = ref(props.email);
                         v-model="inputEmail"
                         dir="ltr"
                         readonly
-                        class="input-premium h-11 cursor-not-allowed bg-muted/40 ps-4 pe-4 text-left text-sm opacity-80"
+                        class="cursor-not-allowed bg-muted/40 text-left opacity-80"
                     />
                 </div>
                 <InputError :message="errors.email" />
@@ -92,7 +92,6 @@ const inputEmail = ref(props.email);
                     :tabindex="1"
                     :placeholder="t('auth.passwordPlaceholder')"
                     :passwordrules="passwordRules"
-                    class="input-premium h-11 ps-8 text-sm"
                 />
                 <InputError :message="errors.password" />
             </div>
@@ -116,7 +115,6 @@ const inputEmail = ref(props.email);
                     :tabindex="2"
                     :placeholder="t('auth.passwordPlaceholder')"
                     :passwordrules="passwordRules"
-                    class="input-premium h-11 ps-8 text-sm"
                 />
                 <InputError :message="errors.password_confirmation" />
             </div>
@@ -125,7 +123,7 @@ const inputEmail = ref(props.email);
             <div class="pt-2">
                 <Button
                     type="submit"
-                    class="h-12 w-full cursor-pointer rounded-xl bg-gradient-to-r from-onda-blue-600 to-onda-blue-700 text-sm font-semibold text-white shadow-lg shadow-onda-blue-600/25 transition-all hover:-translate-y-0.5 hover:from-onda-blue-700 hover:to-onda-blue-800 hover:shadow-onda-blue-600/40 active:translate-y-0 dark:from-onda-blue-500 dark:to-onda-blue-600 dark:hover:from-onda-blue-400 dark:hover:to-onda-blue-500"
+                    class="h-10 w-full cursor-pointer rounded-lg text-sm font-semibold shadow-xs"
                     :tabindex="3"
                     :disabled="processing"
                     data-test="reset-password-button"

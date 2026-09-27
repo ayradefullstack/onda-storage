@@ -5,10 +5,10 @@ import { useGlobalLoader } from '@/composables/useGlobalLoader';
 
 const props = withDefaults(
     defineProps<{
-        minDuration?: number; // Initial mount display time in ms (e.g. 600ms)
+        minDuration?: number; // Initial mount display time in ms (e.g. 0 for instant, or custom)
     }>(),
     {
-        minDuration: 600,
+        minDuration: 0,
     },
 );
 
@@ -20,7 +20,7 @@ const {
 } = useGlobalLoader();
 
 const isMounted = ref(false);
-const isInitialMount = ref(true);
+const isInitialMount = ref(props.minDuration > 0);
 const initialProgress = ref(0);
 let animationFrameId: number | null = null;
 let startTime: number | null = null;
@@ -83,26 +83,28 @@ const displayMessage = computed(() => {
 onMounted(() => {
     isMounted.value = true;
 
-    if (typeof document !== 'undefined' && document.body) {
-        document.body.style.overflow = 'hidden';
-    }
-
-    animationFrameId = requestAnimationFrame(animateInitialProgress);
-
-    setTimeout(() => {
-        if (isInitialMount.value) {
-            initialProgress.value = 100;
-            isInitialMount.value = false;
-
-            if (
-                !isRequestLoading.value &&
-                typeof document !== 'undefined' &&
-                document.body
-            ) {
-                document.body.style.overflow = '';
-            }
+    if (isInitialMount.value) {
+        if (typeof document !== 'undefined' && document.body) {
+            document.body.style.overflow = 'hidden';
         }
-    }, 1200);
+
+        animationFrameId = requestAnimationFrame(animateInitialProgress);
+
+        setTimeout(() => {
+            if (isInitialMount.value) {
+                initialProgress.value = 100;
+                isInitialMount.value = false;
+
+                if (
+                    !isRequestLoading.value &&
+                    typeof document !== 'undefined' &&
+                    document.body
+                ) {
+                    document.body.style.overflow = '';
+                }
+            }
+        }, 1200);
+    }
 });
 
 onUnmounted(() => {

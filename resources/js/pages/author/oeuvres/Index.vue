@@ -32,10 +32,23 @@ import { useI18n } from 'vue-i18n';
 import { oeuvreLabel } from '@/components/oeuvre/label';
 import OeuvreDeleteDialog from '@/components/oeuvre/OeuvreDeleteDialog.vue';
 import OeuvreSubmitDialog from '@/components/oeuvre/OeuvreSubmitDialog.vue';
+import { ActionButton } from '@/components/ui/action';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+    DataTable,
+    DataTableToolbar,
+    DataTableSearch,
+    DataTableFilterPills,
+    DataTableStatusBadge,
+    DataTableProgress,
+    DataTablePagination,
+    DataTableEmpty,
+} from '@/components/ui/data-table';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
+import { Pagination } from '@/components/ui/pagination';
 import { create, index, show } from '@/routes/oeuvres';
 
 /** What the row may offer. Mirrors OeuvrePolicy; the server re-checks. */
@@ -374,6 +387,33 @@ const hasFilters = computed(
         selectedSort.value !== 'newest',
 );
 
+const activeFilters = computed(() => {
+    const pills: { key: string; label: string; value: string }[] = [];
+    if (searchQuery.value && searchQuery.value.trim() !== '') {
+        pills.push({
+            key: 'search',
+            label: t('oeuvres.index.searchPlaceholder') || 'Recherche',
+            value: `"${searchQuery.value.trim()}"`,
+        });
+    }
+    if (selectedStatus.value !== '') {
+        pills.push({
+            key: 'status',
+            label: t('oeuvres.table.colStatus') || 'Statut',
+            value: getStatusMeta(selectedStatus.value).label,
+        });
+    }
+    return pills;
+});
+
+const removeFilter = (key: string) => {
+    if (key === 'search') {
+        searchQuery.value = '';
+    } else if (key === 'status') {
+        selectedStatus.value = '';
+    }
+};
+
 const resetFilters = () => {
     searchQuery.value = '';
     selectedStatus.value = '';
@@ -594,191 +634,7 @@ const goToPage = (page: number) => {
             </Card>
         </div>
 
-        <!-- 3. Toolbar & Filters -->
-        <div
-            class="flex flex-col gap-4 rounded-2xl border border-border/80 bg-card/60 p-4 shadow-xs backdrop-blur-xs md:flex-row md:items-center md:justify-between"
-        >
-            <!-- Left: Search & Filter Tabs -->
-            <div class="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
-                <!-- Search Box -->
-                <div class="relative w-full sm:max-w-xs">
-                    <Search
-                        class="pointer-events-none absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                    />
-                    <Input
-                        v-model="searchQuery"
-                        type="text"
-                        :placeholder="t('oeuvres.index.searchPlaceholder')"
-                        class="input-premium h-10 rounded-xl ps-9.5 text-xs sm:text-sm"
-                    />
-                </div>
-
-                <!-- Status Tabs -->
-                <div
-                    class="flex items-center gap-1 overflow-x-auto rounded-xl border border-border/60 bg-muted/40 p-1 text-xs"
-                >
-                    <button
-                        type="button"
-                        :class="[
-                            'cursor-pointer rounded-lg px-3 py-1.5 font-medium transition-all',
-                            selectedStatus === ''
-                                ? 'bg-background font-semibold text-foreground shadow-xs'
-                                : 'text-muted-foreground hover:text-foreground',
-                        ]"
-                        @click="setStatus('')"
-                    >
-                        {{ t('oeuvres.index.filterAll') }}
-                        <span class="ms-1 text-[10px] opacity-70"
-                            >({{ totalOeuvresCount }})</span
-                        >
-                    </button>
-                    <button
-                        type="button"
-                        :class="[
-                            'cursor-pointer rounded-lg px-3 py-1.5 font-medium transition-all',
-                            selectedStatus === 'draft'
-                                ? 'bg-background font-semibold text-foreground shadow-xs'
-                                : 'text-muted-foreground hover:text-foreground',
-                        ]"
-                        @click="setStatus('draft')"
-                    >
-                        {{ t('oeuvres.index.filterDraft') }}
-                        <span class="ms-1 text-[10px] opacity-70"
-                            >({{ draftCount }})</span
-                        >
-                    </button>
-                    <button
-                        type="button"
-                        :class="[
-                            'cursor-pointer rounded-lg px-3 py-1.5 font-medium transition-all',
-                            selectedStatus === 'submitted'
-                                ? 'bg-background font-semibold text-amber-600 shadow-xs dark:text-amber-400'
-                                : 'text-muted-foreground hover:text-foreground',
-                        ]"
-                        @click="setStatus('submitted')"
-                    >
-                        {{ t('oeuvres.status.submitted') }}
-                        <span class="ms-1 text-[10px] opacity-70"
-                            >({{ counts.submitted ?? 0 }})</span
-                        >
-                    </button>
-                    <button
-                        type="button"
-                        :class="[
-                            'cursor-pointer rounded-lg px-3 py-1.5 font-medium transition-all',
-                            selectedStatus === 'under_review'
-                                ? 'bg-background font-semibold text-amber-600 shadow-xs dark:text-amber-400'
-                                : 'text-muted-foreground hover:text-foreground',
-                        ]"
-                        @click="setStatus('under_review')"
-                    >
-                        {{ t('oeuvres.index.filterUnderReview') }}
-                        <span class="ms-1 text-[10px] opacity-70"
-                            >({{ counts.under_review ?? 0 }})</span
-                        >
-                    </button>
-                    <button
-                        type="button"
-                        :class="[
-                            'cursor-pointer rounded-lg px-3 py-1.5 font-medium transition-all',
-                            selectedStatus === 'registered'
-                                ? 'bg-background font-semibold text-emerald-600 shadow-xs dark:text-emerald-400'
-                                : 'text-muted-foreground hover:text-foreground',
-                        ]"
-                        @click="setStatus('registered')"
-                    >
-                        {{ t('oeuvres.index.filterRegistered') }}
-                        <span class="ms-1 text-[10px] opacity-70"
-                            >({{ registeredCount }})</span
-                        >
-                    </button>
-                    <!-- Rejected is the only status that asks the author to
-                         act, so its tab carries the same rose it wears in
-                         the table rather than the neutral treatment. -->
-                    <button
-                        type="button"
-                        :class="[
-                            'cursor-pointer rounded-lg px-3 py-1.5 font-medium transition-all',
-                            selectedStatus === 'rejected'
-                                ? 'bg-background font-semibold text-rose-600 shadow-xs dark:text-rose-400'
-                                : rejectedCount > 0
-                                  ? 'text-rose-600 hover:text-rose-700 dark:text-rose-400'
-                                  : 'text-muted-foreground hover:text-foreground',
-                        ]"
-                        @click="setStatus('rejected')"
-                    >
-                        {{ t('oeuvres.status.rejected') }}
-                        <span class="ms-1 text-[10px] opacity-70"
-                            >({{ rejectedCount }})</span
-                        >
-                    </button>
-                </div>
-            </div>
-
-            <!-- Right: Sort & Grid/List View Toggles -->
-            <div
-                class="flex items-center justify-between gap-2.5 sm:justify-end"
-            >
-                <!-- Sort Dropdown -->
-                <div class="relative flex items-center">
-                    <ArrowUpDown
-                        class="pointer-events-none absolute start-3 size-3.5 text-muted-foreground"
-                    />
-                    <select
-                        v-model="selectedSort"
-                        class="input-premium h-10 cursor-pointer appearance-none rounded-xl bg-background ps-8 pe-8 text-xs font-medium text-foreground focus:outline-none"
-                    >
-                        <option value="newest">
-                            {{ t('oeuvres.index.sortNewest') }}
-                        </option>
-                        <option value="oldest">
-                            {{ t('oeuvres.index.sortOldest') }}
-                        </option>
-                        <option value="title">
-                            {{ t('oeuvres.index.sortTitle') }}
-                        </option>
-                        <option value="files">
-                            {{ t('oeuvres.index.sortFiles') }}
-                        </option>
-                    </select>
-                </div>
-
-                <!-- View Mode Switcher -->
-                <div
-                    class="flex items-center rounded-xl border border-border/60 bg-muted/40 p-1"
-                >
-                    <button
-                        type="button"
-                        :class="[
-                            'cursor-pointer rounded-lg p-1.5 transition-all',
-                            viewMode === 'list'
-                                ? 'bg-background text-onda-blue-600 shadow-xs dark:text-onda-blue-400'
-                                : 'text-muted-foreground hover:text-foreground',
-                        ]"
-                        :title="t('oeuvres.index.list')"
-                        @click="viewMode = 'list'"
-                    >
-                        <List class="size-4" />
-                    </button>
-                    <button
-                        type="button"
-                        :class="[
-                            'cursor-pointer rounded-lg p-1.5 transition-all',
-                            viewMode === 'grid'
-                                ? 'bg-background text-onda-blue-600 shadow-xs dark:text-onda-blue-400'
-                                : 'text-muted-foreground hover:text-foreground',
-                        ]"
-                        :title="t('oeuvres.index.grid')"
-                        @click="viewMode = 'grid'"
-                    >
-                        <Grid3X3 class="size-4" />
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 4. Main Content Area -->
-        <!-- A. ZERO WORKS STATE (No Works at all in account) -->
+        <!-- 3. Zero Works State (No Works at all in account) -->
         <div
             v-if="props.oeuvres.total === 0 && !hasFilters"
             class="relative overflow-hidden rounded-3xl border border-dashed border-border/90 bg-card/60 p-8 text-center backdrop-blur-xs sm:p-14"
@@ -820,377 +676,504 @@ const goToPage = (page: number) => {
             </div>
         </div>
 
-        <!-- B. NO FILTER RESULTS STATE -->
-        <div
-            v-else-if="visibleOeuvres.length === 0"
-            class="rounded-3xl border border-dashed border-border/80 bg-card/40 p-10 text-center backdrop-blur-xs sm:p-14"
-        >
-            <div class="mx-auto max-w-sm space-y-4">
-                <div
-                    class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-muted/60 text-muted-foreground"
+        <!-- 4. Sovereign Data Table & Views -->
+        <DataTable v-else>
+            <template #toolbar>
+                <DataTableToolbar
+                    :title="t('oeuvres.index.title')"
+                    :count="props.oeuvres.total"
                 >
-                    <Search class="size-7" />
-                </div>
-                <div class="space-y-1">
-                    <h3 class="text-base font-bold text-foreground">
-                        {{ t('oeuvres.index.noSearchResults') }}
-                    </h3>
-                    <p class="text-xs text-muted-foreground">
-                        {{ t('oeuvres.index.searchPlaceholder') }}
-                    </p>
-                </div>
-                <Button
-                    variant="outline"
-                    class="cursor-pointer gap-1.5 rounded-xl text-xs font-semibold"
-                    @click="resetFilters"
-                >
-                    <RotateCcw class="size-3.5" />
-                    <span>{{ t('oeuvres.index.resetFilters') }}</span>
-                </Button>
-            </div>
-        </div>
+                    <template #search>
+                        <DataTableSearch
+                            v-model="searchQuery"
+                            :placeholder="t('oeuvres.index.searchPlaceholder')"
+                            class="w-full sm:w-64"
+                        />
+                    </template>
 
-        <!-- C. GRID VIEW MODE -->
-        <div
-            v-else-if="viewMode === 'grid'"
-            class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-        >
-            <div
-                v-for="oeuvre in visibleOeuvres"
-                :key="oeuvre.uuid"
-                class="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-onda-blue-500/40 hover:shadow-xl hover:shadow-onda-blue-600/5 dark:bg-card/90 dark:hover:border-onda-blue-400/40"
-            >
-                <!-- Top Card Bar: Category & Status Badge -->
-                <div>
-                    <div class="flex items-center justify-between gap-2">
-                        <!-- Category Badge -->
-                        <div class="flex items-center gap-1.5">
-                            <div
-                                :class="[
-                                    'flex size-7 items-center justify-center rounded-lg border',
-                                    getOeuvreCategoryMeta(
-                                        oeuvre.label,
-                                        oeuvre.description,
-                                    ).colorClass,
-                                ]"
+                    <template #filters>
+                        <!-- Sort Dropdown -->
+                        <div class="relative flex items-center">
+                            <ArrowUpDown
+                                class="pointer-events-none absolute start-3 size-3.5 text-muted-foreground"
+                            />
+                            <select
+                                v-model="selectedSort"
+                                class="input-premium h-9 cursor-pointer appearance-none rounded-lg bg-background ps-8 pe-8 text-xs font-medium text-foreground focus:outline-none"
                             >
-                                <component
-                                    :is="
+                                <option value="newest">
+                                    {{ t('oeuvres.index.sortNewest') }}
+                                </option>
+                                <option value="oldest">
+                                    {{ t('oeuvres.index.sortOldest') }}
+                                </option>
+                                <option value="title">
+                                    {{ t('oeuvres.index.sortTitle') }}
+                                </option>
+                                <option value="files">
+                                    {{ t('oeuvres.index.sortFiles') }}
+                                </option>
+                            </select>
+                        </div>
+                    </template>
+
+                    <template #actions>
+                        <!-- View Mode Switcher -->
+                        <div
+                            class="flex items-center rounded-lg border border-border/60 bg-muted/40 p-0.5"
+                        >
+                            <button
+                                type="button"
+                                :class="[
+                                    'cursor-pointer rounded-md p-1.5 transition-all',
+                                    viewMode === 'list'
+                                        ? 'bg-background text-onda-blue-600 shadow-xs dark:text-onda-blue-400'
+                                        : 'text-muted-foreground hover:text-foreground',
+                                ]"
+                                :title="t('oeuvres.index.list')"
+                                @click="viewMode = 'list'"
+                            >
+                                <List class="size-4" />
+                            </button>
+                            <button
+                                type="button"
+                                :class="[
+                                    'cursor-pointer rounded-md p-1.5 transition-all',
+                                    viewMode === 'grid'
+                                        ? 'bg-background text-onda-blue-600 shadow-xs dark:text-onda-blue-400'
+                                        : 'text-muted-foreground hover:text-foreground',
+                                ]"
+                                :title="t('oeuvres.index.grid')"
+                                @click="viewMode = 'grid'"
+                            >
+                                <Grid3X3 class="size-4" />
+                            </button>
+                        </div>
+                    </template>
+
+                    <template #tabs>
+                        <div
+                            class="flex items-center gap-1 overflow-x-auto rounded-lg border border-border/60 bg-muted/40 p-1 text-xs"
+                        >
+                            <button
+                                type="button"
+                                :class="[
+                                    'cursor-pointer rounded-md px-3 py-1.5 font-medium whitespace-nowrap transition-all',
+                                    selectedStatus === ''
+                                        ? 'bg-background font-semibold text-foreground shadow-xs'
+                                        : 'text-muted-foreground hover:text-foreground',
+                                ]"
+                                @click="setStatus('')"
+                            >
+                                {{ t('oeuvres.index.filterAll') }}
+                                <span class="ms-1 text-[10px] opacity-70"
+                                    >({{ totalOeuvresCount }})</span
+                                >
+                            </button>
+                            <button
+                                type="button"
+                                :class="[
+                                    'cursor-pointer rounded-md px-3 py-1.5 font-medium whitespace-nowrap transition-all',
+                                    selectedStatus === 'draft'
+                                        ? 'bg-background font-semibold text-foreground shadow-xs'
+                                        : 'text-muted-foreground hover:text-foreground',
+                                ]"
+                                @click="setStatus('draft')"
+                            >
+                                {{ t('oeuvres.index.filterDraft') }}
+                                <span class="ms-1 text-[10px] opacity-70"
+                                    >({{ draftCount }})</span
+                                >
+                            </button>
+                            <button
+                                type="button"
+                                :class="[
+                                    'cursor-pointer rounded-md px-3 py-1.5 font-medium whitespace-nowrap transition-all',
+                                    selectedStatus === 'submitted'
+                                        ? 'bg-background font-semibold text-amber-600 shadow-xs dark:text-amber-400'
+                                        : 'text-muted-foreground hover:text-foreground',
+                                ]"
+                                @click="setStatus('submitted')"
+                            >
+                                {{ t('oeuvres.status.submitted') }}
+                                <span class="ms-1 text-[10px] opacity-70"
+                                    >({{ counts.submitted ?? 0 }})</span
+                                >
+                            </button>
+                            <button
+                                type="button"
+                                :class="[
+                                    'cursor-pointer rounded-md px-3 py-1.5 font-medium whitespace-nowrap transition-all',
+                                    selectedStatus === 'under_review'
+                                        ? 'bg-background font-semibold text-sky-600 shadow-xs dark:text-sky-400'
+                                        : 'text-muted-foreground hover:text-foreground',
+                                ]"
+                                @click="setStatus('under_review')"
+                            >
+                                {{ t('oeuvres.index.filterUnderReview') }}
+                                <span class="ms-1 text-[10px] opacity-70"
+                                    >({{ counts.under_review ?? 0 }})</span
+                                >
+                            </button>
+                            <button
+                                type="button"
+                                :class="[
+                                    'cursor-pointer rounded-md px-3 py-1.5 font-medium whitespace-nowrap transition-all',
+                                    selectedStatus === 'registered'
+                                        ? 'bg-background font-semibold text-emerald-600 shadow-xs dark:text-emerald-400'
+                                        : 'text-muted-foreground hover:text-foreground',
+                                ]"
+                                @click="setStatus('registered')"
+                            >
+                                {{ t('oeuvres.index.filterRegistered') }}
+                                <span class="ms-1 text-[10px] opacity-70"
+                                    >({{ registeredCount }})</span
+                                >
+                            </button>
+                            <button
+                                type="button"
+                                :class="[
+                                    'cursor-pointer rounded-md px-3 py-1.5 font-medium whitespace-nowrap transition-all',
+                                    selectedStatus === 'rejected'
+                                        ? 'bg-background font-semibold text-rose-600 shadow-xs dark:text-rose-400'
+                                        : rejectedCount > 0
+                                          ? 'text-rose-600 hover:text-rose-700 dark:text-rose-400'
+                                          : 'text-muted-foreground hover:text-foreground',
+                                ]"
+                                @click="setStatus('rejected')"
+                            >
+                                {{ t('oeuvres.status.rejected') }}
+                                <span class="ms-1 text-[10px] opacity-70"
+                                    >({{ rejectedCount }})</span
+                                >
+                            </button>
+                        </div>
+                    </template>
+
+                    <template #filter-pills>
+                        <DataTableFilterPills
+                            :filters="activeFilters"
+                            @remove="removeFilter"
+                            @clear-all="resetFilters"
+                        />
+                    </template>
+                </DataTableToolbar>
+            </template>
+
+            <!-- A. No Search / Filter Results State -->
+            <DataTableEmpty
+                v-if="visibleOeuvres.length === 0"
+                :title="t('oeuvres.index.noSearchResults')"
+                :description="t('oeuvres.index.searchPlaceholder')"
+                :has-active-filters="hasFilters"
+                @clear-filters="resetFilters"
+            />
+
+            <!-- B. Grid View Mode -->
+            <div
+                v-else-if="viewMode === 'grid'"
+                class="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:p-5 lg:grid-cols-3"
+            >
+                <div
+                    v-for="oeuvre in visibleOeuvres"
+                    :key="oeuvre.uuid"
+                    class="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-onda-blue-500/40 hover:shadow-xl hover:shadow-onda-blue-600/5 dark:bg-card/90 dark:hover:border-onda-blue-400/40"
+                >
+                    <!-- Top Card Bar: Category & Status Badge -->
+                    <div>
+                        <div class="flex items-center justify-between gap-2">
+                            <!-- Category Badge -->
+                            <div class="flex items-center gap-1.5">
+                                <div
+                                    :class="[
+                                        'flex size-7 items-center justify-center rounded-lg border',
                                         getOeuvreCategoryMeta(
                                             oeuvre.label,
                                             oeuvre.description,
-                                        ).icon
-                                    "
-                                    class="size-3.5"
-                                />
-                            </div>
-                            <span
-                                :class="[
-                                    'rounded-md border px-2 py-0.5 text-[11px] font-semibold',
-                                    getOeuvreCategoryMeta(
-                                        oeuvre.label,
-                                        oeuvre.description,
-                                    ).badgeClass,
-                                ]"
-                            >
-                                {{
-                                    getOeuvreCategoryMeta(
-                                        oeuvre.label,
-                                        oeuvre.description,
-                                    ).label
-                                }}
-                            </span>
-                        </div>
-
-                        <!-- Status Badge with Pulse -->
-                        <Badge
-                            variant="outline"
-                            :class="[
-                                'gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
-                                getStatusMeta(oeuvre.status).class,
-                            ]"
-                        >
-                            <span
-                                v-if="getStatusMeta(oeuvre.status).pulse"
-                                :class="[
-                                    'size-1.5 animate-pulse rounded-full',
-                                    getStatusMeta(oeuvre.status).dotClass,
-                                ]"
-                            />
-                            <span
-                                v-else
-                                :class="[
-                                    'size-1.5 rounded-full',
-                                    getStatusMeta(oeuvre.status).dotClass,
-                                ]"
-                            />
-                            <span>{{
-                                getStatusMeta(oeuvre.status).label
-                            }}</span>
-                        </Badge>
-                    </div>
-
-                    <!-- Work Title & Description -->
-                    <div class="mt-4 space-y-1.5">
-                        <Link
-                            :href="show(oeuvre.uuid)"
-                            class="block group-hover:text-onda-blue-600 dark:group-hover:text-onda-blue-400"
-                        >
-                            <h2
-                                class="line-clamp-1 text-base font-bold tracking-tight text-foreground transition-colors"
-                                :title="oeuvre.label"
-                            >
-                                {{ oeuvre.label }}
-                            </h2>
-                        </Link>
-                        <p
-                            class="line-clamp-2 text-xs leading-relaxed text-muted-foreground"
-                            :title="oeuvre.description || ''"
-                        >
-                            {{
-                                oeuvre.description ||
-                                t('oeuvres.index.noDescription')
-                            }}
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Meta Pills & Footer Actions -->
-                <div class="mt-5 space-y-3.5 border-t border-border/60 pt-4">
-                    <!-- Files & Date Ribbon -->
-                    <div
-                        class="flex items-center justify-between text-xs text-muted-foreground"
-                    >
-                        <div
-                            class="flex items-center gap-1.5 rounded-md bg-muted/60 px-2 py-1 font-medium text-foreground/90"
-                        >
-                            <Files
-                                class="size-3.5 text-onda-blue-600 dark:text-onda-blue-400"
-                            />
-                            <span>{{
-                                t('oeuvres.index.fileCount', {
-                                    count: oeuvre.media_files_count || 0,
-                                })
-                            }}</span>
-                        </div>
-
-                        <span
-                            class="font-mono text-[11px] text-muted-foreground"
-                        >
-                            {{ formatDate(oeuvre.created_at) }}
-                        </span>
-                    </div>
-
-                    <!-- Bottom Action Buttons -->
-                    <div class="flex items-center justify-between gap-2">
-                        <!-- Quick Copy UUID Button -->
-                        <button
-                            type="button"
-                            class="flex cursor-pointer items-center gap-1 rounded-lg border border-border/80 bg-muted/40 px-2 py-1.5 font-mono text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                            :title="oeuvre.uuid"
-                            @click="copyOeuvreUuid(oeuvre.uuid)"
-                        >
-                            <component
-                                :is="copiedUuid === oeuvre.uuid ? Check : Copy"
-                                :class="[
-                                    'size-3 shrink-0',
-                                    copiedUuid === oeuvre.uuid
-                                        ? 'text-emerald-600 dark:text-emerald-400'
-                                        : 'text-muted-foreground',
-                                ]"
-                            />
-                            <span class="max-w-[75px] truncate sm:max-w-[90px]">
-                                {{
-                                    copiedUuid === oeuvre.uuid
-                                        ? t('oeuvres.index.uuidCopied')
-                                        : oeuvre.uuid.slice(0, 8) + '...'
-                                }}
-                            </span>
-                        </button>
-
-                        <!-- Enter Work Details / Upload Hub -->
-                        <Button
-                            as-child
-                            size="sm"
-                            class="h-8.5 cursor-pointer gap-1.5 rounded-xl bg-onda-blue-600/10 px-3 text-xs font-semibold text-onda-blue-700 transition-all hover:bg-onda-blue-600 hover:text-white dark:bg-onda-blue-500/20 dark:text-onda-blue-300 dark:hover:bg-onda-blue-500 dark:hover:text-gray-950"
-                        >
-                            <Link :href="show(oeuvre.uuid)">
-                                <span>{{
-                                    t('oeuvres.index.manageOeuvre')
-                                }}</span>
-                                <ExternalLink class="size-3 rtl:rotate-180" />
-                            </Link>
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- D. THE REGISTRY TABLE — the default view. -->
-        <div
-            v-else-if="viewMode === 'list'"
-            class="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xs"
-        >
-            <div class="overflow-x-auto">
-                <table class="w-full border-collapse text-start text-xs">
-                    <thead>
-                        <tr
-                            class="border-b border-border/70 bg-muted/40 font-semibold text-muted-foreground"
-                        >
-                            <th class="px-4 py-3.5 text-start font-medium">
-                                {{ t('oeuvres.table.colOeuvre') }}
-                            </th>
-                            <th
-                                class="hidden px-4 py-3.5 text-start font-medium lg:table-cell"
-                            >
-                                {{ t('oeuvres.table.colCollege') }}
-                            </th>
-                            <th class="px-4 py-3.5 text-start font-medium">
-                                {{ t('oeuvres.table.colDocuments') }}
-                            </th>
-                            <th class="px-4 py-3.5 text-start font-medium">
-                                {{ t('oeuvres.table.colStatus') }}
-                            </th>
-                            <th
-                                class="hidden px-4 py-3.5 text-start font-medium sm:table-cell"
-                            >
-                                {{ t('oeuvres.table.colCreated') }}
-                            </th>
-                            <th class="px-4 py-3.5 text-end font-medium">
-                                {{ t('oeuvres.table.colActions') }}
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-border/60">
-                        <tr
-                            v-for="oeuvre in visibleOeuvres"
-                            :key="oeuvre.uuid"
-                            :class="[
-                                'group transition-colors',
-                                oeuvre.status === 'rejected'
-                                    ? 'bg-rose-500/[0.04] hover:bg-rose-500/[0.08] dark:bg-rose-500/[0.07] dark:hover:bg-rose-500/[0.11]'
-                                    : 'hover:bg-accent/40',
-                            ]"
-                        >
-                            <!-- Œuvre: the display label, linking to the page.
-                                 A rejected row carries a rose rail down its
-                                 start edge — it is the only status that asks
-                                 the author to do something, and it has to be
-                                 impossible to skim past. -->
-                            <td
-                                :class="[
-                                    'px-4 py-3.5',
-                                    oeuvre.status === 'rejected'
-                                        ? 'border-s-[3px] border-s-rose-500'
-                                        : 'border-s-[3px] border-s-transparent',
-                                ]"
-                            >
-                                <Link
-                                    :href="show(oeuvre.uuid)"
-                                    class="flex items-center gap-3"
+                                        ).colorClass,
+                                    ]"
                                 >
-                                    <div
-                                        :class="[
-                                            'flex size-8 shrink-0 items-center justify-center rounded-lg border',
+                                    <component
+                                        :is="
                                             getOeuvreCategoryMeta(
                                                 oeuvre.label,
                                                 oeuvre.description,
-                                            ).colorClass,
-                                        ]"
-                                    >
-                                        <component
-                                            :is="
-                                                getOeuvreCategoryMeta(
-                                                    oeuvre.label,
-                                                    oeuvre.description,
-                                                ).icon
-                                            "
-                                            class="size-4"
-                                        />
-                                    </div>
-                                    <div class="min-w-0 space-y-0.5">
-                                        <bdi
-                                            class="block max-w-xs truncate font-bold text-foreground transition-colors group-hover:text-onda-blue-600 sm:max-w-sm md:max-w-md dark:group-hover:text-onda-blue-400"
-                                        >
-                                            {{ oeuvre.label }}
-                                        </bdi>
-                                        <button
-                                            type="button"
-                                            class="flex cursor-pointer items-center gap-1.5 font-mono text-[10px] text-muted-foreground transition-colors hover:text-foreground"
-                                            :title="oeuvre.uuid"
-                                            @click.prevent.stop="
-                                                copyOeuvreUuid(oeuvre.uuid)
-                                            "
-                                        >
-                                            <bdi
-                                                >{{
-                                                    oeuvre.uuid.slice(0, 8)
-                                                }}…</bdi
-                                            >
-                                            <component
-                                                :is="
-                                                    copiedUuid === oeuvre.uuid
-                                                        ? Check
-                                                        : Copy
-                                                "
-                                                :class="[
-                                                    'size-2.5 shrink-0',
-                                                    copiedUuid === oeuvre.uuid
-                                                        ? 'text-emerald-600 dark:text-emerald-400'
-                                                        : '',
-                                                ]"
-                                            />
-                                        </button>
-                                    </div>
-                                </Link>
-                            </td>
-
-                            <!-- Collège, already localised by the server. -->
-                            <td
-                                class="hidden max-w-[14rem] px-4 py-3.5 lg:table-cell"
-                            >
-                                <bdi
-                                    v-if="oeuvre.college_name"
-                                    class="block truncate text-muted-foreground"
-                                    >{{ oeuvre.college_name }}</bdi
-                                >
-                                <span v-else class="text-muted-foreground/60"
-                                    >—</span
-                                >
-                            </td>
-
-                            <!-- Documents: required slots satisfied. The
-                                 aggregate comes from SlotProgressQuery, one
-                                 query for the whole page. -->
-                            <td class="px-4 py-3.5 whitespace-nowrap">
+                                            ).icon
+                                        "
+                                        class="size-3.5"
+                                    />
+                                </div>
                                 <span
-                                    v-if="oeuvre.documents.total > 0"
                                     :class="[
-                                        'inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-mono font-semibold',
-                                        oeuvre.documents.satisfied >=
-                                        oeuvre.documents.total
-                                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                                            : 'bg-muted/60 text-foreground',
+                                        'rounded-md border px-2 py-0.5 text-[11px] font-semibold',
+                                        getOeuvreCategoryMeta(
+                                            oeuvre.label,
+                                            oeuvre.description,
+                                        ).badgeClass,
                                     ]"
                                 >
-                                    <Files class="size-3 opacity-70" />
-                                    <bdi>{{
-                                        documentsLabel(oeuvre.documents)
-                                    }}</bdi>
+                                    {{
+                                        getOeuvreCategoryMeta(
+                                            oeuvre.label,
+                                            oeuvre.description,
+                                        ).label
+                                    }}
                                 </span>
-                                <span
-                                    v-else
-                                    class="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-mono text-muted-foreground"
+                            </div>
+
+                            <!-- Status Badge -->
+                            <DataTableStatusBadge
+                                :status="oeuvre.status"
+                                :label="getStatusMeta(oeuvre.status).label"
+                                :pulse="getStatusMeta(oeuvre.status).pulse"
+                            />
+                        </div>
+
+                        <!-- Work Title & Description -->
+                        <div class="mt-4 space-y-1.5">
+                            <Link
+                                :href="show(oeuvre.uuid)"
+                                class="block group-hover:text-onda-blue-600 dark:group-hover:text-onda-blue-400"
+                            >
+                                <h2
+                                    class="line-clamp-1 text-base font-bold tracking-tight text-foreground transition-colors"
+                                    :title="oeuvre.label"
                                 >
-                                    <Files class="size-3 opacity-70" />
-                                    <bdi>{{ oeuvre.media_files_count }}</bdi>
+                                    {{ oeuvre.label }}
+                                </h2>
+                            </Link>
+                            <p
+                                class="line-clamp-2 text-xs leading-relaxed text-muted-foreground"
+                                :title="oeuvre.description || ''"
+                            >
+                                {{
+                                    oeuvre.description ||
+                                    t('oeuvres.index.noDescription')
+                                }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Meta Pills & Footer Actions -->
+                    <div class="mt-5 space-y-3.5 border-t border-border/60 pt-4">
+                        <!-- Files & Date Ribbon -->
+                        <div
+                            class="flex items-center justify-between text-xs text-muted-foreground"
+                        >
+                            <div
+                                class="flex items-center gap-1.5 rounded-md bg-muted/60 px-2 py-1 font-medium text-foreground/90"
+                            >
+                                <Files
+                                    class="size-3.5 text-onda-blue-600 dark:text-onda-blue-400"
+                                />
+                                <span>{{
+                                    t('oeuvres.index.fileCount', {
+                                        count: oeuvre.media_files_count || 0,
+                                    })
+                                }}</span>
+                            </div>
+
+                            <span
+                                class="font-mono text-[11px] text-muted-foreground"
+                            >
+                                {{ formatDate(oeuvre.created_at) }}
+                            </span>
+                        </div>
+
+                        <!-- Bottom Action Buttons -->
+                        <div class="flex items-center justify-between gap-2">
+                            <!-- Quick Copy UUID Button -->
+                            <button
+                                type="button"
+                                class="flex cursor-pointer items-center gap-1 rounded-lg border border-border/80 bg-muted/40 px-2 py-1.5 font-mono text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                :title="oeuvre.uuid"
+                                @click="copyOeuvreUuid(oeuvre.uuid)"
+                            >
+                                <component
+                                    :is="copiedUuid === oeuvre.uuid ? Check : Copy"
+                                    :class="[
+                                        'size-3 shrink-0',
+                                        copiedUuid === oeuvre.uuid
+                                            ? 'text-emerald-600 dark:text-emerald-400'
+                                            : 'text-muted-foreground',
+                                    ]"
+                                />
+                                <span class="max-w-[75px] truncate sm:max-w-[90px]">
+                                    {{
+                                        copiedUuid === oeuvre.uuid
+                                            ? t('oeuvres.index.uuidCopied')
+                                            : oeuvre.uuid.slice(0, 8) + '...'
+                                    }}
                                 </span>
-                                <!-- Conditional slots are not a shortfall:
-                                     they may not apply to this work at all,
-                                     and they never block submission. -->
+                            </button>
+
+                            <!-- Enter Work Details / Upload Hub -->
+                            <Button
+                                as-child
+                                size="sm"
+                                class="h-8.5 cursor-pointer gap-1.5 rounded-xl bg-onda-blue-600/10 px-3 text-xs font-semibold text-onda-blue-700 transition-all hover:bg-onda-blue-600 hover:text-white dark:bg-onda-blue-500/20 dark:text-onda-blue-300 dark:hover:bg-onda-blue-500 dark:hover:text-gray-950"
+                            >
+                                <Link :href="show(oeuvre.uuid)">
+                                    <span>{{
+                                        t('oeuvres.index.manageOeuvre')
+                                    }}</span>
+                                    <ExternalLink class="size-3 rtl:rotate-180" />
+                                </Link>
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- C. Enterprise Registry Table (Default View) -->
+            <table
+                v-else-if="viewMode === 'list'"
+                class="w-full border-collapse text-start text-xs"
+            >
+                <thead>
+                    <tr
+                        class="border-b border-border/70 bg-muted/40 font-semibold text-muted-foreground"
+                    >
+                        <th class="w-12 px-3 py-3 text-center font-medium">#</th>
+                        <th class="px-4 py-3 text-start font-medium">
+                            {{ t('oeuvres.table.colOeuvre') }}
+                        </th>
+                        <th
+                            class="hidden px-4 py-3 text-start font-medium lg:table-cell"
+                        >
+                            {{ t('oeuvres.table.colCollege') }}
+                        </th>
+                        <th class="px-4 py-3 text-start font-medium">
+                            {{ t('oeuvres.table.colDocuments') }}
+                        </th>
+                        <th class="px-4 py-3 text-start font-medium">
+                            {{ t('oeuvres.table.colStatus') }}
+                        </th>
+                        <th
+                            class="hidden px-4 py-3 text-start font-medium sm:table-cell"
+                        >
+                            {{ t('oeuvres.table.colCreated') }}
+                        </th>
+                        <th class="px-4 py-3 text-end font-medium">
+                            {{ t('oeuvres.table.colActions') }}
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border/60">
+                    <tr
+                        v-for="(oeuvre, index) in visibleOeuvres"
+                        :key="oeuvre.uuid"
+                        :class="[
+                            'group transition-colors duration-150',
+                            oeuvre.status === 'rejected'
+                                ? 'bg-rose-500/[0.04] hover:bg-rose-500/[0.08] dark:bg-rose-500/[0.07] dark:hover:bg-rose-500/[0.11]'
+                                : 'hover:bg-muted/40',
+                        ]"
+                    >
+                        <td
+                            class="w-12 px-3 py-3.5 text-center text-xs font-medium text-muted-foreground"
+                        >
+                            {{ (props.oeuvres.from ?? 1) + index }}
+                        </td>
+
+                        <!-- Œuvre display label & UUID -->
+                        <td
+                            :class="[
+                                'px-4 py-3.5',
+                                oeuvre.status === 'rejected'
+                                    ? 'border-s-[3px] border-s-rose-500'
+                                    : 'border-s-[3px] border-s-transparent',
+                            ]"
+                        >
+                            <Link
+                                :href="show(oeuvre.uuid)"
+                                class="flex items-center gap-3"
+                            >
+                                <div
+                                    :class="[
+                                        'flex size-8 shrink-0 items-center justify-center rounded-lg border',
+                                        getOeuvreCategoryMeta(
+                                            oeuvre.label,
+                                            oeuvre.description,
+                                        ).colorClass,
+                                    ]"
+                                >
+                                    <component
+                                        :is="
+                                            getOeuvreCategoryMeta(
+                                                oeuvre.label,
+                                                oeuvre.description,
+                                            ).icon
+                                        "
+                                        class="size-4"
+                                    />
+                                </div>
+                                <div class="min-w-0 space-y-0.5">
+                                    <bdi
+                                        class="block max-w-xs truncate font-bold text-foreground transition-colors group-hover:text-onda-blue-600 sm:max-w-sm md:max-w-md dark:group-hover:text-onda-blue-400"
+                                    >
+                                        {{ oeuvre.label }}
+                                    </bdi>
+                                    <button
+                                        type="button"
+                                        class="flex cursor-pointer items-center gap-1.5 font-mono text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+                                        :title="oeuvre.uuid"
+                                        @click.prevent.stop="
+                                            copyOeuvreUuid(oeuvre.uuid)
+                                        "
+                                    >
+                                        <bdi>{{ oeuvre.uuid.slice(0, 8) }}…</bdi>
+                                        <component
+                                            :is="
+                                                copiedUuid === oeuvre.uuid
+                                                    ? Check
+                                                    : Copy
+                                            "
+                                            :class="[
+                                                'size-2.5 shrink-0',
+                                                copiedUuid === oeuvre.uuid
+                                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                                    : '',
+                                            ]"
+                                        />
+                                    </button>
+                                </div>
+                            </Link>
+                        </td>
+
+                        <!-- Collège -->
+                        <td
+                            class="hidden max-w-[14rem] px-4 py-3.5 lg:table-cell"
+                        >
+                            <bdi
+                                v-if="oeuvre.college_name"
+                                class="block truncate text-muted-foreground"
+                                >{{ oeuvre.college_name }}</bdi
+                            >
+                            <span v-else class="text-muted-foreground/60">—</span>
+                        </td>
+
+                        <!-- Documents progress -->
+                        <td class="px-4 py-3.5 whitespace-nowrap">
+                            <div
+                                v-if="oeuvre.documents.total > 0"
+                                class="flex min-w-[130px] flex-col gap-1"
+                            >
+                                <DataTableProgress
+                                    :value="oeuvre.documents.satisfied"
+                                    :max="oeuvre.documents.total"
+                                    :label="`${oeuvre.documents.satisfied}/${oeuvre.documents.total}`"
+                                    size="sm"
+                                    :tone="
+                                        oeuvre.documents.satisfied >=
+                                        oeuvre.documents.total
+                                            ? 'emerald'
+                                            : 'blue'
+                                    "
+                                />
                                 <p
                                     v-if="oeuvre.documents.conditional > 0"
-                                    class="mt-0.5 text-[10px] text-muted-foreground"
+                                    class="text-[10px] text-muted-foreground"
                                 >
                                     {{
                                         t('oeuvres.table.mayNotApply', {
@@ -1198,167 +1181,76 @@ const goToPage = (page: number) => {
                                         })
                                     }}
                                 </p>
-                            </td>
-
-                            <!-- Statut -->
-                            <td class="px-4 py-3.5 whitespace-nowrap">
-                                <Badge
-                                    variant="outline"
-                                    :class="[
-                                        'gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold',
-                                        getStatusMeta(oeuvre.status).class,
-                                    ]"
-                                >
-                                    <span
-                                        :class="[
-                                            'size-1.5 rounded-full',
-                                            getStatusMeta(oeuvre.status)
-                                                .dotClass,
-                                            getStatusMeta(oeuvre.status).pulse
-                                                ? 'animate-pulse'
-                                                : '',
-                                        ]"
-                                    />
-                                    <span>{{
-                                        getStatusMeta(oeuvre.status).label
-                                    }}</span>
-                                </Badge>
-                            </td>
-
-                            <!-- Créée le -->
-                            <td
-                                class="hidden px-4 py-3.5 font-mono whitespace-nowrap text-muted-foreground sm:table-cell"
+                            </div>
+                            <span
+                                v-else
+                                class="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-mono text-muted-foreground"
                             >
-                                <bdi>{{ formatDate(oeuvre.created_at) }}</bdi>
-                            </td>
+                                <Files class="size-3 opacity-70" />
+                                <bdi>{{ oeuvre.media_files_count }}</bdi>
+                            </span>
+                        </td>
 
-                            <!-- Actions. Each is rendered only where the
-                                 policy allows it — and the policy, not this
-                                 template, is what enforces it. -->
-                            <td class="px-4 py-3.5 text-end whitespace-nowrap">
-                                <div
-                                    class="flex items-center justify-end gap-1"
-                                >
-                                    <Button
-                                        as-child
-                                        size="sm"
-                                        variant="ghost"
-                                        class="h-8 cursor-pointer gap-1.5 px-2.5 text-xs font-semibold text-onda-blue-600 hover:bg-onda-blue-500/10 hover:text-onda-blue-700 dark:text-onda-blue-400"
-                                    >
-                                        <Link :href="show(oeuvre.uuid)">
-                                            <ExternalLink
-                                                class="size-3.5 rtl:rotate-180"
-                                            />
-                                            <span class="hidden sm:inline">{{
-                                                t('oeuvres.table.view')
-                                            }}</span>
-                                        </Link>
-                                    </Button>
+                        <!-- Status Badge -->
+                        <td class="px-4 py-3.5 whitespace-nowrap">
+                            <DataTableStatusBadge
+                                :status="oeuvre.status"
+                                :label="getStatusMeta(oeuvre.status).label"
+                                :pulse="getStatusMeta(oeuvre.status).pulse"
+                            />
+                        </td>
 
-                                    <!-- Edit means managing the FILES. The
-                                         classification is fixed at creation
-                                         and there is no route that changes
-                                         it — see OeuvrePolicy::update(). -->
-                                    <Button
-                                        v-if="oeuvre.can.edit"
-                                        as-child
-                                        size="sm"
-                                        variant="ghost"
-                                        class="h-8 cursor-pointer gap-1.5 px-2.5 text-xs font-semibold text-foreground hover:bg-accent"
-                                    >
-                                        <Link :href="show(oeuvre.uuid)">
-                                            <Pencil class="size-3.5" />
-                                            <span class="hidden sm:inline">{{
-                                                t('oeuvres.table.edit')
-                                            }}</span>
-                                        </Link>
-                                    </Button>
-
-                                    <Button
-                                        v-if="oeuvre.can.submit"
-                                        size="sm"
-                                        variant="ghost"
-                                        class="h-8 cursor-pointer gap-1.5 px-2.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-700 dark:text-emerald-400"
-                                        @click="submitting = oeuvre"
-                                    >
-                                        <Send class="size-3.5" />
-                                        <span class="hidden sm:inline">{{
-                                            t('oeuvres.table.submit')
-                                        }}</span>
-                                    </Button>
-
-                                    <Button
-                                        v-if="oeuvre.can.delete"
-                                        size="sm"
-                                        variant="ghost"
-                                        class="h-8 cursor-pointer px-2 text-xs font-semibold text-rose-600 hover:bg-rose-500/10 hover:text-rose-700 dark:text-rose-400"
-                                        :title="t('oeuvres.table.delete')"
-                                        :aria-label="t('oeuvres.table.delete')"
-                                        @click="deleting = oeuvre"
-                                    >
-                                        <Trash2 class="size-3.5" />
-                                    </Button>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination. Server-side, like the filters above it. -->
-            <div
-                v-if="props.oeuvres.last_page > 1"
-                class="flex flex-col items-center justify-between gap-3 border-t border-border/70 bg-muted/20 px-4 py-3 text-xs sm:flex-row"
-            >
-                <p class="text-muted-foreground">
-                    <i18n-t keypath="oeuvres.table.showing" tag="span">
-                        <template #from
-                            ><bdi class="font-semibold text-foreground">{{
-                                props.oeuvres.from ?? 0
-                            }}</bdi></template
+                        <!-- Created date -->
+                        <td
+                            class="hidden px-4 py-3.5 whitespace-nowrap text-muted-foreground sm:table-cell"
                         >
-                        <template #to
-                            ><bdi class="font-semibold text-foreground">{{
-                                props.oeuvres.to ?? 0
-                            }}</bdi></template
-                        >
-                        <template #total
-                            ><bdi class="font-semibold text-foreground">{{
-                                props.oeuvres.total
-                            }}</bdi></template
-                        >
-                    </i18n-t>
-                </p>
-                <div class="flex items-center gap-2">
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        class="h-8 cursor-pointer rounded-lg px-3 text-xs"
-                        :disabled="props.oeuvres.current_page <= 1"
-                        @click="goToPage(props.oeuvres.current_page - 1)"
-                    >
-                        {{ t('dashboard.table.prev') }}
-                    </Button>
-                    <span class="font-mono text-muted-foreground">
-                        <bdi
-                            >{{ props.oeuvres.current_page }} /
-                            {{ props.oeuvres.last_page }}</bdi
-                        >
-                    </span>
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        class="h-8 cursor-pointer rounded-lg px-3 text-xs"
-                        :disabled="
-                            props.oeuvres.current_page >= props.oeuvres.last_page
-                        "
-                        @click="goToPage(props.oeuvres.current_page + 1)"
-                    >
-                        {{ t('dashboard.table.next') }}
-                    </Button>
-                </div>
-            </div>
-        </div>
+                            <bdi>{{ formatDate(oeuvre.created_at) }}</bdi>
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="px-4 py-3.5 text-end whitespace-nowrap">
+                            <div class="flex items-center justify-end gap-1">
+                                <ActionButton
+                                    action="view"
+                                    size="sm"
+                                    :label="t('oeuvres.table.view')"
+                                    :href="show(oeuvre.uuid).url"
+                                />
+                                <ActionButton
+                                    v-if="oeuvre.can.edit"
+                                    action="edit"
+                                    size="sm"
+                                    :label="t('oeuvres.table.edit')"
+                                    :href="show(oeuvre.uuid).url"
+                                />
+                                <ActionButton
+                                    v-if="oeuvre.can.submit"
+                                    action="submit"
+                                    size="sm"
+                                    :label="t('oeuvres.table.submit')"
+                                    @click="submitting = oeuvre"
+                                />
+                                <ActionButton
+                                    v-if="oeuvre.can.delete"
+                                    action="delete"
+                                    size="sm"
+                                    :label="t('oeuvres.table.delete')"
+                                    @click="deleting = oeuvre"
+                                />
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <template #pagination>
+                <DataTablePagination
+                    v-if="props.oeuvres.last_page > 1"
+                    :paginated="props.oeuvres"
+                    :show-page-size="false"
+                />
+            </template>
+        </DataTable>
 
         <OeuvreDeleteDialog :oeuvre="deleting" @close="deleting = null" />
         <OeuvreSubmitDialog :oeuvre="submitting" @close="submitting = null" />

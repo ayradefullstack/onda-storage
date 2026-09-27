@@ -50,7 +50,7 @@ const handlePrint = () => {
 <template>
     <Dialog :open="open" @update:open="emit('update:open', $event)">
         <DialogContent
-            class="max-w-2xl overflow-hidden rounded-2xl border border-onda-blue-500/30 bg-card p-0 shadow-2xl"
+            class="max-w-2xl overflow-hidden rounded-xl border border-border bg-card p-0 shadow-xl"
         >
             <!-- Modal Top Bar -->
             <div

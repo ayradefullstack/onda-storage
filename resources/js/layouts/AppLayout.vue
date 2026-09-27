@@ -10,8 +10,8 @@ const { breadcrumbs = [] } = defineProps<{
 </script>
 
 <template>
-    <!-- Fullscreen ONDA Logo & Orbital Spinner Loading Screen -->
-    <FullscreenPreloader :min-duration="600" />
+    <!-- Global Request / Navigation Feedback -->
+    <FullscreenPreloader :min-duration="0" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <slot />

@@ -23,8 +23,8 @@ defineProps<{
 </script>
 
 <template>
-    <!-- Fullscreen ONDA Logo & Orbital Spinner Loading Screen -->
-    <FullscreenPreloader :min-duration="650" />
+    <!-- Global Request Feedback -->
+    <FullscreenPreloader :min-duration="0" />
 
     <div
         class="relative flex min-h-screen flex-col justify-between bg-background text-foreground selection:bg-onda-blue-600 selection:text-white"

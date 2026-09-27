@@ -91,7 +91,7 @@ const payouts = [
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <!-- Left 2 Cols: Revenue Channel Breakdown -->
         <div
-            class="space-y-5 rounded-2xl border border-border/80 bg-card p-5 shadow-xs sm:p-6 lg:col-span-2"
+            class="space-y-5 rounded-xl border border-border bg-card p-5 shadow-xs sm:p-6 lg:col-span-2"
         >
             <div
                 class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
@@ -117,10 +117,10 @@ const payouts = [
                         {{ t('dashboard.royalties.totalEarned') }}
                     </span>
                     <p
-                        class="font-mono text-xl font-extrabold text-foreground sm:text-2xl"
+                        class="text-xl font-bold text-foreground sm:text-2xl"
                     >
                         482,500
-                        <span class="font-sans text-xs text-muted-foreground"
+                        <span class="text-xs text-muted-foreground"
                             >DZD</span
                         >
                     </p>
@@ -164,7 +164,7 @@ const payouts = [
                                 {{ ch.title }}
                             </p>
                             <span
-                                class="font-mono text-[11px] text-muted-foreground"
+                                class="text-[11px] text-muted-foreground"
                             >
                                 {{ ch.percentage }}% du total
                             </span>
@@ -172,7 +172,7 @@ const payouts = [
                     </div>
 
                     <div class="text-end">
-                        <p class="font-mono text-xs font-bold text-foreground">
+                        <p class="text-xs font-semibold text-foreground">
                             {{ ch.amount }}
                         </p>
                     </div>
@@ -182,7 +182,7 @@ const payouts = [
 
         <!-- Right 1 Col: Payout History Timeline -->
         <div
-            class="space-y-4 rounded-2xl border border-border/80 bg-card p-5 shadow-xs sm:p-6"
+            class="space-y-4 rounded-xl border border-border bg-card p-5 shadow-xs sm:p-6"
         >
             <div class="flex items-center justify-between">
                 <h3
@@ -208,7 +208,7 @@ const payouts = [
                             {{ payout.period }}
                         </p>
                         <span
-                            class="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400"
+                            class="text-xs font-semibold text-emerald-600 dark:text-emerald-400"
                         >
                             {{ payout.amount }}
                         </span>
