@@ -232,7 +232,7 @@ function handlePhoneInput(event: Event) {
                         autocomplete="given-name"
                         name="first_name"
                         placeholder="Ex: Mohamed"
-                        class="input-premium h-10.5 text-left text-sm"
+                        class="text-left"
                     />
                     <InputError :message="errors.first_name" />
                 </div>
@@ -255,7 +255,7 @@ function handlePhoneInput(event: Event) {
                         autocomplete="family-name"
                         name="last_name"
                         placeholder="Ex: Benali"
-                        class="input-premium h-10.5 text-left text-sm"
+                        class="text-left"
                     />
                     <InputError :message="errors.last_name" />
                 </div>
@@ -287,7 +287,7 @@ function handlePhoneInput(event: Event) {
                         name="first_name_ar"
                         placeholder="مثال: محمد"
                         @input="handleArabicInput"
-                        class="input-premium-teal font-arabic h-10.5 text-right text-sm"
+                        class="font-arabic text-right"
                     />
                     <InputError :message="errors.first_name_ar" />
                 </div>
@@ -316,7 +316,7 @@ function handlePhoneInput(event: Event) {
                         name="last_name_ar"
                         placeholder="مثال: بن علي"
                         @input="handleArabicInput"
-                        class="input-premium-teal font-arabic h-10.5 text-right text-sm"
+                        class="font-arabic text-right"
                     />
                     <InputError :message="errors.last_name_ar" />
                 </div>
@@ -422,7 +422,6 @@ function handlePhoneInput(event: Event) {
                     name="city"
                     :tabindex="6"
                     :placeholder="t('auth.cityPlaceholder')"
-                    class="input-premium h-10.5 text-sm"
                 />
                 <InputError :message="errors.city" />
             </div>
@@ -439,7 +438,7 @@ function handlePhoneInput(event: Event) {
                 </Label>
                 <div
                     dir="ltr"
-                    class="input-premium relative flex overflow-hidden"
+                    class="relative flex h-10 overflow-hidden rounded-lg border border-input bg-card shadow-xs focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40"
                 >
                     <!-- Dialing code prefix badge locked to the left in LTR with flag -->
                     <span
@@ -491,7 +490,7 @@ function handlePhoneInput(event: Event) {
                     autocomplete="email"
                     name="email"
                     placeholder="author@onda.dz"
-                    class="input-premium h-10.5 text-left text-sm"
+                    class="text-left"
                 />
                 <InputError :message="errors.email" />
             </div>
@@ -516,7 +515,6 @@ function handlePhoneInput(event: Event) {
                         name="password"
                         placeholder="••••••••"
                         :passwordrules="passwordRules"
-                        class="input-premium h-10.5 ps-8 text-sm"
                     />
                     <InputError :message="errors.password" />
                 </div>
@@ -538,7 +536,6 @@ function handlePhoneInput(event: Event) {
                         name="password_confirmation"
                         placeholder="••••••••"
                         :passwordrules="passwordRules"
-                        class="input-premium h-10.5 ps-8 text-sm"
                     />
                     <InputError :message="errors.password_confirmation" />
                 </div>
@@ -547,7 +544,7 @@ function handlePhoneInput(event: Event) {
             <!-- SUBMIT BUTTON -->
             <Button
                 type="submit"
-                class="mt-3 h-12 w-full cursor-pointer rounded-xl bg-gradient-to-r from-onda-blue-600 to-onda-blue-700 text-sm font-semibold text-white shadow-lg shadow-onda-blue-600/25 transition-all hover:-translate-y-0.5 hover:from-onda-blue-700 hover:to-onda-blue-800 hover:shadow-onda-blue-600/40 active:translate-y-0 dark:from-onda-blue-500 dark:to-onda-blue-600 dark:hover:from-onda-blue-400 dark:hover:to-onda-blue-500"
+                class="mt-3 h-10 w-full cursor-pointer rounded-lg text-sm font-semibold shadow-xs"
                 :tabindex="12"
                 :disabled="processing"
                 data-test="register-user-button"
@@ -556,7 +553,7 @@ function handlePhoneInput(event: Event) {
                 <span v-else class="flex items-center justify-center gap-2">
                     <span>{{ t('auth.registerBtn') }}</span>
                     <ArrowRight
-                        class="size-4.5 transition-transform group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1"
+                        class="size-4 rtl:rotate-180"
                     />
                 </span>
             </Button>

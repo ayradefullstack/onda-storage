@@ -100,7 +100,7 @@ const submitDeposit = () => {
 <template>
     <Dialog :open="open" @update:open="emit('update:open', $event)">
         <DialogContent
-            class="max-w-xl overflow-hidden rounded-2xl border border-onda-blue-500/30 bg-card p-0 shadow-2xl"
+            class="max-w-xl overflow-hidden rounded-xl border border-border bg-card p-0 shadow-xl"
         >
             <!-- Modal Header -->
             <div class="border-b border-border/80 bg-muted/30 px-6 py-4">
@@ -225,7 +225,7 @@ const submitDeposit = () => {
                             :placeholder="
                                 t('dashboard.newModal.workTitlePlaceholder')
                             "
-                            class="input-premium h-10 rounded-xl text-xs"
+                            class="text-xs"
                         />
                     </div>
 
@@ -241,7 +241,7 @@ const submitDeposit = () => {
                                 id="workYear"
                                 v-model="workYear"
                                 type="number"
-                                class="input-premium h-10 rounded-xl text-xs"
+                                class="text-xs"
                             />
                         </div>
                         <div class="space-y-1.5">
@@ -249,7 +249,7 @@ const submitDeposit = () => {
                                 >Domaine</Label
                             >
                             <div
-                                class="flex h-10 items-center rounded-xl border border-border bg-muted/40 px-3 text-xs font-semibold text-foreground capitalize"
+                                class="flex h-10 items-center rounded-lg border border-border bg-muted/40 px-3 text-xs font-medium text-foreground capitalize"
                             >
                                 {{ selectedCategory }}
                             </div>
@@ -270,7 +270,7 @@ const submitDeposit = () => {
                             :placeholder="
                                 t('dashboard.newModal.descPlaceholder')
                             "
-                            class="w-full rounded-xl border border-input bg-background p-3 text-xs shadow-xs focus:border-onda-blue-600 focus:outline-hidden dark:focus:border-onda-blue-400"
+                            class="w-full rounded-lg border border-input bg-background p-3 text-xs shadow-xs focus:border-ring focus:outline-hidden"
                         />
                     </div>
                 </div>
@@ -327,7 +327,7 @@ const submitDeposit = () => {
                 <Button
                     variant="outline"
                     size="sm"
-                    class="cursor-pointer rounded-xl text-xs"
+                    class="cursor-pointer rounded-lg text-xs"
                     :disabled="isSubmitting"
                     @click="step > 1 ? step-- : emit('update:open', false)"
                 >
@@ -340,7 +340,7 @@ const submitDeposit = () => {
 
                 <Button
                     size="sm"
-                    class="h-9 cursor-pointer rounded-xl bg-gradient-to-r from-onda-blue-600 to-onda-blue-700 px-4 text-xs font-semibold text-white shadow-xs hover:from-onda-blue-700 hover:to-onda-blue-800"
+                    class="cursor-pointer rounded-lg px-4 text-xs font-semibold shadow-xs"
                     :disabled="isSubmitting || (step === 2 && !workTitle)"
                     @click="handleNext"
                 >

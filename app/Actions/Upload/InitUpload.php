@@ -15,6 +15,7 @@ use App\Models\Oeuvre;
 use App\Models\StorageQuota;
 use App\Models\UploadSession;
 use App\Models\User;
+use App\Support\FileFormats;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Validation\ValidationException;
@@ -35,57 +36,25 @@ use Illuminate\Validation\ValidationException;
 final class InitUpload
 {
     /**
-     * Accepted deposit types per CLAUDE.md ("video, audio, PDF, PPTX").
-     * Extension => accepted declared mime types, canonical value first.
-     * CompleteUpload re-derives the canonical mime from this same table
-     * rather than trusting a client-declared value carried across 640
-     * requests, since `upload_sessions` has no `mime` column to hold it.
+     * The global whitelist for an UNCLASSIFIED oeuvre's single dropzone —
+     * the deposit types CLAUDE.md names ("video, audio, PDF, PPTX").
      *
-     * @var array<string, list<string>>
+     * Deliberately still a narrow list rather than the whole registry: this
+     * path has no requirement slot to constrain what belongs where, and
+     * widening it would change upload acceptance for a flow nothing in this
+     * change otherwise touches. (The audit found 13 extensions that slots
+     * accept and this path does not — reported, not changed here.)
+     *
+     * The MIME values are no longer hardcoded: they come from
+     * App\Support\FileFormats, so there is one measured source of truth
+     * rather than three copies drifting apart.
+     *
+     * @var list<string>
      */
-    private const ALLOWED = [
-        'mp4' => ['video/mp4'],
-        'mov' => ['video/quicktime'],
-        'avi' => ['video/x-msvideo', 'video/avi'],
-        'mkv' => ['video/x-matroska'],
-        'webm' => ['video/webm'],
-        'mp3' => ['audio/mpeg', 'audio/mp3'],
-        'wav' => ['audio/wav', 'audio/x-wav', 'audio/wave'],
-        'flac' => ['audio/flac', 'audio/x-flac'],
-        'aac' => ['audio/aac', 'audio/x-aac'],
-        'ogg' => ['audio/ogg'],
-        'pdf' => ['application/pdf'],
-        'pptx' => ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
-    ];
-
-    /**
-     * Canonical mime for the extensions a required-document slot may list
-     * that ALLOWED does not cover. Derived server-side from the extension,
-     * never taken from the browser's declared type — which for `.7z`, `.sql`
-     * or `.rar` is routinely empty or `application/octet-stream`, so a slot
-     * upload checks the extension only.
-     *
-     * `svg` and `xml` are deliberately `application/octet-stream`: both can
-     * carry script, and the stream endpoint serves `Content-Type` from the
-     * stored mime — an author-supplied SVG stored as `image/svg+xml` would
-     * execute against the session of the admin reviewing it.
-     *
-     * @var array<string, string>
-     */
-    private const REQUIREMENT_MIMES = [
-        'jpg' => 'image/jpeg',
-        'jpeg' => 'image/jpeg',
-        'png' => 'image/png',
-        'zip' => 'application/zip',
-        'rar' => 'application/vnd.rar',
-        '7z' => 'application/x-7z-compressed',
-        'tar' => 'application/x-tar',
-        'gz' => 'application/gzip',
-        'txt' => 'text/plain',
-        'sql' => 'text/plain',
-        'json' => 'application/json',
-        'svg' => 'application/octet-stream',
-        'xml' => 'application/octet-stream',
+    private const GLOBAL_EXTENSIONS = [
+        'mp4', 'mov', 'avi', 'mkv', 'webm',
+        'mp3', 'wav', 'flac', 'aac', 'ogg',
+        'pdf', 'pptx',
     ];
 
     public function __construct(
@@ -172,19 +141,40 @@ final class InitUpload
         return $session;
     }
 
+    /**
+     * The MIME written to `media_files.mime` for an extension.
+     *
+     * Delegates to the registry, which is also what the streaming endpoint
+     * ultimately serves — so a format that is not `inline_safe` (svg, xml)
+     * resolves to `application/octet-stream` here exactly as it did when
+     * this method held its own table. VerifyContentType re-applies the same
+     * value after the content check.
+     */
     public static function canonicalMimeFor(string $extension): ?string
     {
-        $extension = strtolower($extension);
-
-        return self::ALLOWED[$extension][0] ?? self::REQUIREMENT_MIMES[$extension] ?? null;
+        return FileFormats::storedMimeFor($extension);
     }
 
     private function assertAllowedFile(string $filename, string $mime): void
     {
         $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        $allowedMimes = self::ALLOWED[$extension] ?? null;
 
-        if ($allowedMimes === null || ! in_array($mime, $allowedMimes, true)) {
+        if (! in_array($extension, self::GLOBAL_EXTENSIONS, true)) {
+            throw ValidationException::withMessages([
+                'filename' => ["The file type \".{$extension}\" is not an accepted deposit type."],
+            ]);
+        }
+
+        // The browser-declared MIME is checked against every value finfo
+        // may return for this extension, not against a single canonical
+        // one — but it is only a courtesy filter. The authoritative check
+        // is VerifyContentType, which reads the actual bytes after the
+        // upload completes. A declared type that is empty or
+        // `application/octet-stream` (routine for several formats) is
+        // therefore not grounds for rejection here.
+        $known = FileFormats::mimesFor($extension);
+
+        if ($mime !== '' && $mime !== 'application/octet-stream' && ! in_array($mime, $known, true)) {
             throw ValidationException::withMessages([
                 'filename' => ["The file type \".{$extension}\" (declared as \"{$mime}\") is not an accepted deposit type."],
             ]);

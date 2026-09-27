@@ -97,7 +97,7 @@ const emit = defineEmits<{
             <div class="flex shrink-0 flex-wrap items-center gap-3">
                 <Button
                     variant="outline"
-                    class="h-11 cursor-pointer gap-2 rounded-xl border-border/80 bg-card/80 px-4 text-xs font-semibold text-foreground shadow-xs backdrop-blur-xs transition-all duration-200 hover:border-onda-blue-500/40 hover:bg-accent"
+                    class="h-10 cursor-pointer gap-2 rounded-lg border-border bg-card px-4 text-xs font-semibold text-foreground shadow-xs transition-colors hover:bg-accent"
                     @click="emit('open-statement')"
                 >
                     <FileSpreadsheet
@@ -107,7 +107,7 @@ const emit = defineEmits<{
                 </Button>
 
                 <Button
-                    class="h-11 cursor-pointer gap-2 rounded-xl bg-gradient-to-r from-onda-blue-600 to-onda-blue-700 px-5 text-xs font-semibold text-white shadow-lg shadow-onda-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:from-onda-blue-700 hover:to-onda-blue-800 hover:shadow-onda-blue-600/35 active:translate-y-0 dark:from-onda-blue-500 dark:to-onda-blue-600 dark:text-gray-950"
+                    class="h-10 cursor-pointer gap-2 rounded-lg px-5 text-xs font-semibold shadow-xs"
                     @click="emit('open-deposit')"
                 >
                     <PlusCircle class="size-4" />

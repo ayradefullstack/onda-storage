@@ -151,7 +151,8 @@ const homeHref = computed(() =>
                                 as-child
                                 :is-active="item.active"
                                 :tooltip="item.title"
-                                class="group relative rounded-lg font-medium transition-all data-[active=true]:bg-onda-blue-600/10 data-[active=true]:font-semibold data-[active=true]:text-onda-blue-700 dark:data-[active=true]:bg-onda-blue-500/20 dark:data-[active=true]:text-onda-blue-400"
+                                :tooltip-side="isRtl ? 'left' : 'right'"
+                                class="group relative rounded-lg font-medium transition-colors duration-150 data-[active=true]:bg-primary/10 data-[active=true]:font-semibold data-[active=true]:text-primary dark:data-[active=true]:bg-primary/15 dark:data-[active=true]:text-primary"
                             >
                                 <Link
                                     :href="item.href"
@@ -159,14 +160,15 @@ const homeHref = computed(() =>
                                 >
                                     <component
                                         :is="item.icon"
-                                        class="size-4 shrink-0 transition-transform group-hover:scale-110"
+                                        :stroke-width="1.75"
+                                        class="size-4 shrink-0 text-muted-foreground group-hover:text-foreground group-data-[active=true]:text-primary transition-colors"
                                     />
                                     <span class="truncate">{{
                                         item.title
                                     }}</span>
                                     <span
                                         v-if="item.badge"
-                                        class="ms-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-onda-blue-600/10 px-1.5 font-mono text-[10px] font-bold text-onda-blue-700 dark:bg-onda-teal-500/20 dark:text-onda-teal-300"
+                                        class="ms-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 px-1.5 font-mono text-[10px] font-bold text-primary dark:bg-primary/20 dark:text-primary"
                                     >
                                         {{ item.badge }}
                                     </span>
@@ -194,7 +196,8 @@ const homeHref = computed(() =>
                             as-child
                             :is-active="item.active"
                             :tooltip="item.title"
-                            class="group relative rounded-lg font-medium transition-all data-[active=true]:bg-onda-blue-600/10 data-[active=true]:font-semibold data-[active=true]:text-onda-blue-700 dark:data-[active=true]:bg-onda-blue-500/20 dark:data-[active=true]:text-onda-blue-400"
+                            :tooltip-side="isRtl ? 'left' : 'right'"
+                            class="group relative rounded-lg font-medium transition-colors duration-150 data-[active=true]:bg-primary/10 data-[active=true]:font-semibold data-[active=true]:text-primary dark:data-[active=true]:bg-primary/15 dark:data-[active=true]:text-primary"
                         >
                             <Link
                                 :href="item.href"
@@ -202,7 +205,8 @@ const homeHref = computed(() =>
                             >
                                 <component
                                     :is="item.icon"
-                                    class="size-4 shrink-0 transition-transform group-hover:scale-110"
+                                    :stroke-width="1.75"
+                                    class="size-4 shrink-0 text-muted-foreground group-hover:text-foreground group-data-[active=true]:text-primary transition-colors"
                                 />
                                 <span class="truncate">{{ item.title }}</span>
                             </Link>
@@ -213,15 +217,15 @@ const homeHref = computed(() =>
 
             <!-- Hotline Widget for Creators -->
             <template v-if="isAuthor">
-                <!-- Expanded view: Full detailed card -->
+                <!-- Expanded view: Full clean card -->
                 <div
-                    class="mx-3 mt-auto mb-2 rounded-xl border border-onda-blue-500/20 bg-gradient-to-br from-onda-blue-500/5 to-onda-teal-500/5 p-3 group-data-[collapsible=icon]:hidden dark:from-onda-blue-950/40 dark:to-onda-teal-950/40"
+                    class="mx-3 mt-auto mb-2 rounded-xl border border-border bg-card/60 p-3 shadow-xs group-data-[collapsible=icon]:hidden"
                 >
                     <div class="mb-1.5 flex items-center gap-2">
                         <div
-                            class="flex size-6 items-center justify-center rounded-md bg-onda-blue-600/10 text-onda-blue-600 dark:bg-onda-blue-500/20 dark:text-onda-blue-400"
+                            class="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary"
                         >
-                            <Headphones class="size-3.5" />
+                            <Headphones :stroke-width="1.75" class="size-3.5" />
                         </div>
                         <span class="text-xs font-semibold text-foreground">
                             {{ t('sidebar.hotline.title') }}
@@ -229,7 +233,7 @@ const homeHref = computed(() =>
                     </div>
                     <a
                         :href="`tel:${t('sidebar.hotline.number').replace(/\s+/g, '')}`"
-                        class="dir-ltr block text-start font-mono text-xs font-bold tracking-wider text-onda-blue-700 transition-colors hover:underline dark:text-onda-blue-400"
+                        class="dir-ltr block text-start font-mono text-xs font-semibold text-primary transition-colors hover:underline"
                     >
                         {{ t('sidebar.hotline.number') }}
                     </a>
@@ -246,10 +250,10 @@ const homeHref = computed(() =>
                         <TooltipTrigger as-child>
                             <a
                                 :href="`tel:${t('sidebar.hotline.number').replace(/\s+/g, '')}`"
-                                class="flex size-8 items-center justify-center rounded-lg border border-onda-blue-500/20 bg-onda-blue-500/10 text-onda-blue-600 transition-all hover:scale-105 hover:bg-onda-blue-500/20 active:scale-95 dark:bg-onda-blue-500/20 dark:text-onda-blue-400"
+                                class="flex size-8 items-center justify-center rounded-lg border border-border bg-card/60 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                                 :aria-label="t('sidebar.hotline.title')"
                             >
-                                <Headphones class="size-4" />
+                                <Headphones :stroke-width="1.75" class="size-4" />
                             </a>
                         </TooltipTrigger>
                         <TooltipContent
@@ -257,19 +261,19 @@ const homeHref = computed(() =>
                             align="center"
                             :side-offset="8"
                             :hidden="state !== 'collapsed' || isMobile"
-                            class="p-2.5 shadow-xl"
+                            class="p-2.5 shadow-md border border-border bg-popover"
                         >
                             <div class="space-y-1 min-w-[140px]">
                                 <div class="flex items-center gap-2">
-                                    <Headphones class="size-3.5 shrink-0" />
-                                    <span class="text-xs font-semibold">
+                                    <Headphones :stroke-width="1.75" class="size-3.5 shrink-0 text-primary" />
+                                    <span class="text-xs font-semibold text-foreground">
                                         {{ t('sidebar.hotline.title') }}
                                     </span>
                                 </div>
-                                <p class="dir-ltr text-start font-mono text-xs font-bold tracking-wider">
+                                <p class="dir-ltr text-start font-mono text-xs font-semibold text-primary">
                                     {{ t('sidebar.hotline.number') }}
                                 </p>
-                                <p class="text-[10px] opacity-80 whitespace-nowrap">
+                                <p class="text-[10px] text-muted-foreground whitespace-nowrap">
                                     Dimanche – Jeudi (08:30 - 16:30)
                                 </p>
                             </div>

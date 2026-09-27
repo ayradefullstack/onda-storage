@@ -278,6 +278,9 @@ npm run build
 
 php artisan migrate --force
 
+# Re-derive college_oeuvre_files.mime_types if the format registry changed.
+php artisan referentiel:sync-mime-types
+
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
@@ -322,6 +325,8 @@ Ordered. The key comes first, because after the first upload it is too late.
 - [ ] Set `FFMPEG_BINARY` / `FFPROBE_BINARY` / `CLAMDSCAN_BINARY` to absolute paths.
 - [ ] Install both cron entries.
 - [ ] If downloads go through Cloudflare, create the DNS-only subdomain.
+- [ ] **Re-measure the MIME types on this host.** `App\Support\FileFormats` records values measured on libmagic 545 (Windows); cPanel ships a different build and can return a different type for the same file — notably `application/zip` instead of the full OpenXML type. Run `finfo_file()` over a sample of each accepted format here and add any new value to the registry's `mimes` list.
+- [ ] **Run `php artisan referentiel:sync-mime-types`** after any change to the format registry, so `college_oeuvre_files.mime_types` is re-derived. `--dry-run` first to see what would change.
 - [ ] Run `php artisan vault:doctor` — **zero FAILs**.
 - [ ] Upload one small test file end to end; confirm it reaches `ready`.
 - [ ] Confirm nothing appeared under `public_html`.

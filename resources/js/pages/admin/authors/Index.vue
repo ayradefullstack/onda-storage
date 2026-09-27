@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ArrowDown, ArrowUp, ArrowUpDown, Search } from '@lucide/vue';
+import { ArrowDown, ArrowUp, ArrowUpDown } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import EmptyState from '@/components/admin/EmptyState.vue';
-import Pagination from '@/components/admin/Pagination.vue';
 import QuotaBar from '@/components/admin/QuotaBar.vue';
-import { Input } from '@/components/ui/input';
+import {
+    DataTable,
+    DataTableToolbar,
+    DataTableSearch,
+    DataTableFilterPills,
+    DataTablePagination,
+    DataTableEmpty,
+} from '@/components/ui/data-table';
 import {
     Select,
     SelectContent,
@@ -117,6 +122,46 @@ function sortIcon(column: SortColumn) {
 }
 
 const hasResults = computed(() => props.authors.data.length > 0);
+
+const hasActiveFilters = computed(
+    () => Boolean(search.value?.trim() || wilayaFilter.value),
+);
+
+const activeFilters = computed(() => {
+    const pills: { key: string; label: string; value: string }[] = [];
+    if (search.value?.trim()) {
+        pills.push({
+            key: 'search',
+            label: t('common.search', 'Recherche'),
+            value: `"${search.value.trim()}"`,
+        });
+    }
+    if (wilayaFilter.value) {
+        const found = props.wilayas.find((w) => w.uuid === wilayaFilter.value);
+        pills.push({
+            key: 'wilaya',
+            label: t('admin.authors.colWilaya', 'Wilaya'),
+            value: found ? wilayaLabel(found) : wilayaFilter.value,
+        });
+    }
+    return pills;
+});
+
+function removeFilter(key: string): void {
+    if (key === 'search') {
+        search.value = '';
+        applyFilters({ search: '' });
+    } else if (key === 'wilaya') {
+        wilayaFilter.value = '';
+        applyFilters({ wilaya: '' });
+    }
+}
+
+function clearFilters(): void {
+    search.value = '';
+    wilayaFilter.value = '';
+    applyFilters({ search: '', wilaya: '' });
+}
 </script>
 
 <template>
@@ -132,60 +177,77 @@ const hasResults = computed(() => props.authors.data.length > 0);
             </p>
         </div>
 
-        <div class="flex flex-wrap items-center gap-3">
-            <div class="relative w-full max-w-xs">
-                <Search
-                    class="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                />
-                <Input
-                    v-model="search"
-                    class="ps-9"
-                    :placeholder="t('admin.authors.searchPlaceholder')"
-                    @keyup.enter="applyFilters()"
-                    @blur="applyFilters()"
-                />
-            </div>
+        <DataTable>
+            <template #toolbar>
+                <DataTableToolbar
+                    :title="t('admin.authors.title')"
+                    :count="authors.total"
+                >
+                    <template #search>
+                        <DataTableSearch
+                            v-model="search"
+                            :placeholder="t('admin.authors.searchPlaceholder')"
+                            class="w-full sm:w-64"
+                            @submit="applyFilters()"
+                            @clear="applyFilters({ search: '' })"
+                        />
+                    </template>
 
-            <Select
-                :model-value="wilayaFilter"
-                @update:model-value="
-                    (v) => {
-                        wilayaFilter = String(v ?? '');
-                        applyFilters();
-                    }
-                "
-            >
-                <SelectTrigger class="w-48">
-                    <SelectValue :placeholder="t('admin.authors.allWilayas')" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="">{{
-                        t('admin.authors.allWilayas')
-                    }}</SelectItem>
-                    <SelectItem
-                        v-for="w in wilayas"
-                        :key="w.uuid"
-                        :value="w.uuid"
-                    >
-                        {{ wilayaLabel(w) }}
-                    </SelectItem>
-                </SelectContent>
-            </Select>
-        </div>
+                    <template #filters>
+                        <Select
+                            :model-value="wilayaFilter"
+                            @update:model-value="
+                                (v) => {
+                                    wilayaFilter = String(v ?? '');
+                                    applyFilters();
+                                }
+                            "
+                        >
+                            <SelectTrigger size="sm" class="h-9 w-44">
+                                <SelectValue :placeholder="t('admin.authors.allWilayas')" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">{{
+                                    t('admin.authors.allWilayas')
+                                }}</SelectItem>
+                                <SelectItem
+                                    v-for="w in wilayas"
+                                    :key="w.uuid"
+                                    :value="w.uuid"
+                                >
+                                    {{ wilayaLabel(w) }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </template>
 
-        <EmptyState
-            v-if="!hasResults"
-            :title="t('admin.authors.empty')"
-            :description="t('admin.authors.emptyDescription')"
-        />
+                    <template #filter-pills>
+                        <DataTableFilterPills
+                            :filters="activeFilters"
+                            @remove="removeFilter"
+                            @clear-all="clearFilters"
+                        />
+                    </template>
+                </DataTableToolbar>
+            </template>
 
-        <div v-else class="overflow-x-auto rounded-lg border border-border">
-            <table class="w-full text-sm">
+            <!-- Empty State -->
+            <DataTableEmpty
+                v-if="!hasResults"
+                :title="t('admin.authors.empty')"
+                :description="t('admin.authors.emptyDescription')"
+                :has-active-filters="hasActiveFilters"
+                @clear-filters="clearFilters"
+            />
+
+            <!-- Enterprise Table -->
+            <table v-else class="w-full border-collapse text-xs">
                 <thead>
                     <tr
-                        class="border-b border-border text-xs text-muted-foreground uppercase"
+                        class="border-b border-border/70 bg-muted/40 font-semibold text-muted-foreground"
                     >
-                        <th class="px-3 py-2 text-start font-medium">
+                        <th class="w-12 px-3 py-3 text-center font-medium">#</th>
+                        <th class="px-4 py-3 text-start font-medium">
                             <Link
                                 :href="sortHref('name')"
                                 class="inline-flex items-center gap-1 hover:text-foreground"
@@ -193,14 +255,15 @@ const hasResults = computed(() => props.authors.data.length > 0);
                                 {{ t('admin.authors.colName') }}
                                 <component
                                     :is="sortIcon('name')"
+                                    :stroke-width="1.75"
                                     class="size-3"
                                 />
                             </Link>
                         </th>
-                        <th class="px-3 py-2 text-start font-medium">
+                        <th class="px-4 py-3 text-start font-medium">
                             {{ t('admin.authors.colWilaya') }}
                         </th>
-                        <th class="px-3 py-2 text-start font-medium">
+                        <th class="px-4 py-3 text-start font-medium">
                             <Link
                                 :href="sortHref('oeuvres')"
                                 class="inline-flex items-center gap-1 hover:text-foreground"
@@ -208,11 +271,12 @@ const hasResults = computed(() => props.authors.data.length > 0);
                                 {{ t('admin.authors.colOeuvres') }}
                                 <component
                                     :is="sortIcon('oeuvres')"
+                                    :stroke-width="1.75"
                                     class="size-3"
                                 />
                             </Link>
                         </th>
-                        <th class="px-3 py-2 text-start font-medium">
+                        <th class="px-4 py-3 text-start font-medium">
                             <Link
                                 :href="sortHref('files')"
                                 class="inline-flex items-center gap-1 hover:text-foreground"
@@ -220,11 +284,12 @@ const hasResults = computed(() => props.authors.data.length > 0);
                                 {{ t('admin.authors.colFiles') }}
                                 <component
                                     :is="sortIcon('files')"
+                                    :stroke-width="1.75"
                                     class="size-3"
                                 />
                             </Link>
                         </th>
-                        <th class="px-3 py-2 text-start font-medium">
+                        <th class="px-4 py-3 text-start font-medium">
                             <Link
                                 :href="sortHref('quota')"
                                 class="inline-flex items-center gap-1 hover:text-foreground"
@@ -232,11 +297,12 @@ const hasResults = computed(() => props.authors.data.length > 0);
                                 {{ t('admin.authors.colStorage') }}
                                 <component
                                     :is="sortIcon('quota')"
+                                    :stroke-width="1.75"
                                     class="size-3"
                                 />
                             </Link>
                         </th>
-                        <th class="px-3 py-2 text-start font-medium">
+                        <th class="px-4 py-3 text-start font-medium">
                             <Link
                                 :href="sortHref('activity')"
                                 class="inline-flex items-center gap-1 hover:text-foreground"
@@ -244,22 +310,28 @@ const hasResults = computed(() => props.authors.data.length > 0);
                                 {{ t('admin.authors.colLastActivity') }}
                                 <component
                                     :is="sortIcon('activity')"
+                                    :stroke-width="1.75"
                                     class="size-3"
                                 />
                             </Link>
                         </th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="divide-y divide-border/60">
                     <tr
-                        v-for="author in authors.data"
+                        v-for="(author, index) in authors.data"
                         :key="author.uuid"
-                        class="border-b border-border last:border-0 hover:bg-accent/50"
+                        class="hover:bg-muted/40 transition-colors duration-150"
                     >
-                        <td class="px-3 py-2">
+                        <td
+                            class="w-12 px-3 py-3.5 text-center text-xs font-medium text-muted-foreground"
+                        >
+                            {{ (authors.from ?? 1) + index }}
+                        </td>
+                        <td class="px-4 py-3.5">
                             <Link
                                 :href="authorShow(author.uuid)"
-                                class="font-medium hover:underline"
+                                class="font-medium text-foreground transition-colors hover:text-primary"
                             >
                                 {{ author.name }}
                             </Link>
@@ -267,24 +339,24 @@ const hasResults = computed(() => props.authors.data.length > 0);
                                 <bdi dir="ltr">{{ author.email }}</bdi>
                             </div>
                         </td>
-                        <td class="px-3 py-2 text-muted-foreground">
+                        <td class="px-4 py-3 text-muted-foreground">
                             {{
                                 author.wilaya ? wilayaLabel(author.wilaya) : '—'
                             }}
                         </td>
-                        <td class="px-3 py-2">
+                        <td class="px-4 py-3">
                             <bdi dir="ltr">{{ author.oeuvres_count }}</bdi>
                         </td>
-                        <td class="px-3 py-2">
+                        <td class="px-4 py-3">
                             <bdi dir="ltr">{{ author.files_count }}</bdi>
                         </td>
-                        <td class="min-w-40 px-3 py-2">
+                        <td class="min-w-40 px-4 py-3">
                             <QuotaBar
                                 :used-bytes="author.quota_used_bytes"
                                 :limit-bytes="author.quota_limit_bytes"
                             />
                         </td>
-                        <td class="px-3 py-2 text-muted-foreground">
+                        <td class="px-4 py-3 text-muted-foreground">
                             <bdi dir="ltr">{{
                                 author.last_activity_at
                                     ? formatDate(
@@ -297,13 +369,10 @@ const hasResults = computed(() => props.authors.data.length > 0);
                     </tr>
                 </tbody>
             </table>
-        </div>
 
-        <Pagination
-            :links="authors.links"
-            :from="authors.from"
-            :to="authors.to"
-            :total="authors.total"
-        />
+            <template #pagination>
+                <DataTablePagination :paginated="authors" />
+            </template>
+        </DataTable>
     </div>
 </template>

@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { Info, Search } from '@lucide/vue';
-import { ref, watch } from 'vue';
+import { Info } from '@lucide/vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Input } from '@/components/ui/input';
+import {
+    DataTableFilterPills,
+    DataTableSearch,
+} from '@/components/ui/data-table';
+import type { ActiveFilter } from '@/components/ui/data-table';
 
 /**
  * The frame every reference-data tab shares: the tab bar with its row
@@ -57,6 +61,21 @@ watch(query, () => {
 });
 
 const tabHref = (tab: Tab) => `/admin/referentiel/${tab.key}`;
+
+const activeFilters = computed<ActiveFilter[]>(() => {
+    if (!query.value || query.value.trim() === '') return [];
+    return [
+        {
+            key: 'search',
+            label: t('common.search', 'Recherche'),
+            value: `"${query.value.trim()}"`,
+        },
+    ];
+});
+
+const clearSearch = () => {
+    query.value = '';
+};
 </script>
 
 <template>
@@ -101,19 +120,23 @@ const tabHref = (tab: Tab) => `/admin/referentiel/${tab.key}`;
             </Link>
         </nav>
 
-        <div class="flex flex-wrap items-center gap-2.5">
-            <div class="relative w-full sm:max-w-xs">
-                <Search
-                    class="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                />
-                <Input
+        <div class="flex flex-col gap-2.5">
+            <div class="flex flex-wrap items-center gap-2.5">
+                <DataTableSearch
                     v-model="query"
-                    type="search"
                     :placeholder="t('admin.referentiel.searchPlaceholder')"
-                    class="h-9 ps-9 text-sm"
+                    class="w-full sm:max-w-xs"
+                    @clear="clearSearch"
                 />
+                <slot name="filters" />
             </div>
-            <slot name="filters" />
+
+            <DataTableFilterPills
+                v-if="activeFilters.length > 0"
+                :filters="activeFilters"
+                @remove="clearSearch"
+                @clear-all="clearSearch"
+            />
         </div>
 
         <!-- What the three overlapping flags actually do. -->

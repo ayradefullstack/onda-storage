@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin\Referentiel;
 
+use App\Support\FileFormats;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 /**
@@ -45,8 +47,18 @@ final class UpdateDocumentRequest extends FormRequest
             // exists because the seeder had to derive this list from
             // ONDA's mixed `File::types` / `mimetypes:` rules, and the
             // failure modes are exactly those shapes leaking back in.
-            'extensions' => ['sometimes', 'array', 'min:1', 'max:20'],
-            'extensions.*' => ['string', 'max:12', 'regex:/^[a-z0-9]+$/'],
+            'extensions' => ['sometimes', 'array', 'min:1', 'max:60'],
+            // Rule::in over the registry is the real gate: it rejects `exe`,
+            // `php` and anything invented, because the registry is a
+            // whitelist and absence is refusal. The regex stays in front of
+            // it so a malformed value gets a message about its shape rather
+            // than "invalid selection".
+            'extensions.*' => [
+                'string',
+                'max:12',
+                'regex:/^[a-z0-9]+$/',
+                Rule::in(FileFormats::extensions()),
+            ],
 
             'is_required' => ['sometimes', 'boolean'],
             'display_order' => ['sometimes', 'integer', 'min:1', 'max:999'],
@@ -66,6 +78,7 @@ final class UpdateDocumentRequest extends FormRequest
             // go, so the message names all three shapes an officer is
             // likely to paste in: ".PDF", "application/pdf", "pdf, jpg".
             'extensions.*.regex' => 'Each extension must be lowercase letters or digits only — no dot, no MIME type, no spaces (e.g. "pdf", not ".PDF" or "application/pdf").',
+            'extensions.*.in' => 'That format is not one this application can accept. Executable and script formats are deliberately absent from the registry.',
         ];
     }
 

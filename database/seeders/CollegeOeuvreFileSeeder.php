@@ -28,6 +28,12 @@ use RuntimeException;
  *   SEEDER-OWNED (the UI renders these read-only)
  *     document_key, register_type_college_id, title, conditions
  *
+ * `mime_types` appears in neither list because it is DERIVED: the model's
+ * `saving` hook recomputes it from `extensions` through
+ * App\Support\FileFormats on every write, so every row this seeder creates
+ * gets it through the same derivation the admin UI uses. Never write it by
+ * hand here.
+ *
  *   UI-OWNED (create-only here, so a re-run never reverts an officer)
  *     title_ar, title_en, extensions, is_required, max_size_kb,
  *     allows_multiple, display_order, needs_review

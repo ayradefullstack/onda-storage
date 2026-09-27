@@ -4,9 +4,12 @@ import { AlertTriangle, Info, Pencil } from '@lucide/vue';
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import EmptyState from '@/components/admin/EmptyState.vue';
+import FormatMultiSelect from '@/components/admin/FormatMultiSelect.vue';
+import type { FormatGroup } from '@/components/admin/FormatMultiSelect.vue';
 import LockedField from '@/components/admin/LockedField.vue';
 import Pagination from '@/components/admin/Pagination.vue';
 import ReferentielShell from '@/components/admin/ReferentielShell.vue';
+import { ActionButton } from '@/components/ui/action';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -38,6 +41,8 @@ interface DocumentRow {
     college: string | null;
     code_college: string | null;
     extensions: string[];
+    /** Derived from `extensions` by the server; read-only here. */
+    mime_types: string[];
     is_required: boolean;
     display_order: number;
     max_size_kb: number | null;
@@ -57,6 +62,8 @@ const props = defineProps<{
     };
     filters: { search: string; college: number | null; needs_review: boolean };
     colleges: Array<{ id: number; name: string }>;
+    /** The file-format registry, grouped by category. Server-owned. */
+    formats: FormatGroup[];
 }>();
 
 const { t } = useI18n();
@@ -68,8 +75,8 @@ const affectedDrafts = ref<number | null>(null);
 const form = ref({
     title_ar: '',
     title_en: '',
-    /** Edited as a comma-separated string; split and normalised on save. */
-    extensions: '',
+    /** Chosen through the registry multi-select — always registry keys. */
+    extensions: [] as string[],
     is_required: false,
     display_order: 1,
     max_size_kb: '' as string,
@@ -82,7 +89,7 @@ const open = (row: DocumentRow) => {
     form.value = {
         title_ar: row.title_ar ?? '',
         title_en: row.title_en ?? '',
-        extensions: row.extensions.join(', '),
+        extensions: [...row.extensions],
         is_required: row.is_required,
         display_order: row.display_order,
         max_size_kb: row.max_size_kb === null ? '' : String(row.max_size_kb),
@@ -130,13 +137,9 @@ const save = () => {
         {
             title_ar: form.value.title_ar.trim() || null,
             title_en: form.value.title_en.trim() || null,
-            // Lowercased and de-dotted here so an officer pasting ".PDF"
-            // is helped rather than rejected; anything still malformed
-            // (MIME strings, spaces) fails validation with a message.
-            extensions: form.value.extensions
-                .split(',')
-                .map((e) => e.trim().replace(/^\./, '').toLowerCase())
-                .filter((e) => e !== ''),
+            // Already registry keys — lowercase, dot-free, and known to the
+            // server. No parsing step to get wrong.
+            extensions: form.value.extensions,
             is_required: form.value.is_required,
             display_order: form.value.display_order,
             max_size_kb:
@@ -232,6 +235,7 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                         <tr
                             class="border-b border-border bg-muted/40 text-muted-foreground"
                         >
+                            <th class="w-12 px-3 py-2.5 text-center font-medium">#</th>
                             <th class="px-3 py-2.5 text-start font-medium">
                                 {{ t('admin.referentiel.col.key') }}
                             </th>
@@ -259,7 +263,7 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                     </thead>
                     <tbody class="divide-y divide-border/70">
                         <tr
-                            v-for="row in rows.data"
+                            v-for="(row, index) in rows.data"
                             :key="row.uuid"
                             :class="[
                                 'transition-colors hover:bg-accent/30',
@@ -268,6 +272,9 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                                     : '',
                             ]"
                         >
+                            <td class="w-12 px-3 py-2 text-center text-xs font-medium text-muted-foreground">
+                                {{ (rows.from ?? 1) + index }}
+                            </td>
                             <td
                                 class="px-3 py-2 font-mono text-[11px] whitespace-nowrap text-muted-foreground"
                             >
@@ -302,7 +309,7 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                                 </div>
                             </td>
                             <td
-                                class="px-3 py-2 text-end font-mono text-muted-foreground"
+                                class="px-3 py-2 text-end text-muted-foreground"
                             >
                                 <bdi>{{ row.display_order }}</bdi>
                             </td>
@@ -347,15 +354,12 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                                 </div>
                             </td>
                             <td class="px-3 py-2 text-end">
-                                <Button
+                                <ActionButton
+                                    action="edit"
                                     size="sm"
-                                    variant="ghost"
-                                    class="h-7 cursor-pointer gap-1.5 px-2 text-xs"
+                                    :label="t('admin.referentiel.edit')"
                                     @click="open(row)"
-                                >
-                                    <Pencil class="size-3" />
-                                    {{ t('admin.referentiel.edit') }}
-                                </Button>
+                                />
                             </td>
                         </tr>
                     </tbody>
@@ -425,19 +429,13 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                 </div>
 
                 <div class="space-y-1.5">
-                    <Label for="extensions" class="text-xs">{{
+                    <Label class="text-xs">{{
                         t('admin.referentiel.col.extensions')
                     }}</Label>
-                    <Input
-                        id="extensions"
+                    <FormatMultiSelect
                         v-model="form.extensions"
-                        dir="ltr"
-                        placeholder="pdf, jpg, png"
-                        class="h-9 font-mono text-sm"
+                        :groups="formats"
                     />
-                    <p class="text-[11px] leading-relaxed text-muted-foreground">
-                        {{ t('admin.referentiel.extensionsHelp') }}
-                    </p>
                     <!-- Tightening a rule does not reach back in time, and
                          must not: a file already deposited was valid when
                          it was deposited. -->

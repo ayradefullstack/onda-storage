@@ -57,6 +57,11 @@ final class ProcessMediaFile implements ShouldBeUnique, ShouldQueue
     {
         return [
             new DecryptToTemp($mediaFileUuid),
+            // Immediately after the decrypt and before anything expensive:
+            // finfo reads only the first bytes, and a file whose content is
+            // not what its slot accepts should fail before it is hashed,
+            // deduplicated or scanned.
+            new VerifyContentType($mediaFileUuid),
             new ComputeContentHash($mediaFileUuid),
             new DeduplicateFile($mediaFileUuid),
             new ScanForMalware($mediaFileUuid),

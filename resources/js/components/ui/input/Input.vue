@@ -3,11 +3,16 @@ import type { HTMLAttributes } from "vue"
 import { useVModel } from "@vueuse/core"
 import { cn } from "@/lib/utils"
 
-const props = defineProps<{
+interface Props {
   defaultValue?: string | number
   modelValue?: string | number
   class?: HTMLAttributes["class"]
-}>()
+  size?: "default" | "sm"
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  size: "default",
+})
 
 const emits = defineEmits<{
   (e: "update:modelValue", payload: string | number): void
@@ -23,11 +28,13 @@ const modelValue = useVModel(props, "modelValue", emits, {
   <input
     v-model="modelValue"
     data-slot="input"
+    :data-size="size"
     :class="cn(
-      'file:text-foreground placeholder:text-muted-foreground selection:bg-onda-blue-600 selection:text-white dark:bg-input/20 border-input h-10 w-full min-w-0 rounded-xl border bg-background/50 px-3.5 py-2 text-base md:text-sm shadow-xs transition-all duration-300 ease-out outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
-      'hover:border-onda-blue-400/60 hover:shadow-[0_0_12px_rgba(27,102,157,0.14)]',
-      'focus-visible:border-onda-blue-600 focus-visible:ring-4 focus-visible:ring-onda-blue-600/20 focus-visible:shadow-[0_0_18px_rgba(27,102,157,0.25)] dark:focus-visible:border-onda-blue-400 dark:focus-visible:ring-onda-blue-400/25',
+      'file:text-foreground placeholder:text-muted-foreground selection:bg-primary/20 selection:text-foreground border-input w-full min-w-0 rounded-lg border bg-background/60 dark:bg-card/40 text-sm shadow-xs transition-colors duration-150 ease-out outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
+      'hover:border-slate-400 dark:hover:border-slate-600',
+      'focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25 focus-visible:ring-offset-1',
       'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive',
+      size === 'sm' ? 'h-9 px-3 py-1.5 text-xs md:text-sm' : 'h-10 px-3.5 py-2 text-sm',
       props.class,
     )"
   >

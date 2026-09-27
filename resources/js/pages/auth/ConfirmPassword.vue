@@ -74,7 +74,6 @@ const { t } = useI18n();
                         id="password"
                         name="password"
                         dir="ltr"
-                        class="input-premium block h-11 w-full rounded-xl border border-input bg-background/50 px-3.5 text-left font-mono text-sm text-foreground shadow-xs transition-all duration-200 focus:border-onda-blue-500 focus:bg-background focus:ring-4 focus:ring-onda-blue-500/15 focus:outline-none"
                         required
                         autocomplete="current-password"
                         autofocus
@@ -87,7 +86,7 @@ const { t } = useI18n();
             <div class="flex items-center pt-2">
                 <Button
                     type="submit"
-                    class="h-12 w-full cursor-pointer rounded-xl bg-gradient-to-r from-onda-blue-600 to-onda-blue-700 text-sm font-semibold text-white shadow-lg shadow-onda-blue-600/25 transition-all hover:-translate-y-0.5 hover:from-onda-blue-700 hover:to-onda-blue-800 hover:shadow-onda-blue-600/40 active:translate-y-0 dark:from-onda-blue-500 dark:to-onda-blue-600 dark:hover:from-onda-blue-400 dark:hover:to-onda-blue-500"
+                    class="h-10 w-full cursor-pointer rounded-lg text-sm font-semibold shadow-xs"
                     :disabled="processing"
                     data-test="confirm-password-button"
                 >

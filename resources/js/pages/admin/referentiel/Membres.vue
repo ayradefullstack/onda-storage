@@ -7,6 +7,7 @@ import EmptyState from '@/components/admin/EmptyState.vue';
 import LockedField from '@/components/admin/LockedField.vue';
 import Pagination from '@/components/admin/Pagination.vue';
 import ReferentielShell from '@/components/admin/ReferentielShell.vue';
+import { ActionButton } from '@/components/ui/action';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -146,6 +147,7 @@ const applyCollege = (value: string) => {
                         <tr
                             class="border-b border-border bg-muted/40 text-muted-foreground"
                         >
+                            <th class="w-12 px-3 py-2.5 text-center font-medium">#</th>
                             <th class="px-3 py-2.5 text-start font-medium">
                                 {{ t('admin.referentiel.col.name') }}
                             </th>
@@ -167,10 +169,13 @@ const applyCollege = (value: string) => {
                     </thead>
                     <tbody class="divide-y divide-border/70">
                         <tr
-                            v-for="row in rows.data"
+                            v-for="(row, index) in rows.data"
                             :key="row.uuid"
                             class="transition-colors hover:bg-accent/30"
                         >
+                            <td class="w-12 px-3 py-2 text-center text-xs font-medium text-muted-foreground">
+                                {{ (rows.from ?? 1) + index }}
+                            </td>
                             <td class="max-w-[20rem] px-3 py-2">
                                 <bdi class="block truncate font-medium">{{
                                     row.name
@@ -225,15 +230,12 @@ const applyCollege = (value: string) => {
                                 </div>
                             </td>
                             <td class="px-3 py-2 text-end">
-                                <Button
+                                <ActionButton
+                                    action="edit"
                                     size="sm"
-                                    variant="ghost"
-                                    class="h-7 cursor-pointer gap-1.5 px-2 text-xs"
+                                    :label="t('admin.referentiel.edit')"
                                     @click="open(row)"
-                                >
-                                    <Pencil class="size-3" />
-                                    {{ t('admin.referentiel.edit') }}
-                                </Button>
+                                />
                             </td>
                         </tr>
                     </tbody>

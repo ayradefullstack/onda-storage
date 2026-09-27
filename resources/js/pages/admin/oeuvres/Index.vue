@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { AlertTriangle, CheckCircle2, Search } from '@lucide/vue';
+import { AlertTriangle, CheckCircle2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import EmptyState from '@/components/admin/EmptyState.vue';
-import Pagination from '@/components/admin/Pagination.vue';
-import StatusBadge from '@/components/admin/StatusBadge.vue';
 import { oeuvreLabel } from '@/components/oeuvre/label';
+import {
+    DataTable,
+    DataTableToolbar,
+    DataTableSearch,
+    DataTableFilterPills,
+    DataTableStatusBadge,
+    DataTablePagination,
+    DataTableEmpty,
+} from '@/components/ui/data-table';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -88,6 +94,74 @@ function applyFilters(overrides: Record<string, string> = {}): void {
 }
 
 const hasResults = computed(() => props.oeuvres.data.length > 0);
+
+const hasActiveFilters = computed(
+    () =>
+        Boolean(
+            search.value?.trim() ||
+            author.value?.trim() ||
+            props.filters.status ||
+            from.value ||
+            to.value,
+        ),
+);
+
+const activeFilters = computed(() => {
+    const pills: { key: string; label: string; value: string }[] = [];
+    if (search.value?.trim()) {
+        pills.push({
+            key: 'search',
+            label: t('common.search', 'Recherche'),
+            value: `"${search.value.trim()}"`,
+        });
+    }
+    if (author.value?.trim()) {
+        pills.push({
+            key: 'author',
+            label: t('admin.oeuvres.colAuthor', 'Auteur'),
+            value: author.value.trim(),
+        });
+    }
+    if (props.filters.status) {
+        pills.push({
+            key: 'status',
+            label: t('admin.oeuvres.colStatus', 'Statut'),
+            value: t(`oeuvres.status.${props.filters.status}`),
+        });
+    }
+    if (from.value || to.value) {
+        pills.push({
+            key: 'date',
+            label: t('common.date', 'Date'),
+            value: `${from.value || '...'} → ${to.value || '...'}`,
+        });
+    }
+    return pills;
+});
+
+function removeFilter(key: string): void {
+    if (key === 'search') {
+        search.value = '';
+        applyFilters({ search: '' });
+    } else if (key === 'author') {
+        author.value = '';
+        applyFilters({ author: '' });
+    } else if (key === 'status') {
+        applyFilters({ status: '' });
+    } else if (key === 'date') {
+        from.value = '';
+        to.value = '';
+        applyFilters({ from: '', to: '' });
+    }
+}
+
+function clearFilters(): void {
+    search.value = '';
+    author.value = '';
+    from.value = '';
+    to.value = '';
+    applyFilters({ search: '', author: '', status: '', from: '', to: '' });
+}
 </script>
 
 <template>
@@ -103,117 +177,139 @@ const hasResults = computed(() => props.oeuvres.data.length > 0);
             </p>
         </div>
 
-        <div class="flex flex-wrap items-end gap-3">
-            <div class="relative w-full max-w-xs">
-                <Search
-                    class="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                />
-                <Input
-                    v-model="search"
-                    class="ps-9"
-                    :placeholder="t('admin.oeuvres.searchPlaceholder')"
-                    @keyup.enter="applyFilters()"
-                    @blur="applyFilters()"
-                />
-            </div>
+        <DataTable>
+            <template #toolbar>
+                <DataTableToolbar
+                    :title="t('admin.oeuvres.title')"
+                    :count="oeuvres.total"
+                >
+                    <template #search>
+                        <DataTableSearch
+                            v-model="search"
+                            :placeholder="t('admin.oeuvres.searchPlaceholder')"
+                            class="w-full sm:w-60"
+                            @submit="applyFilters()"
+                            @clear="applyFilters({ search: '' })"
+                        />
+                    </template>
 
-            <Input
-                v-model="author"
-                class="w-48"
-                :placeholder="t('admin.oeuvres.authorPlaceholder')"
-                @keyup.enter="applyFilters()"
-                @blur="applyFilters()"
+                    <template #filters>
+                        <Input
+                            v-model="author"
+                            class="h-9 w-40 text-xs"
+                            :placeholder="t('admin.oeuvres.authorPlaceholder')"
+                            @keyup.enter="applyFilters()"
+                            @blur="applyFilters()"
+                        />
+
+                        <Select
+                            :model-value="filters.status"
+                            @update:model-value="
+                                (v) => applyFilters({ status: String(v ?? '') })
+                            "
+                        >
+                            <SelectTrigger class="h-9 w-40 text-xs">
+                                <SelectValue
+                                    :placeholder="t('admin.oeuvres.allStatuses')"
+                                />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="">{{
+                                    t('admin.oeuvres.allStatuses')
+                                }}</SelectItem>
+                                <SelectItem
+                                    v-for="status in statuses"
+                                    :key="status"
+                                    :value="status"
+                                >
+                                    {{ t(`oeuvres.status.${status}`) }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        <div class="flex items-center gap-1.5">
+                            <Input
+                                v-model="from"
+                                type="date"
+                                class="h-9 w-36 text-xs"
+                                @change="applyFilters()"
+                            />
+                            <span class="text-xs text-muted-foreground">{{
+                                t('admin.oeuvres.dateRangeTo')
+                            }}</span>
+                            <Input
+                                v-model="to"
+                                type="date"
+                                class="h-9 w-36 text-xs"
+                                @change="applyFilters()"
+                            />
+                        </div>
+                    </template>
+
+                    <template #filter-pills>
+                        <DataTableFilterPills
+                            :filters="activeFilters"
+                            @remove="removeFilter"
+                            @clear-all="clearFilters"
+                        />
+                    </template>
+                </DataTableToolbar>
+            </template>
+
+            <!-- Empty State -->
+            <DataTableEmpty
+                v-if="!hasResults"
+                :title="t('admin.oeuvres.empty')"
+                :description="t('admin.oeuvres.emptyDescription')"
+                :has-active-filters="hasActiveFilters"
+                @clear-filters="clearFilters"
             />
 
-            <Select
-                :model-value="filters.status"
-                @update:model-value="
-                    (v) => applyFilters({ status: String(v ?? '') })
-                "
-            >
-                <SelectTrigger class="w-48">
-                    <SelectValue
-                        :placeholder="t('admin.oeuvres.allStatuses')"
-                    />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="">{{
-                        t('admin.oeuvres.allStatuses')
-                    }}</SelectItem>
-                    <SelectItem
-                        v-for="status in statuses"
-                        :key="status"
-                        :value="status"
-                    >
-                        {{ t(`oeuvres.status.${status}`) }}
-                    </SelectItem>
-                </SelectContent>
-            </Select>
-
-            <div class="flex items-center gap-2">
-                <Input
-                    v-model="from"
-                    type="date"
-                    class="w-40"
-                    @change="applyFilters()"
-                />
-                <span class="text-xs text-muted-foreground">{{
-                    t('admin.oeuvres.dateRangeTo')
-                }}</span>
-                <Input
-                    v-model="to"
-                    type="date"
-                    class="w-40"
-                    @change="applyFilters()"
-                />
-            </div>
-        </div>
-
-        <EmptyState
-            v-if="!hasResults"
-            :title="t('admin.oeuvres.empty')"
-            :description="t('admin.oeuvres.emptyDescription')"
-        />
-
-        <div v-else class="overflow-x-auto rounded-lg border border-border">
-            <table class="w-full text-sm">
+            <!-- Enterprise Table -->
+            <table v-else class="w-full border-collapse text-xs">
                 <thead>
                     <tr
-                        class="border-b border-border text-xs text-muted-foreground uppercase"
+                        class="border-b border-border/70 bg-muted/40 font-semibold text-muted-foreground"
                     >
-                        <th class="px-3 py-2 text-start font-medium">
+                        <th class="w-12 px-3 py-3 text-center font-medium">#</th>
+                        <th class="px-4 py-3 text-start font-medium">
                             {{ t('admin.oeuvres.colTitle') }}
                         </th>
-                        <th class="px-3 py-2 text-start font-medium">
+                        <th class="px-4 py-3 text-start font-medium">
                             {{ t('admin.oeuvres.colAuthor') }}
                         </th>
-                        <th class="px-3 py-2 text-start font-medium">
+                        <th class="px-4 py-3 text-start font-medium">
                             {{ t('admin.oeuvres.colStatus') }}
                         </th>
-                        <th class="px-3 py-2 text-start font-medium">
+                        <th class="px-4 py-3 text-start font-medium">
                             {{ t('admin.oeuvres.colFiles') }}
                         </th>
-                        <th class="px-3 py-2 text-start font-medium">
+                        <th class="px-4 py-3 text-start font-medium">
                             {{ t('admin.oeuvres.colSize') }}
                         </th>
-                        <th class="px-3 py-2 text-start font-medium">
+                        <th class="px-4 py-3 text-start font-medium">
                             {{ t('admin.oeuvres.colSubmitted') }}
                         </th>
-                        <th class="px-3 py-2 text-start font-medium">
+                        <th class="px-4 py-3 text-start font-medium">
                             {{ t('admin.oeuvres.colReady') }}
                         </th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody class="divide-y divide-border/60">
                     <tr
-                        v-for="oeuvre in oeuvres.data"
+                        v-for="(oeuvre, index) in oeuvres.data"
                         :key="oeuvre.uuid"
-                        class="border-b border-border last:border-0 hover:bg-accent/50"
+                        class="hover:bg-muted/40 transition-colors duration-150"
                     >
-                        <td class="px-3 py-2">
+                        <td
+                            class="w-12 px-3 py-3.5 text-center text-xs font-medium text-muted-foreground"
+                        >
+                            {{ (oeuvres.from ?? 1) + index }}
+                        </td>
+                        <td class="px-4 py-3.5">
                             <Link
                                 :href="oeuvreShow(oeuvre.uuid)"
-                                class="font-medium hover:underline"
+                                class="font-medium text-foreground transition-colors hover:text-primary"
                             >
                                 <bdi>{{
                                     oeuvreLabel(
@@ -224,25 +320,25 @@ const hasResults = computed(() => props.oeuvres.data.length > 0);
                                 }}</bdi>
                             </Link>
                         </td>
-                        <td class="px-3 py-2">
+                        <td class="px-4 py-3 text-muted-foreground">
                             <Link
                                 v-if="oeuvre.author"
                                 :href="authorShow(oeuvre.author.uuid)"
-                                class="hover:underline"
+                                class="hover:underline hover:text-foreground"
                             >
                                 {{ oeuvre.author.name }}
                             </Link>
                             <span v-else class="text-muted-foreground">—</span>
                         </td>
-                        <td class="px-3 py-2">
+                        <td class="px-4 py-3">
                             <div class="flex items-center gap-1.5">
-                                <StatusBadge
-                                    kind="oeuvre"
+                                <DataTableStatusBadge
                                     :status="oeuvre.status"
+                                    :label="t(`oeuvres.status.${oeuvre.status}`)"
                                 />
                                 <span
                                     v-if="oeuvre.has_blocking_file"
-                                    class="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive"
+                                    class="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive"
                                     :title="t('admin.oeuvres.hasBlockingFile')"
                                 >
                                     <AlertTriangle class="size-3" />
@@ -250,36 +346,33 @@ const hasResults = computed(() => props.oeuvres.data.length > 0);
                                 </span>
                             </div>
                         </td>
-                        <td class="px-3 py-2">
+                        <td class="px-4 py-3">
                             <bdi dir="ltr">{{ oeuvre.files_count }}</bdi>
                         </td>
-                        <td class="px-3 py-2">
+                        <td class="px-4 py-3">
                             <bdi dir="ltr">{{
                                 formatBytes(oeuvre.files_size_bytes, locale)
                             }}</bdi>
                         </td>
-                        <td class="px-3 py-2 text-muted-foreground">
+                        <td class="px-4 py-3 text-muted-foreground">
                             <bdi dir="ltr">{{
                                 formatDate(oeuvre.created_at, locale)
                             }}</bdi>
                         </td>
-                        <td class="px-3 py-2">
+                        <td class="px-4 py-3">
                             <CheckCircle2
                                 v-if="oeuvre.all_ready"
-                                class="size-4 text-primary"
+                                class="size-4 text-emerald-600 dark:text-emerald-400"
                             />
                             <span v-else class="text-muted-foreground">—</span>
                         </td>
                     </tr>
                 </tbody>
             </table>
-        </div>
 
-        <Pagination
-            :links="oeuvres.links"
-            :from="oeuvres.from"
-            :to="oeuvres.to"
-            :total="oeuvres.total"
-        />
+            <template #pagination>
+                <DataTablePagination :paginated="oeuvres" />
+            </template>
+        </DataTable>
     </div>
 </template>

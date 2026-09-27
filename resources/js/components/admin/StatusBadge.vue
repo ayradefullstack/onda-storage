@@ -19,18 +19,20 @@ const { t } = useI18n();
 
 const WORK_VARIANTS: Record<string, BadgeVariants['variant']> = {
     draft: 'outline',
-    submitted: 'secondary',
-    under_review: 'secondary',
-    registered: 'default',
+    submitted: 'info',
+    under_review: 'warning',
+    registered: 'success',
+    approved: 'success',
+    distributed: 'info',
     rejected: 'destructive',
 };
 
 const MEDIA_VARIANTS: Record<string, BadgeVariants['variant']> = {
     uploading: 'outline',
     assembling: 'outline',
-    scanning: 'outline',
-    processing: 'secondary',
-    ready: 'default',
+    scanning: 'warning',
+    processing: 'info',
+    ready: 'success',
     failed: 'destructive',
     quarantined: 'destructive',
 };

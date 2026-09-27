@@ -54,15 +54,15 @@ const handleDepositClick = () => {
             <Button
                 variant="outline"
                 size="sm"
-                class="hidden h-9 cursor-pointer items-center gap-2 rounded-lg border-border/70 bg-background/50 px-3 text-xs text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-foreground md:flex"
+                class="hidden md:flex items-center gap-2 border-border/80 bg-background/60 text-xs text-muted-foreground hover:text-foreground"
                 @click="handleSearchClick"
             >
-                <Search class="size-3.5" />
+                <Search :stroke-width="1.75" class="size-3.5" />
                 <span class="inline-block max-w-[140px] truncate">{{
                     t('nav.search')
                 }}</span>
                 <kbd
-                    class="pointer-events-none ms-2 inline-flex h-5 items-center gap-1 rounded border border-border bg-muted/60 px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 select-none"
+                    class="pointer-events-none ms-2 inline-flex h-4.5 items-center gap-0.5 rounded border border-border bg-muted/60 px-1 font-mono text-[10px] font-medium text-muted-foreground select-none"
                 >
                     <span class="text-xs">⌘</span>K
                 </kbd>
@@ -70,11 +70,12 @@ const handleDepositClick = () => {
 
             <!-- Quick Deposit Button -->
             <Button
+                variant="default"
                 size="sm"
-                class="h-9 cursor-pointer gap-1.5 rounded-lg bg-gradient-to-r from-onda-blue-600 to-onda-blue-700 text-xs font-semibold text-white shadow-xs transition-all hover:from-onda-blue-700 hover:to-onda-blue-800 hover:shadow-onda-blue-600/30 dark:from-onda-blue-500 dark:to-onda-blue-600 dark:text-gray-950"
+                class="gap-1.5 text-xs font-semibold shadow-xs"
                 @click="handleDepositClick"
             >
-                <PlusCircle class="size-3.5" />
+                <PlusCircle :stroke-width="1.75" class="size-3.5" />
                 <span class="hidden sm:inline">{{
                     t('dashboard.newDepositBtn')
                 }}</span>

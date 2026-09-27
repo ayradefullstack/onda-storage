@@ -3,19 +3,26 @@ import {
     Award,
     BookOpen,
     Check,
-    ChevronLeft,
-    ChevronRight,
     Clapperboard,
     CodeXml,
     Copy,
     FileCheck2,
     Music,
-    Search,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { ActionButton } from '@/components/ui/action';
+import {
+    DataTable,
+    DataTableToolbar,
+    DataTableSearch,
+    DataTableFilterPills,
+    DataTableStatusBadge,
+    DataTablePagination,
+    DataTableEmpty,
+} from '@/components/ui/data-table';
+import { Tabs } from '@/components/ui/tabs';
+import type { TabItem } from '@/components/ui/tabs';
 
 const { t, locale } = useI18n();
 
@@ -123,6 +130,29 @@ const emit = defineEmits<{
     (e: 'open-deposit'): void;
 }>();
 
+const statusTabs = computed<TabItem[]>(() => [
+    {
+        value: 'all',
+        label: t('dashboard.table.allStatus'),
+        count: works.value.length,
+    },
+    {
+        value: 'approved',
+        label: t('dashboard.table.statusApproved'),
+        count: works.value.filter((w) => w.status === 'approved').length,
+    },
+    {
+        value: 'pending',
+        label: t('dashboard.table.statusPending'),
+        count: works.value.filter((w) => w.status === 'pending').length,
+    },
+    {
+        value: 'distributed',
+        label: t('dashboard.table.statusDistributed'),
+        count: works.value.filter((w) => w.status === 'distributed').length,
+    },
+]);
+
 const filteredWorks = computed(() => {
     return works.value.filter((item) => {
         const matchesSearch =
@@ -172,342 +202,261 @@ const getCategoryIcon = (category: Work['category']) => {
 const getCategoryBadgeClass = (category: Work['category']) => {
     switch (category) {
         case 'music':
-            return 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border-blue-500/20';
+            return 'bg-blue-500/10 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 border-blue-500/30';
         case 'literature':
-            return 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 border-amber-500/20';
+            return 'bg-amber-500/10 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border-amber-500/30';
         case 'cinema':
-            return 'bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400 border-purple-500/20';
+            return 'bg-purple-500/10 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300 border-purple-500/30';
         case 'software':
-            return 'bg-onda-teal-500/10 text-onda-teal-600 dark:bg-onda-teal-500/20 dark:text-onda-teal-400 border-onda-teal-500/20';
+            return 'bg-teal-500/10 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300 border-teal-500/30';
     }
 };
 
-const getStatusBadge = (status: Work['status']) => {
+const activeFilters = computed(() => {
+    const pills: { key: string; label: string; value: string }[] = [];
+    if (searchQuery.value.trim() !== '') {
+        pills.push({
+            key: 'search',
+            label: t('common.search', 'Recherche'),
+            value: `"${searchQuery.value.trim()}"`,
+        });
+    }
+    if (selectedStatus.value !== 'all') {
+        const found = statusTabs.value.find((tab) => tab.value === selectedStatus.value);
+        pills.push({
+            key: 'status',
+            label: t('dashboard.table.colStatus', 'Statut'),
+            value: found ? found.label : selectedStatus.value,
+        });
+    }
+    return pills;
+});
+
+const removeFilter = (key: string) => {
+    if (key === 'search') {
+        searchQuery.value = '';
+    } else if (key === 'status') {
+        selectedStatus.value = 'all';
+    }
+};
+
+const clearFilters = () => {
+    searchQuery.value = '';
+    selectedStatus.value = 'all';
+};
+
+const getStatusLabel = (status: Work['status']) => {
     switch (status) {
         case 'approved':
-            return {
-                label: t('dashboard.table.statusApproved'),
-                class: 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-500/20',
-                pulse: true,
-                pulseClass: 'bg-emerald-500',
-            };
+            return t('dashboard.table.statusApproved');
         case 'pending':
-            return {
-                label: t('dashboard.table.statusPending'),
-                class: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 border-amber-500/20',
-                pulse: true,
-                pulseClass: 'bg-amber-500',
-            };
-        case 'draft':
-            return {
-                label: t('dashboard.table.statusDraft'),
-                class: 'bg-muted text-muted-foreground border-border',
-                pulse: false,
-                pulseClass: '',
-            };
+            return t('dashboard.table.statusPending');
         case 'distributed':
-            return {
-                label: t('dashboard.table.statusDistributed'),
-                class: 'bg-onda-blue-500/10 text-onda-blue-600 dark:bg-onda-blue-500/20 dark:text-onda-blue-400 border-onda-blue-500/20',
-                pulse: true,
-                pulseClass: 'bg-onda-blue-500',
-            };
+            return t('dashboard.table.statusDistributed');
+        case 'draft':
+        default:
+            return t('dashboard.table.statusDraft');
     }
 };
 </script>
 
 <template>
-    <div
-        class="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xs"
-    >
-        <!-- Table Header & Filter Toolbar -->
-        <div class="space-y-4 border-b border-border/70 p-4 sm:p-5">
-            <div
-                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+    <DataTable>
+        <template #toolbar>
+            <DataTableToolbar
+                :title="t('dashboard.table.title')"
+                :subtitle="t('dashboard.table.subtitle')"
+                :count="filteredWorks.length"
+                :icon="FileCheck2"
             >
-                <div>
-                    <h2
-                        class="flex items-center gap-2 text-base font-bold tracking-tight text-foreground sm:text-lg"
-                    >
-                        <FileCheck2
-                            class="size-5 text-onda-blue-600 dark:text-onda-blue-400"
-                        />
-                        {{ t('dashboard.table.title') }}
-                    </h2>
-                    <p class="mt-0.5 text-xs text-muted-foreground">
-                        {{ t('dashboard.table.subtitle') }}
-                    </p>
-                </div>
-
-                <!-- Search Input -->
-                <div class="relative w-full sm:w-72">
-                    <Search
-                        class="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                    />
-                    <Input
+                <template #search>
+                    <DataTableSearch
                         v-model="searchQuery"
-                        type="text"
                         :placeholder="t('dashboard.table.searchPlaceholder')"
-                        class="input-premium h-9.5 rounded-xl ps-9 text-xs"
+                        class="w-full sm:w-72"
                     />
-                </div>
-            </div>
+                </template>
 
-            <!-- Status Tabs -->
-            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-                <button
-                    type="button"
-                    :class="[
-                        'shrink-0 cursor-pointer rounded-lg px-3 py-1.5 font-medium transition-all',
-                        selectedStatus === 'all'
-                            ? 'bg-onda-blue-600 font-semibold text-white shadow-xs dark:bg-onda-blue-500 dark:text-gray-950'
-                            : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground',
-                    ]"
-                    @click="selectedStatus = 'all'"
-                >
-                    {{ t('dashboard.table.allStatus') }} ({{ works.length }})
-                </button>
-                <button
-                    type="button"
-                    :class="[
-                        'shrink-0 cursor-pointer rounded-lg px-3 py-1.5 font-medium transition-all',
-                        selectedStatus === 'approved'
-                            ? 'bg-onda-blue-600 font-semibold text-white shadow-xs dark:bg-onda-blue-500 dark:text-gray-950'
-                            : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground',
-                    ]"
-                    @click="selectedStatus = 'approved'"
-                >
-                    {{ t('dashboard.table.statusApproved') }} (3)
-                </button>
-                <button
-                    type="button"
-                    :class="[
-                        'shrink-0 cursor-pointer rounded-lg px-3 py-1.5 font-medium transition-all',
-                        selectedStatus === 'pending'
-                            ? 'bg-onda-blue-600 font-semibold text-white shadow-xs dark:bg-onda-blue-500 dark:text-gray-950'
-                            : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground',
-                    ]"
-                    @click="selectedStatus = 'pending'"
-                >
-                    {{ t('dashboard.table.statusPending') }} (1)
-                </button>
-                <button
-                    type="button"
-                    :class="[
-                        'shrink-0 cursor-pointer rounded-lg px-3 py-1.5 font-medium transition-all',
-                        selectedStatus === 'distributed'
-                            ? 'bg-onda-blue-600 font-semibold text-white shadow-xs dark:bg-onda-blue-500 dark:text-gray-950'
-                            : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground',
-                    ]"
-                    @click="selectedStatus = 'distributed'"
-                >
-                    {{ t('dashboard.table.statusDistributed') }} (1)
-                </button>
-            </div>
-        </div>
+                <template #tabs>
+                    <Tabs
+                        v-model="selectedStatus"
+                        :tabs="statusTabs"
+                        size="sm"
+                        class="overflow-x-auto"
+                    />
+                </template>
 
-        <!-- Responsive Table -->
-        <div class="overflow-x-auto">
-            <table class="w-full border-collapse text-start text-xs">
-                <thead>
-                    <tr
-                        class="border-b border-border/70 bg-muted/40 font-semibold text-muted-foreground"
+                <template #filter-pills>
+                    <DataTableFilterPills
+                        :filters="activeFilters"
+                        @remove="removeFilter"
+                        @clear-all="clearFilters"
+                    />
+                </template>
+            </DataTableToolbar>
+        </template>
+
+        <!-- Empty Filter Results -->
+        <DataTableEmpty
+            v-if="filteredWorks.length === 0"
+            :title="t('dashboard.table.noWorks')"
+            :has-active-filters="Boolean(searchQuery.trim() || selectedStatus !== 'all')"
+            @clear-filters="clearFilters"
+        />
+
+        <!-- Responsive Table with Index Column -->
+        <table
+            v-else
+            class="w-full border-collapse text-start text-xs"
+        >
+            <thead>
+                <tr
+                    class="border-b border-border/70 bg-muted/40 font-semibold text-muted-foreground"
+                >
+                    <th class="w-12 px-3 py-3 text-center font-medium">#</th>
+                    <th class="px-4 py-3 text-start font-medium">
+                        {{ t('dashboard.table.colTitle') }}
+                    </th>
+                    <th
+                        class="hidden px-4 py-3 text-start font-medium md:table-cell"
                     >
-                        <th class="px-4 py-3.5 text-start font-medium">
-                            {{ t('dashboard.table.colTitle') }}
-                        </th>
-                        <th
-                            class="hidden px-4 py-3.5 text-start font-medium md:table-cell"
-                        >
-                            {{ t('dashboard.table.colRef') }}
-                        </th>
-                        <th
-                            class="hidden px-4 py-3.5 text-start font-medium sm:table-cell"
-                        >
-                            {{ t('dashboard.table.colDate') }}
-                        </th>
-                        <th
-                            class="hidden px-4 py-3.5 text-start font-medium lg:table-cell"
-                        >
-                            {{ t('dashboard.table.colHash') }}
-                        </th>
-                        <th class="px-4 py-3.5 text-start font-medium">
-                            {{ t('dashboard.table.colStatus') }}
-                        </th>
-                        <th class="px-4 py-3.5 text-end font-medium">
-                            {{ t('dashboard.table.colActions') }}
-                        </th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-border/60">
-                    <tr
-                        v-for="work in filteredWorks"
-                        :key="work.id"
-                        class="group transition-colors hover:bg-accent/40"
+                        {{ t('dashboard.table.colRef') }}
+                    </th>
+                    <th
+                        class="hidden px-4 py-3 text-start font-medium sm:table-cell"
                     >
-                        <!-- Title & Domain -->
-                        <td class="px-4 py-3.5">
-                            <div class="flex items-center gap-3">
-                                <div
-                                    :class="[
-                                        'flex size-9 shrink-0 items-center justify-center rounded-xl border',
-                                        getCategoryBadgeClass(work.category),
-                                    ]"
-                                >
-                                    <component
-                                        :is="getCategoryIcon(work.category)"
-                                        class="size-4"
-                                    />
-                                </div>
-                                <div class="min-w-0 space-y-0.5">
-                                    <p
-                                        class="max-w-[220px] truncate font-semibold text-foreground sm:max-w-xs md:max-w-md"
-                                    >
-                                        {{
-                                            locale === 'ar'
-                                                ? work.titleAr
-                                                : work.title
-                                        }}
-                                    </p>
-                                    <p
-                                        class="text-[11px] text-muted-foreground"
-                                    >
-                                        {{ work.fileSize }} • {{ work.year }}
-                                    </p>
-                                </div>
-                            </div>
-                        </td>
+                        {{ t('dashboard.table.colDate') }}
+                    </th>
+                    <th
+                        class="hidden px-4 py-3 text-start font-medium lg:table-cell"
+                    >
+                        {{ t('dashboard.table.colHash') }}
+                    </th>
+                    <th class="px-4 py-3 text-start font-medium">
+                        {{ t('dashboard.table.colStatus') }}
+                    </th>
+                    <th class="px-4 py-3 text-end font-medium">
+                        {{ t('dashboard.table.colActions') }}
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-border/60">
+                <tr
+                    v-for="(work, index) in filteredWorks"
+                    :key="work.id"
+                    class="group transition-colors duration-150 hover:bg-muted/40"
+                >
+                    <!-- Index Column -->
+                    <td
+                        class="w-12 px-3 py-3.5 text-center text-xs font-medium text-muted-foreground"
+                    >
+                        {{ index + 1 }}
+                    </td>
 
-                        <!-- Reference Number -->
-                        <td class="hidden px-4 py-3.5 md:table-cell">
-                            <span
-                                class="rounded-md bg-muted/60 px-2 py-1 font-mono text-xs font-semibold text-foreground/90"
-                            >
-                                {{ work.reference }}
-                            </span>
-                        </td>
-
-                        <!-- Date -->
-                        <td
-                            class="hidden px-4 py-3.5 whitespace-nowrap text-muted-foreground sm:table-cell"
-                        >
-                            {{ work.date }}
-                        </td>
-
-                        <!-- SHA-256 Checksum -->
-                        <td class="hidden px-4 py-3.5 lg:table-cell">
-                            <button
-                                type="button"
-                                class="flex cursor-pointer items-center gap-1.5 rounded-md bg-muted/40 px-2 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                                :title="work.hash"
-                                @click="copyHash(work.id, work.hash)"
-                            >
-                                <span class="max-w-[120px] truncate"
-                                    >{{ work.hash.slice(0, 12) }}...{{
-                                        work.hash.slice(-6)
-                                    }}</span
-                                >
-                                <component
-                                    :is="
-                                        copiedHashId === work.id ? Check : Copy
-                                    "
-                                    :class="[
-                                        'size-3 shrink-0',
-                                        copiedHashId === work.id
-                                            ? 'text-emerald-600 dark:text-emerald-400'
-                                            : 'text-muted-foreground',
-                                    ]"
-                                />
-                            </button>
-                        </td>
-
-                        <!-- Status Badge -->
-                        <td class="px-4 py-3.5 whitespace-nowrap">
-                            <span
+                    <!-- Title & Domain -->
+                    <td class="px-4 py-3.5">
+                        <div class="flex items-center gap-3">
+                            <div
                                 :class="[
-                                    'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold',
-                                    getStatusBadge(work.status).class,
+                                    'flex size-9 shrink-0 items-center justify-center rounded-lg border',
+                                    getCategoryBadgeClass(work.category),
                                 ]"
                             >
-                                <span
-                                    v-if="getStatusBadge(work.status).pulse"
-                                    :class="[
-                                        'size-1.5 animate-pulse rounded-full',
-                                        getStatusBadge(work.status).pulseClass,
-                                    ]"
+                                <component
+                                    :is="getCategoryIcon(work.category)"
+                                    :stroke-width="1.75"
+                                    class="size-4"
                                 />
-                                {{ getStatusBadge(work.status).label }}
-                            </span>
-                        </td>
-
-                        <!-- Actions -->
-                        <td class="px-4 py-3.5 text-end whitespace-nowrap">
-                            <div class="flex items-center justify-end gap-1.5">
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    class="h-8 cursor-pointer gap-1.5 px-2 text-xs font-semibold text-onda-blue-600 hover:bg-onda-blue-500/10 hover:text-onda-blue-700 dark:text-onda-blue-400"
-                                    @click="emit('view-certificate', work)"
-                                >
-                                    <Award class="size-3.5" />
-                                    <span class="hidden sm:inline">{{
-                                        t('dashboard.table.viewCert')
-                                    }}</span>
-                                </Button>
                             </div>
-                        </td>
-                    </tr>
-
-                    <tr v-if="filteredWorks.length === 0">
-                        <td
-                            colspan="6"
-                            class="py-12 text-center text-muted-foreground"
-                        >
-                            <div
-                                class="flex flex-col items-center justify-center gap-2"
-                            >
-                                <Search
-                                    class="size-8 text-muted-foreground/50"
-                                />
-                                <p class="text-sm font-medium">
-                                    {{ t('dashboard.table.noWorks') }}
+                            <div class="min-w-0 space-y-0.5">
+                                <p
+                                    class="max-w-[220px] truncate font-semibold text-foreground sm:max-w-xs md:max-w-md"
+                                >
+                                    {{
+                                        locale === 'ar'
+                                            ? work.titleAr
+                                            : work.title
+                                    }}
+                                </p>
+                                <p class="text-[11px] text-muted-foreground">
+                                    {{ work.fileSize }} • {{ work.year }}
                                 </p>
                             </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+                        </div>
+                    </td>
+
+                    <!-- Reference Number -->
+                    <td class="hidden px-4 py-3.5 md:table-cell">
+                        <span
+                            class="rounded-md bg-muted/60 px-2 py-1 font-mono text-xs font-medium text-foreground"
+                        >
+                            {{ work.reference }}
+                        </span>
+                    </td>
+
+                    <!-- Date -->
+                    <td
+                        class="hidden px-4 py-3.5 whitespace-nowrap text-muted-foreground sm:table-cell"
+                    >
+                        {{ work.date }}
+                    </td>
+
+                    <!-- SHA-256 Checksum (Monospace Technical Value) -->
+                    <td class="hidden px-4 py-3.5 lg:table-cell">
+                        <button
+                            type="button"
+                            class="flex cursor-pointer items-center gap-1.5 rounded-md bg-muted/40 px-2 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            :title="work.hash"
+                            @click="copyHash(work.id, work.hash)"
+                        >
+                            <span class="max-w-[120px] truncate"
+                                >{{ work.hash.slice(0, 10) }}…{{
+                                    work.hash.slice(-6)
+                                }}</span
+                            >
+                            <component
+                                :is="copiedHashId === work.id ? Check : Copy"
+                                :stroke-width="1.75"
+                                :class="[
+                                    'size-3 shrink-0',
+                                    copiedHashId === work.id
+                                        ? 'text-emerald-600 dark:text-emerald-400'
+                                        : 'text-muted-foreground',
+                                ]"
+                            />
+                        </button>
+                    </td>
+
+                    <!-- Flowbite-inspired Status Badge with dot -->
+                    <td class="px-4 py-3.5 whitespace-nowrap">
+                        <DataTableStatusBadge
+                            :status="work.status"
+                            :label="getStatusLabel(work.status)"
+                        />
+                    </td>
+
+                    <!-- Actions -->
+                    <td class="px-4 py-3.5 text-end whitespace-nowrap">
+                        <div class="flex items-center justify-end gap-1.5">
+                            <ActionButton
+                                action="view"
+                                size="sm"
+                                :label="t('dashboard.table.viewCert')"
+                                @click="emit('view-certificate', work)"
+                            />
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
 
         <!-- Table Footer Pagination bar -->
-        <div
-            class="flex items-center justify-between border-t border-border/70 px-4 py-3 text-xs text-muted-foreground"
-        >
-            <span>{{ t('dashboard.table.page', { page: 1, total: 1 }) }}</span>
-            <div class="flex items-center gap-1">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    class="h-7 rounded-lg text-xs"
-                    disabled
-                >
-                    <ChevronLeft class="size-3 rtl:rotate-180" />
-                    <span class="hidden sm:inline">{{
-                        t('dashboard.table.prev')
-                    }}</span>
-                </Button>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    class="h-7 rounded-lg text-xs"
-                    disabled
-                >
-                    <span class="hidden sm:inline">{{
-                        t('dashboard.table.next')
-                    }}</span>
-                    <ChevronRight class="size-3 rtl:rotate-180" />
-                </Button>
-            </div>
-        </div>
-    </div>
+        <template #pagination>
+            <DataTablePagination
+                :from="filteredWorks.length > 0 ? 1 : 0"
+                :to="filteredWorks.length"
+                :total="filteredWorks.length"
+            />
+        </template>
+    </DataTable>
 </template>

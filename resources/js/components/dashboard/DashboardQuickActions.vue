@@ -78,7 +78,7 @@ const categories = computed(() => [
                 :key="cat.id"
                 type="button"
                 :class="[
-                    'group relative flex cursor-pointer flex-col justify-between rounded-2xl border bg-card p-4.5 text-start transition-all duration-300 hover:-translate-y-1 hover:shadow-md',
+                    'group relative flex cursor-pointer flex-col justify-between rounded-xl border bg-card p-4.5 text-start transition-colors hover:shadow-xs',
                     cat.borderColor,
                     cat.gradient,
                 ]"
@@ -87,7 +87,7 @@ const categories = computed(() => [
                 <div class="flex w-full items-start justify-between gap-2">
                     <div
                         :class="[
-                            'flex size-11 items-center justify-center rounded-xl shadow-xs transition-transform duration-300 group-hover:scale-110',
+                            'flex size-10 items-center justify-center rounded-lg shadow-xs',
                             cat.iconBg,
                         ]"
                     >
