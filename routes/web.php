@@ -64,7 +64,9 @@ Route::middleware(['auth'])->prefix('notifications')->name('notifications.')->gr
     Route::post('/{notification}/read', [NotificationController::class, 'read'])->name('read');
 });
 
-Route::get('/_vault-doctor', VaultDoctorController::class)->name('vault-doctor');
+Route::get('/_vault-doctor', VaultDoctorController::class)
+    ->middleware('throttle:vault-doctor')
+    ->name('vault-doctor');
 
 if (app()->environment('local')) {
     Route::get('/mail/preview', function () {

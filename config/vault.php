@@ -148,4 +148,24 @@ return [
 
     'preview_max_height' => (int) env('VAULT_PREVIEW_MAX_HEIGHT', 480),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Doctor web endpoint
+    |--------------------------------------------------------------------------
+    |
+    | `doctor_web_enabled` exposes /_vault-doctor outside `local`, signed URLs
+    | only, and with a reduced php.ini-only payload. Keep it false except
+    | during a diagnostic session.
+    |
+    | `doctor_resolve_ip` pins the host of `vault:doctor --fpm`'s request to
+    | this IP via CURLOPT_RESOLVE, for servers behind NAT where the domain
+    | resolves to a public IP from the server itself. TLS is still fully
+    | verified against the domain name. Blank means no override.
+    |
+    */
+
+    'doctor_web_enabled' => (bool) env('VAULT_DOCTOR_WEB_ENABLED', false),
+
+    'doctor_resolve_ip' => env('VAULT_DOCTOR_RESOLVE_IP') ?: null,
+
 ];

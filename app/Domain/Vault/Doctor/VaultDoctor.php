@@ -35,32 +35,28 @@ final class VaultDoctor
     }
 
     /**
+     * The subset exposed by the web endpoint outside `local`: runtime values
+     * that differ between CLI and FPM, and nothing else. Never touches disks,
+     * the master key, the DB, the queue, Redis or external binaries, and no
+     * value carries a filesystem path.
+     *
+     * @return Collection<int, CheckResult>
+     */
+    public function runtimeChecks(): Collection
+    {
+        return collect([
+            ...$this->phpIdentityChecks(),
+            ...$this->uploadLimitChecks(),
+            ...$this->disableFunctionsCheck(),
+        ]);
+    }
+
+    /**
      * @return list<CheckResult>
      */
     private function phpCoreChecks(): array
     {
-        $results = [];
-
-        $results[] = new CheckResult(
-            'php.int_size',
-            '64-bit PHP',
-            PHP_INT_SIZE === 8 ? CheckResult::PASS : CheckResult::FAIL,
-            PHP_INT_SIZE.'-byte int',
-            PHP_INT_SIZE === 8
-                ? 'PHP is 64-bit.'
-                : '32-bit PHP cannot seek beyond 2 GB — vault files up to 5 GB will corrupt.',
-        );
-
-        $versionOk = version_compare(PHP_VERSION, '8.4.0', '>=');
-        $results[] = new CheckResult(
-            'php.version',
-            'PHP version',
-            $versionOk ? CheckResult::PASS : CheckResult::FAIL,
-            PHP_VERSION,
-            $versionOk ? 'Meets the minimum of 8.4.' : 'Below the required 8.4.',
-        );
-
-        $results[] = new CheckResult('php.sapi', 'SAPI', CheckResult::PASS, PHP_SAPI, 'Informational.');
+        $results = $this->phpIdentityChecks();
 
         $iniPath = php_ini_loaded_file();
         $results[] = new CheckResult(
@@ -109,6 +105,37 @@ final class VaultDoctor
         );
 
         $results[] = $this->throughputCheck();
+
+        return $results;
+    }
+
+    /**
+     * @return list<CheckResult>
+     */
+    private function phpIdentityChecks(): array
+    {
+        $results = [];
+
+        $results[] = new CheckResult(
+            'php.int_size',
+            '64-bit PHP',
+            PHP_INT_SIZE === 8 ? CheckResult::PASS : CheckResult::FAIL,
+            PHP_INT_SIZE.'-byte int',
+            PHP_INT_SIZE === 8
+                ? 'PHP is 64-bit.'
+                : '32-bit PHP cannot seek beyond 2 GB — vault files up to 5 GB will corrupt.',
+        );
+
+        $versionOk = version_compare(PHP_VERSION, '8.4.0', '>=');
+        $results[] = new CheckResult(
+            'php.version',
+            'PHP version',
+            $versionOk ? CheckResult::PASS : CheckResult::FAIL,
+            PHP_VERSION,
+            $versionOk ? 'Meets the minimum of 8.4.' : 'Below the required 8.4.',
+        );
+
+        $results[] = new CheckResult('php.sapi', 'SAPI', CheckResult::PASS, PHP_SAPI, 'Informational.');
 
         return $results;
     }

@@ -33,3 +33,4 @@ graphify-out
 /.playwright-cli
 /.playwright
 /bash.exe.stackdump
+/public/build.zip

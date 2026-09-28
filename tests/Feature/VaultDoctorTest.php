@@ -1,9 +1,17 @@
 <?php
 
+use App\Console\Commands\VaultDoctorCommand;
 use App\Domain\Vault\Doctor\CheckResult;
 use App\Domain\Vault\Doctor\VaultDoctor;
 use App\Models\User;
+use Illuminate\Config\Repository;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Facade;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
+use Spatie\Permission\Models\Role;
 
 test('the offset proof check fails when the target cannot be written to', function () {
     $doctor = new VaultDoctor;
@@ -171,4 +179,219 @@ test('the vault doctor endpoint returns 403 for a non-admin user', function () {
     $response = $this->actingAs($user)->get('/_vault-doctor');
 
     $response->assertForbidden();
+});
+
+/*
+|--------------------------------------------------------------------------
+| Web endpoint outside `local`
+|--------------------------------------------------------------------------
+*/
+
+const RUNTIME_CHECK_KEYS = [
+    'php.int_size',
+    'php.version',
+    'php.sapi',
+    'ini.post_max_size',
+    'ini.upload_max_filesize',
+    'ini.memory_limit',
+    'ini.max_execution_time',
+    'ini.max_input_time',
+    'disable_functions',
+];
+
+function signedDoctorUrl(?DateTimeInterface $expires = null): string
+{
+    return URL::temporarySignedRoute('vault-doctor', $expires ?? now()->addMinutes(2));
+}
+
+test('production with the flag off returns 404, signed or not', function () {
+    app()->instance('env', 'production');
+    config(['vault.doctor_web_enabled' => false]);
+
+    $this->get('/_vault-doctor')->assertNotFound();
+    $this->get(signedDoctorUrl())->assertNotFound();
+});
+
+test('production with the flag on accepts a valid signature', function () {
+    app()->instance('env', 'production');
+    config(['vault.doctor_web_enabled' => true]);
+
+    $this->get(signedDoctorUrl())
+        ->assertOk()
+        ->assertJsonStructure(['sapi', 'checks']);
+});
+
+test('production with the flag on refuses an admin session without a signature', function () {
+    app()->instance('env', 'production');
+    config(['vault.doctor_web_enabled' => true]);
+
+    $admin = User::factory()->create();
+    $admin->assignRole(Role::findOrCreate('admin'));
+
+    $this->actingAs($admin)->get('/_vault-doctor')->assertNotFound();
+});
+
+test('production with the flag on rejects an expired or tampered signature', function () {
+    app()->instance('env', 'production');
+    config(['vault.doctor_web_enabled' => true]);
+
+    $this->get(signedDoctorUrl(now()->subMinute()))->assertForbidden();
+
+    $valid = signedDoctorUrl();
+    $tampered = substr($valid, 0, -1).(str_ends_with($valid, 'a') ? 'b' : 'a');
+
+    $this->get($tampered)->assertForbidden();
+});
+
+test('the non-local payload keys are exactly the runtime allowlist', function () {
+    app()->instance('env', 'production');
+    config(['vault.doctor_web_enabled' => true]);
+
+    $keys = collect($this->get(signedDoctorUrl())->assertOk()->json('checks'))->pluck('key')->all();
+
+    expect($keys)->toBe(RUNTIME_CHECK_KEYS);
+});
+
+test('the non-local payload touches no vault disk, the master key or the queue tables', function () {
+    app()->instance('env', 'production');
+    config(['vault.doctor_web_enabled' => true]);
+
+    $disks = ['vault', 'incoming', 'work', 'variants'];
+
+    foreach ($disks as $disk) {
+        Storage::fake($disk);
+        config(["filesystems.disks.$disk.root" => Storage::disk($disk)->path('')]);
+    }
+
+    $url = signedDoctorUrl();
+
+    // Record every config key read while the request runs: resolving a disk
+    // root or the master key path is the first step of every check that
+    // would touch them, so "never read" is proof of "never touched".
+    $recorder = new class(config()->all()) extends Repository
+    {
+        /** @var list<string> */
+        public array $reads = [];
+
+        public function get($key, $default = null)
+        {
+            if (is_string($key)) {
+                $this->reads[] = $key;
+            }
+
+            return parent::get($key, $default);
+        }
+    };
+    app()->instance('config', $recorder);
+    Facade::clearResolvedInstance('config');
+
+    $queries = [];
+    DB::listen(function ($query) use (&$queries) {
+        $queries[] = $query->sql;
+    });
+
+    $this->get($url)->assertOk();
+
+    foreach ($disks as $disk) {
+        expect(Storage::disk($disk)->allFiles())->toBeEmpty()
+            ->and($recorder->reads)->not->toContain("filesystems.disks.$disk.root");
+    }
+
+    expect($recorder->reads)->not->toContain('vault.master_key_path')
+        ->and(collect($queries)->filter(fn (string $sql) => str_contains($sql, 'jobs'))->all())->toBeEmpty();
+});
+
+test('the non-local endpoint is rate limited', function () {
+    app()->instance('env', 'production');
+    config(['vault.doctor_web_enabled' => true]);
+
+    $url = signedDoctorUrl();
+
+    foreach (range(1, 5) as $_) {
+        $this->get($url)->assertOk();
+    }
+
+    $this->get($url)->assertTooManyRequests();
+});
+
+test('local keeps the full payload for a valid signature', function () {
+    app()->instance('env', 'local');
+
+    $keys = collect($this->get(signedDoctorUrl())->assertOk()->json('checks'))->pluck('key');
+
+    expect($keys->all())->toBe(app(VaultDoctor::class)->run()->pluck('key')->all())
+        ->and($keys->all())->toContain('vault_key.set');
+});
+
+test('local still accepts an admin session without a signature', function () {
+    app()->instance('env', 'local');
+
+    $admin = User::factory()->create();
+    $admin->assignRole(Role::findOrCreate('admin'));
+
+    $this->actingAs($admin)->get('/_vault-doctor')->assertOk();
+});
+
+/*
+|--------------------------------------------------------------------------
+| vault:doctor --fpm resolve override
+|--------------------------------------------------------------------------
+*/
+
+function fpmHttpOptions(string $url, ?string $ip): array
+{
+    $method = new ReflectionMethod(VaultDoctorCommand::class, 'fpmHttpOptions');
+
+    return $method->invoke(new VaultDoctorCommand, $url, $ip);
+}
+
+test('no resolve override adds no curl options', function () {
+    expect(fpmHttpOptions('https://onda-storage.ayrad.dz/_vault-doctor', null))->toBe([])
+        ->and(fpmHttpOptions('https://onda-storage.ayrad.dz/_vault-doctor', ''))->toBe([]);
+});
+
+test('a resolve override pins the host on the default https port', function () {
+    expect(fpmHttpOptions('https://onda-storage.ayrad.dz/_vault-doctor?signature=x', '10.10.10.135'))
+        ->toBe(['curl' => [CURLOPT_RESOLVE => ['onda-storage.ayrad.dz:443:10.10.10.135']]]);
+});
+
+test('a resolve override keeps a non-default port and defaults http to 80', function () {
+    expect(fpmHttpOptions('https://onda.test:8443/_vault-doctor', '10.10.10.135'))
+        ->toBe(['curl' => [CURLOPT_RESOLVE => ['onda.test:8443:10.10.10.135']]])
+        ->and(fpmHttpOptions('http://onda.test/_vault-doctor', '10.10.10.135'))
+        ->toBe(['curl' => [CURLOPT_RESOLVE => ['onda.test:80:10.10.10.135']]]);
+});
+
+test('a resolve override brackets an IPv6 address', function () {
+    expect(fpmHttpOptions('https://onda.test/_vault-doctor', '::1'))
+        ->toBe(['curl' => [CURLOPT_RESOLVE => ['onda.test:443:[::1]']]]);
+});
+
+test('an invalid resolve IP fails the check with an explicit message and sends nothing', function () {
+    Http::fake();
+    config(['vault.doctor_resolve_ip' => '10.10.10.999']);
+
+    $exit = Artisan::call('vault:doctor', ['--fpm' => true]);
+
+    expect($exit)->toBe(1)
+        ->and(Artisan::output())->toContain("VAULT_DOCTOR_RESOLVE_IP is not a valid IP address: '10.10.10.999'");
+
+    Http::assertNothingSent();
+});
+
+test('an active resolve override is shown in the output', function () {
+    Http::fake(['*' => Http::response(['sapi' => 'fpm-fcgi', 'checks' => []])]);
+    config(['vault.doctor_resolve_ip' => '10.10.10.135']);
+
+    Artisan::call('vault:doctor', ['--fpm' => true]);
+
+    expect(Artisan::output())->toContain('resolved via 10.10.10.135');
+});
+
+test('a 404 outside local prints the enable hint', function () {
+    Http::fake(['*' => Http::response('', 404)]);
+
+    Artisan::call('vault:doctor', ['--fpm' => true]);
+
+    expect(Artisan::output())->toContain('Endpoint disabled — set VAULT_DOCTOR_WEB_ENABLED=true temporarily');
 });

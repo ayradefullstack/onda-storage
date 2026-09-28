@@ -9,10 +9,13 @@ use App\Policies\MediaFilePolicy;
 use App\Policies\OeuvrePolicy;
 use App\Policies\UploadSessionPolicy;
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -34,6 +37,20 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureBlueprintMacros();
         $this->configurePolicies();
+        $this->configureRateLimiting();
+    }
+
+    /**
+     * Outside `local`, /_vault-doctor is reachable by signed URL alone, and a
+     * signed URL replays freely until it expires — cap it. Resolved
+     * per-request so the environment check stays live.
+     */
+    protected function configureRateLimiting(): void
+    {
+        RateLimiter::for('vault-doctor', fn (Request $request): Limit => app()->environment('local')
+            ? Limit::none()
+            : Limit::perMinute(5)->by($request->ip()),
+        );
     }
 
     /**
