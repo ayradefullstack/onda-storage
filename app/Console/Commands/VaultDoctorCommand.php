@@ -10,6 +10,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\URL;
+use InvalidArgumentException;
 use Throwable;
 
 final class VaultDoctorCommand extends Command
@@ -63,11 +64,27 @@ final class VaultDoctorCommand extends Command
     private function compareWithFpm(Collection $cli): int
     {
         $url = URL::temporarySignedRoute('vault-doctor', now()->addMinutes(2));
+        $resolveIp = config('vault.doctor_resolve_ip');
+        $resolveIp = is_string($resolveIp) && $resolveIp !== '' ? $resolveIp : null;
 
         try {
-            $response = Http::timeout(10)->get($url);
+            $options = $this->fpmHttpOptions($url, $resolveIp);
+        } catch (InvalidArgumentException $e) {
+            $this->error($e->getMessage());
+
+            return 1;
+        }
+
+        $resolvedVia = $resolveIp !== null ? " (resolved via {$resolveIp})" : '';
+
+        if ($resolveIp !== null) {
+            $this->line("FPM endpoint resolved via {$resolveIp} (VAULT_DOCTOR_RESOLVE_IP).");
+        }
+
+        try {
+            $response = Http::timeout(10)->withOptions($options)->get($url);
         } catch (Throwable $e) {
-            $this->error('Could not reach the web server at '.config('app.url').' — is it running under FPM (e.g. via Herd)?');
+            $this->error('Could not reach the web server at '.config('app.url').$resolvedVia.' — is it running under FPM (e.g. via Herd)?');
             $this->line($e->getMessage());
 
             return 1;
@@ -75,7 +92,12 @@ final class VaultDoctorCommand extends Command
 
         if (! $response->successful()) {
             $this->error("Web endpoint returned HTTP {$response->status()}.");
-            $this->line($response->body());
+
+            if ($response->status() === 404 && ! app()->environment('local')) {
+                $this->line('Endpoint disabled — set VAULT_DOCTOR_WEB_ENABLED=true temporarily, run optimize, then disable it again.');
+            } else {
+                $this->line($response->body());
+            }
 
             return 1;
         }
@@ -91,7 +113,9 @@ final class VaultDoctorCommand extends Command
             $fpm = $fpmByKey->get($check->key);
             $fpmValue = $fpm['value'] ?? 'n/a';
             $fpmStatus = $fpm['status'] ?? null;
-            $differs = $fpmValue !== $check->value;
+            // Outside `local` the endpoint returns only runtime checks; a key
+            // it doesn't report is "not compared", not "differs".
+            $differs = $fpm !== null && $fpmValue !== $check->value;
 
             if ($check->status === CheckResult::FAIL || $fpmStatus === CheckResult::FAIL) {
                 $hasFail = true;
@@ -110,5 +134,38 @@ final class VaultDoctorCommand extends Command
         $this->line('* differs between CLI and FPM. Only the FPM column governs upload behaviour — [sapi] marks checks known to depend on it.');
 
         return $hasFail ? 1 : 0;
+    }
+
+    /**
+     * Guzzle options for the FPM self-request. With an override IP, pins the
+     * URL's own host:port to it via CURLOPT_RESOLVE — the connection goes to
+     * that IP while SNI, the Host header and certificate verification still
+     * use the hostname, so TLS is verified exactly as without the override.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws InvalidArgumentException when $ip is not a valid IP address
+     */
+    private function fpmHttpOptions(string $url, ?string $ip): array
+    {
+        if ($ip === null || $ip === '') {
+            return [];
+        }
+
+        if (filter_var($ip, FILTER_VALIDATE_IP) === false) {
+            throw new InvalidArgumentException("VAULT_DOCTOR_RESOLVE_IP is not a valid IP address: '{$ip}'.");
+        }
+
+        $parts = parse_url($url);
+        $host = $parts['host'] ?? null;
+
+        if (! is_string($host) || $host === '') {
+            throw new InvalidArgumentException("Cannot pin the FPM request to {$ip}: no host in '{$url}'.");
+        }
+
+        $port = $parts['port'] ?? (($parts['scheme'] ?? 'http') === 'https' ? 443 : 80);
+        $address = filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false ? "[{$ip}]" : $ip;
+
+        return ['curl' => [CURLOPT_RESOLVE => ["{$host}:{$port}:{$address}"]]];
     }
 }
