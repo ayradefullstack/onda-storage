@@ -11,5 +11,11 @@ defineProps<{
 </script>
 
 <template>
-    <Pagination :links="links" :from="from" :to="to" :total="total" class="px-0 pt-3" />
+    <Pagination
+        :links="links"
+        :from="from"
+        :to="to"
+        :total="total"
+        class="px-0 pt-3"
+    />
 </template>

@@ -116,13 +116,9 @@ const payouts = [
                     >
                         {{ t('dashboard.royalties.totalEarned') }}
                     </span>
-                    <p
-                        class="text-xl font-bold text-foreground sm:text-2xl"
-                    >
+                    <p class="text-xl font-bold text-foreground sm:text-2xl">
                         482,500
-                        <span class="text-xs text-muted-foreground"
-                            >DZD</span
-                        >
+                        <span class="text-xs text-muted-foreground">DZD</span>
                     </p>
                 </div>
             </div>
@@ -163,9 +159,7 @@ const payouts = [
                             <p class="text-xs font-semibold text-foreground">
                                 {{ ch.title }}
                             </p>
-                            <span
-                                class="text-[11px] text-muted-foreground"
-                            >
+                            <span class="text-[11px] text-muted-foreground">
                                 {{ ch.percentage }}% du total
                             </span>
                         </div>

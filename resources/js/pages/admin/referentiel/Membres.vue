@@ -78,13 +78,17 @@ const save = () => {
 
     saving.value = true;
 
-    router.patch(update(editing.value.uuid).url, { ...form.value }, {
-        preserveScroll: true,
-        onFinish: () => {
-            saving.value = false;
-            editing.value = null;
+    router.patch(
+        update(editing.value.uuid).url,
+        { ...form.value },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                saving.value = false;
+                editing.value = null;
+            },
         },
-    });
+    );
 };
 
 const applyCollege = (value: string) => {
@@ -147,7 +151,11 @@ const applyCollege = (value: string) => {
                         <tr
                             class="border-b border-border bg-muted/40 text-muted-foreground"
                         >
-                            <th class="w-12 px-3 py-2.5 text-center font-medium">#</th>
+                            <th
+                                class="w-12 px-3 py-2.5 text-center font-medium"
+                            >
+                                #
+                            </th>
                             <th class="px-3 py-2.5 text-start font-medium">
                                 {{ t('admin.referentiel.col.name') }}
                             </th>
@@ -173,7 +181,9 @@ const applyCollege = (value: string) => {
                             :key="row.uuid"
                             class="transition-colors hover:bg-accent/30"
                         >
-                            <td class="w-12 px-3 py-2 text-center text-xs font-medium text-muted-foreground">
+                            <td
+                                class="w-12 px-3 py-2 text-center text-xs font-medium text-muted-foreground"
+                            >
                                 {{ (rows.from ?? 1) + index }}
                             </td>
                             <td class="max-w-[20rem] px-3 py-2">
@@ -224,7 +234,9 @@ const applyCollege = (value: string) => {
                                         v-if="!row.available_in_registration"
                                         class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
                                         >{{
-                                            t('admin.referentiel.flags.internal')
+                                            t(
+                                                'admin.referentiel.flags.internal',
+                                            )
                                         }}</span
                                     >
                                 </div>

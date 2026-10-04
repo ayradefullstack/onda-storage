@@ -71,6 +71,7 @@ function onDragEnter(): void {
 
 function onDragLeave(): void {
     dragDepth.value = Math.max(0, dragDepth.value - 1);
+
     if (dragDepth.value === 0) {
         isDragging.value = false;
     }
@@ -96,15 +97,17 @@ function onInputChange(event: Event): void {
 <template>
     <div>
         <div
-            class="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed text-center transition-all duration-200 select-none cursor-pointer"
+            class="group relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed text-center transition-all duration-200 select-none"
             :class="[
                 compact
                     ? 'gap-3 p-4 sm:flex-row sm:justify-between sm:text-start'
                     : 'gap-4 p-8 sm:p-10',
                 isDragging
-                    ? 'border-onda-blue-500 bg-onda-blue-500/10 shadow-lg shadow-onda-blue-500/10 scale-[1.008]'
+                    ? 'scale-[1.008] border-onda-blue-500 bg-onda-blue-500/10 shadow-lg shadow-onda-blue-500/10'
                     : 'border-border/80 bg-muted/20 hover:border-onda-blue-500/50 hover:bg-muted/35',
-                disabled ? 'pointer-events-none opacity-40 cursor-not-allowed' : '',
+                disabled
+                    ? 'pointer-events-none cursor-not-allowed opacity-40'
+                    : '',
             ]"
             @dragover.prevent
             @dragenter.prevent="onDragEnter"
@@ -114,14 +117,16 @@ function onInputChange(event: Event): void {
         >
             <div class="flex items-center gap-3">
                 <div
-                    class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-onda-blue-500/10 text-onda-blue-600 dark:text-onda-blue-400 transition-transform duration-200 group-hover:scale-105"
+                    class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-onda-blue-500/10 text-onda-blue-600 transition-transform duration-200 group-hover:scale-105 dark:text-onda-blue-400"
                     :class="{ 'animate-bounce': isDragging }"
                 >
                     <CloudUpload class="size-5" />
                 </div>
 
                 <div class="space-y-0.5">
-                    <p class="text-xs sm:text-sm font-semibold tracking-tight text-foreground">
+                    <p
+                        class="text-xs font-semibold tracking-tight text-foreground sm:text-sm"
+                    >
                         {{ t('upload.dropzone.title') }}
                     </p>
                     <i18n-t
@@ -130,10 +135,16 @@ function onInputChange(event: Event): void {
                         class="text-[11px] text-muted-foreground"
                     >
                         <template #size>
-                            <bdi dir="ltr" class="font-mono">{{ formatBytes(sizeLimit, locale) }}</bdi>
+                            <bdi dir="ltr" class="font-mono">{{
+                                formatBytes(sizeLimit, locale)
+                            }}</bdi>
                         </template>
                         <template #extensions>
-                            <bdi dir="ltr" class="font-mono text-foreground/80 font-medium">{{ extensionsLabel }}</bdi>
+                            <bdi
+                                dir="ltr"
+                                class="font-mono font-medium text-foreground/80"
+                                >{{ extensionsLabel }}</bdi
+                            >
                         </template>
                     </i18n-t>
                 </div>
@@ -143,7 +154,7 @@ function onInputChange(event: Event): void {
                 type="button"
                 variant="outline"
                 size="sm"
-                class="shrink-0 h-8 px-3 text-xs font-semibold cursor-pointer border-border hover:border-onda-blue-500 hover:bg-onda-blue-500/10"
+                class="h-8 shrink-0 cursor-pointer border-border px-3 text-xs font-semibold hover:border-onda-blue-500 hover:bg-onda-blue-500/10"
                 :disabled="disabled"
                 @click.stop="onBrowse"
             >
@@ -174,18 +185,26 @@ function onInputChange(event: Event): void {
                         keypath="upload.reject.extension"
                     >
                         <template #filename>
-                            <bdi class="font-semibold">{{ truncateFilenameMiddle(rejection.filename) }}</bdi>
+                            <bdi class="font-semibold">{{
+                                truncateFilenameMiddle(rejection.filename)
+                            }}</bdi>
                         </template>
                         <template #extensions>
-                            <bdi dir="ltr" class="font-mono">{{ extensionsLabel }}</bdi>
+                            <bdi dir="ltr" class="font-mono">{{
+                                extensionsLabel
+                            }}</bdi>
                         </template>
                     </i18n-t>
                     <i18n-t v-else keypath="upload.reject.size">
                         <template #filename>
-                            <bdi class="font-semibold">{{ truncateFilenameMiddle(rejection.filename) }}</bdi>
+                            <bdi class="font-semibold">{{
+                                truncateFilenameMiddle(rejection.filename)
+                            }}</bdi>
                         </template>
                         <template #size>
-                            <bdi dir="ltr" class="font-mono">{{ formatBytes(sizeLimit, locale) }}</bdi>
+                            <bdi dir="ltr" class="font-mono">{{
+                                formatBytes(sizeLimit, locale)
+                            }}</bdi>
                         </template>
                     </i18n-t>
                 </div>

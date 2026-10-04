@@ -1,22 +1,27 @@
 <?php
 
+use App\Domain\Localization\LanguageService;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\Media\StreamController;
 use App\Http\Controllers\Media\StreamLinkController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\VaultDoctorController;
-use App\Http\Middleware\SetLocale;
+use App\Models\Language;
 use App\Models\Wilaya;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/'.SetLocale::FALLBACK_LOCALE);
+// Which locales exist lives in the `languages` table, which can't be read at
+// route-registration time (it would freeze under `route:cache`). The route
+// constraint therefore only checks the *shape* of a code; SetLocale and
+// LocaleController 404 any shape that isn't an active language.
+Route::get('/', fn () => redirect('/'.app(LanguageService::class)->defaultCode()));
 
 Route::get('locale/{locale}', LocaleController::class)
-    ->where(['locale' => implode('|', SetLocale::SUPPORTED_LOCALES)])
+    ->where(['locale' => Language::CODE_PATTERN])
     ->name('locale.switch');
 
 Route::prefix('{locale}')
-    ->where(['locale' => implode('|', SetLocale::SUPPORTED_LOCALES)])
+    ->where(['locale' => Language::CODE_PATTERN])
     ->group(function () {
         Route::inertia('/', 'Home')->name('home');
     });

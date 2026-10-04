@@ -90,35 +90,88 @@ const isReady = computed(() => mediaFile.value?.status === 'ready');
 // Upload percentage calculation
 const uploadPercent = computed(() => {
     const f = uploadFile.value;
-    if (!f || f.size === 0) return 0;
-    return Math.min(100, Math.max(0, Math.round((f.bytesUploaded / f.size) * 100)));
+
+    if (!f || f.size === 0) {
+        return 0;
+    }
+
+    return Math.min(
+        100,
+        Math.max(0, Math.round((f.bytesUploaded / f.size) * 100)),
+    );
 });
 
 // File icon and tone based on extension / MIME
 const fileDetails = computed(() => {
-    const ext = (uploadFile.value?.extension || mediaFile.value?.extension || '').toLowerCase();
-    const mime = (uploadFile.value?.mime || mediaFile.value?.mime || '').toLowerCase();
+    const ext = (
+        uploadFile.value?.extension ||
+        mediaFile.value?.extension ||
+        ''
+    ).toLowerCase();
+    const mime = (
+        uploadFile.value?.mime ||
+        mediaFile.value?.mime ||
+        ''
+    ).toLowerCase();
 
-    if (mime.startsWith('audio/') || ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'aiff'].includes(ext)) {
-        return { icon: Music, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10' };
+    if (
+        mime.startsWith('audio/') ||
+        ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'aiff'].includes(ext)
+    ) {
+        return {
+            icon: Music,
+            color: 'text-violet-600 dark:text-violet-400',
+            bg: 'bg-violet-500/10',
+        };
     }
-    if (mime.startsWith('video/') || ['mp4', 'mkv', 'mov', 'avi', 'webm'].includes(ext)) {
-        return { icon: Film, color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-500/10' };
+
+    if (
+        mime.startsWith('video/') ||
+        ['mp4', 'mkv', 'mov', 'avi', 'webm'].includes(ext)
+    ) {
+        return {
+            icon: Film,
+            color: 'text-sky-600 dark:text-sky-400',
+            bg: 'bg-sky-500/10',
+        };
     }
-    if (mime === 'application/pdf' || ['pdf', 'doc', 'docx', 'txt', 'rtf'].includes(ext)) {
-        return { icon: FileText, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+
+    if (
+        mime === 'application/pdf' ||
+        ['pdf', 'doc', 'docx', 'txt', 'rtf'].includes(ext)
+    ) {
+        return {
+            icon: FileText,
+            color: 'text-amber-600 dark:text-amber-400',
+            bg: 'bg-amber-500/10',
+        };
     }
-    if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'svg', 'gif'].includes(ext)) {
-        return { icon: Image, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
+
+    if (
+        mime.startsWith('image/') ||
+        ['jpg', 'jpeg', 'png', 'webp', 'svg', 'gif'].includes(ext)
+    ) {
+        return {
+            icon: Image,
+            color: 'text-emerald-600 dark:text-emerald-400',
+            bg: 'bg-emerald-500/10',
+        };
     }
+
     if (['zip', 'tar', 'gz', 'json', 'xml', 'py', 'js', 'ts'].includes(ext)) {
-        return { icon: CodeXml, color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-500/10' };
+        return {
+            icon: CodeXml,
+            color: 'text-indigo-600 dark:text-indigo-400',
+            bg: 'bg-indigo-500/10',
+        };
     }
+
     return { icon: File, color: 'text-muted-foreground', bg: 'bg-muted/40' };
 });
 
 const isPreviewable = computed(() => {
     const mime = mediaFile.value?.mime ?? '';
+
     return (
         mime.startsWith('image/') ||
         mime.startsWith('video/') ||
@@ -130,6 +183,7 @@ const previewOpen = ref(false);
 
 const dimensions = computed(() => {
     const m = mediaFile.value;
+
     return m?.width && m?.height ? `${m.width}×${m.height}` : null;
 });
 
@@ -140,6 +194,7 @@ const displayedEtaSeconds = ref<number | null>(null);
 watch(
     () => {
         const f = uploadFile.value;
+
         return f && etaEligible(f) ? f.etaSeconds : null;
     },
     (raw) => {
@@ -155,6 +210,7 @@ const canPause = computed(
 );
 const canResumeOrRetry = computed(() => {
     const f = uploadFile.value;
+
     return (
         !!f &&
         (f.status === 'paused' || f.status === 'failed') &&
@@ -165,9 +221,11 @@ const canResumeOrRetry = computed(() => {
 const errorMessage = computed<{ key: string; chunk: number | null } | null>(
     () => {
         const f = uploadFile.value;
+
         if (!f || f.status !== 'failed' || !f.errorCode) {
             return null;
         }
+
         return { key: `upload.error.${f.errorCode}`, chunk: f.errorChunkIndex };
     },
 );
@@ -183,6 +241,7 @@ const quotaForFileRemaining = computed(() => {
     if (!props.quota || !uploadFile.value) {
         return null;
     }
+
     return Math.max(
         0,
         props.quota.limit_bytes -
@@ -196,13 +255,18 @@ const onRemoveConfirm = () => {
     if (mediaFile.value !== null) {
         emit('remove', mediaFile.value.uuid);
     }
+
     removeConfirmOpen.value = false;
 };
 
 const cancelConfirmOpen = ref(false);
 function onCancelClick(): void {
     const f = uploadFile.value;
-    if (!f) return;
+
+    if (!f) {
+        return;
+    }
+
     if (f.bytesUploaded > 0) {
         cancelConfirmOpen.value = true;
     } else {
@@ -214,18 +278,24 @@ function confirmCancel(): void {
     if (uploadFile.value) {
         emit('cancel', uploadFile.value.id);
     }
+
     cancelConfirmOpen.value = false;
 }
 
 const fingerprintCopied = ref(false);
 const abbreviatedHash = computed(() => {
     const hash = mediaFile.value?.sha256_plain;
+
     return hash ? `${hash.slice(0, 12)}…${hash.slice(-8)}` : null;
 });
 
 async function copyFingerprint(): Promise<void> {
     const hash = mediaFile.value?.sha256_plain;
-    if (!hash) return;
+
+    if (!hash) {
+        return;
+    }
+
     try {
         await navigator.clipboard.writeText(hash);
         fingerprintCopied.value = true;
@@ -250,18 +320,22 @@ async function copyFingerprint(): Promise<void> {
                     ? 'border-emerald-500/30 bg-card/80 shadow-xs'
                     : uploadFile?.status === 'uploading'
                       ? 'border-onda-blue-500/50 bg-card shadow-sm ring-1 ring-onda-blue-500/20'
-                      : 'border-border/80 bg-card/60'
+                      : 'border-border/80 bg-card/60',
         ]"
     >
         <!-- File Header Row -->
         <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-3 min-w-0 flex-1">
+            <div class="flex min-w-0 flex-1 items-center gap-3">
                 <!-- File Icon -->
                 <div
                     class="flex size-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover/card:scale-105"
                     :class="fileDetails.bg"
                 >
-                    <component :is="fileDetails.icon" class="size-5 shrink-0" :class="fileDetails.color" />
+                    <component
+                        :is="fileDetails.icon"
+                        class="size-5 shrink-0"
+                        :class="fileDetails.color"
+                    />
                 </div>
 
                 <!-- Name & Meta -->
@@ -277,17 +351,33 @@ async function copyFingerprint(): Promise<void> {
                         v-if="mediaFile"
                         class="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs text-muted-foreground"
                     >
-                        <span class="font-medium text-foreground/80 font-mono">
-                            <bdi dir="ltr">{{ formatBytes(mediaFile.size_bytes, locale) }}</bdi>
+                        <span class="font-mono font-medium text-foreground/80">
+                            <bdi dir="ltr">{{
+                                formatBytes(mediaFile.size_bytes, locale)
+                            }}</bdi>
                         </span>
-                        <span v-if="mediaFile.duration_sec !== null" class="font-mono">
-                            • <bdi dir="ltr">{{ formatDuration(mediaFile.duration_sec) }}</bdi>
+                        <span
+                            v-if="mediaFile.duration_sec !== null"
+                            class="font-mono"
+                        >
+                            •
+                            <bdi dir="ltr">{{
+                                formatDuration(mediaFile.duration_sec)
+                            }}</bdi>
                         </span>
                         <span v-if="dimensions" class="font-mono">
                             • <bdi dir="ltr">{{ dimensions }}</bdi>
                         </span>
-                        <span v-if="mediaFile.variant_count > 0" class="text-emerald-600 dark:text-emerald-400">
-                            • {{ t('oeuvres.show.variantCount', { count: mediaFile.variant_count }) }}
+                        <span
+                            v-if="mediaFile.variant_count > 0"
+                            class="text-emerald-600 dark:text-emerald-400"
+                        >
+                            •
+                            {{
+                                t('oeuvres.show.variantCount', {
+                                    count: mediaFile.variant_count,
+                                })
+                            }}
                         </span>
                     </div>
 
@@ -296,18 +386,25 @@ async function copyFingerprint(): Promise<void> {
                         v-else-if="uploadFile"
                         class="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground"
                     >
-                        <span class="font-medium text-foreground/80 font-mono">
-                            <bdi dir="ltr">{{ formatBytes(uploadFile.size, locale) }}</bdi>
+                        <span class="font-mono font-medium text-foreground/80">
+                            <bdi dir="ltr">{{
+                                formatBytes(uploadFile.size, locale)
+                            }}</bdi>
                         </span>
                         <span>•</span>
                         <span
                             v-if="uploadFile.status === 'uploading'"
-                            class="inline-flex items-center gap-1 text-onda-blue-600 dark:text-onda-blue-400 font-medium"
+                            class="inline-flex items-center gap-1 font-medium text-onda-blue-600 dark:text-onda-blue-400"
                         >
                             <Activity class="size-3 animate-pulse" />
-                            <bdi dir="ltr">{{ formatSpeed(uploadFile.speedBps, locale) }}</bdi>
+                            <bdi dir="ltr">{{
+                                formatSpeed(uploadFile.speedBps, locale)
+                            }}</bdi>
                         </span>
-                        <span v-else-if="uploadFile.status === 'paused'" class="text-amber-600 dark:text-amber-400 font-medium">
+                        <span
+                            v-else-if="uploadFile.status === 'paused'"
+                            class="font-medium text-amber-600 dark:text-amber-400"
+                        >
                             {{ t('upload.status.paused') }}
                         </span>
                         <span v-else class="text-muted-foreground">
@@ -324,7 +421,7 @@ async function copyFingerprint(): Promise<void> {
                         v-if="canPause"
                         variant="ghost"
                         size="icon-sm"
-                        class="size-8 rounded-lg cursor-pointer text-muted-foreground hover:bg-muted hover:text-foreground"
+                        class="size-8 cursor-pointer rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
                         :aria-label="t('upload.actions.pause')"
                         @click="emit('pause', uploadFile.id)"
                     >
@@ -334,7 +431,7 @@ async function copyFingerprint(): Promise<void> {
                         v-if="canResumeOrRetry"
                         variant="ghost"
                         size="icon-sm"
-                        class="size-8 rounded-lg cursor-pointer text-onda-blue-600 hover:bg-onda-blue-500/10 hover:text-onda-blue-700 dark:text-onda-blue-400"
+                        class="size-8 cursor-pointer rounded-lg text-onda-blue-600 hover:bg-onda-blue-500/10 hover:text-onda-blue-700 dark:text-onda-blue-400"
                         :aria-label="
                             uploadFile.status === 'failed'
                                 ? t('upload.actions.retry')
@@ -342,13 +439,16 @@ async function copyFingerprint(): Promise<void> {
                         "
                         @click="emit('resume', uploadFile.id)"
                     >
-                        <Play v-if="uploadFile.status === 'paused'" class="size-4" />
+                        <Play
+                            v-if="uploadFile.status === 'paused'"
+                            class="size-4"
+                        />
                         <RotateCcw v-else class="size-4" />
                     </Button>
                     <Button
                         variant="ghost"
                         size="icon-sm"
-                        class="size-8 rounded-lg cursor-pointer text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        class="size-8 cursor-pointer rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                         :aria-label="t('upload.actions.cancel')"
                         @click="onCancelClick"
                     >
@@ -360,7 +460,7 @@ async function copyFingerprint(): Promise<void> {
                     <Button
                         variant="ghost"
                         size="icon-sm"
-                        class="size-8 rounded-lg cursor-pointer text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        class="size-8 cursor-pointer rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                         :disabled="!mediaFile.can_remove"
                         :aria-label="t('oeuvres.files.remove')"
                         :title="
@@ -378,12 +478,17 @@ async function copyFingerprint(): Promise<void> {
 
         <!-- ANIMATED PROGRESS SECTION (Uploading & Chunk transfer) -->
         <div
-            v-if="uploadFile && (uploadFile.status === 'uploading' || uploadFile.status === 'paused' || uploadFile.status === 'completing')"
+            v-if="
+                uploadFile &&
+                (uploadFile.status === 'uploading' ||
+                    uploadFile.status === 'paused' ||
+                    uploadFile.status === 'completing')
+            "
             class="mt-3.5 space-y-2 rounded-xl bg-muted/40 p-3"
         >
             <div class="flex items-center justify-between text-xs">
                 <div class="flex items-center gap-2">
-                    <span class="font-bold text-foreground font-mono">
+                    <span class="font-mono font-bold text-foreground">
                         {{ uploadPercent }}%
                     </span>
                     <span
@@ -395,49 +500,74 @@ async function copyFingerprint(): Promise<void> {
                     </span>
                 </div>
 
-                <div class="flex items-center gap-2 text-[11px] text-muted-foreground font-mono">
+                <div
+                    class="flex items-center gap-2 font-mono text-[11px] text-muted-foreground"
+                >
                     <bdi dir="ltr">
-                        {{ formatBytes(uploadFile.bytesUploaded, locale) }} / {{ formatBytes(uploadFile.size, locale) }}
+                        {{ formatBytes(uploadFile.bytesUploaded, locale) }} /
+                        {{ formatBytes(uploadFile.size, locale) }}
                     </bdi>
-                    <span v-if="displayedEtaSeconds !== null && uploadFile.status === 'uploading'">
+                    <span
+                        v-if="
+                            displayedEtaSeconds !== null &&
+                            uploadFile.status === 'uploading'
+                        "
+                    >
                         • {{ formatDuration(displayedEtaSeconds) }}
                     </span>
                 </div>
             </div>
 
             <!-- Dynamic Animated Bar with Shimmer Effect -->
-            <div class="relative h-2 w-full overflow-hidden rounded-full bg-muted shadow-inner">
+            <div
+                class="relative h-2 w-full overflow-hidden rounded-full bg-muted shadow-inner"
+            >
                 <div
                     class="h-full rounded-full transition-all duration-300 ease-out"
                     :class="[
                         uploadFile.status === 'paused'
                             ? 'bg-amber-500'
-                            : 'bg-gradient-to-r from-onda-blue-600 via-onda-blue-500 to-onda-teal-500 shadow-onda-glow-blue'
+                            : 'bg-gradient-to-r from-onda-blue-600 via-onda-blue-500 to-onda-teal-500 shadow-onda-glow-blue',
                     ]"
                     :style="{ width: `${uploadPercent}%` }"
                 >
                     <!-- Animated Shimmer Stripe -->
                     <div
                         v-if="uploadFile.status === 'uploading'"
-                        class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse"
+                        class="absolute inset-0 animate-pulse bg-gradient-to-r from-transparent via-white/30 to-transparent"
                     />
                 </div>
             </div>
 
             <!-- Custody Rail Mini Tracking -->
-            <DepositStateTrack :step-index="stepIndex" :tone="railTone" class="pt-1" />
+            <DepositStateTrack
+                :step-index="stepIndex"
+                :tone="railTone"
+                class="pt-1"
+            />
         </div>
 
         <!-- SERVER PROCESSING STAGES (Assembling, Scanning, Processing) -->
         <div
-            v-else-if="mediaFile && ['assembling', 'scanning', 'processing'].includes(mediaFile.status)"
+            v-else-if="
+                mediaFile &&
+                ['assembling', 'scanning', 'processing'].includes(
+                    mediaFile.status,
+                )
+            "
             class="mt-3.5 space-y-2.5 rounded-xl border border-onda-blue-500/20 bg-onda-blue-500/5 p-3"
         >
             <div class="flex items-center justify-between text-xs">
-                <div class="flex items-center gap-2 text-onda-blue-700 dark:text-onda-blue-300 font-medium">
+                <div
+                    class="flex items-center gap-2 font-medium text-onda-blue-700 dark:text-onda-blue-300"
+                >
                     <span class="relative flex size-2">
-                        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-onda-blue-500 opacity-75" />
-                        <span class="relative inline-flex size-2 rounded-full bg-onda-blue-600" />
+                        <span
+                            class="absolute inline-flex h-full w-full animate-ping rounded-full bg-onda-blue-500 opacity-75"
+                        />
+                        <span
+                            class="relative inline-flex size-2 rounded-full bg-onda-blue-600"
+                        />
                     </span>
                     <span>
                         {{
@@ -450,15 +580,17 @@ async function copyFingerprint(): Promise<void> {
                     </span>
                 </div>
 
-                <span class="text-[11px] text-muted-foreground font-mono">
+                <span class="font-mono text-[11px] text-muted-foreground">
                     Sécurisation ONDA
                 </span>
             </div>
 
             <!-- Indeterminate Animated Bar -->
-            <div class="relative h-1.5 w-full overflow-hidden rounded-full bg-muted/60">
+            <div
+                class="relative h-1.5 w-full overflow-hidden rounded-full bg-muted/60"
+            >
                 <div
-                    class="h-full w-1/3 rounded-full bg-gradient-to-r from-onda-blue-600 to-onda-teal-500 animate-[indeterminate_1.5s_infinite_linear]"
+                    class="h-full w-1/3 animate-[indeterminate_1.5s_infinite_linear] rounded-full bg-gradient-to-r from-onda-blue-600 to-onda-teal-500"
                 />
             </div>
 
@@ -471,47 +603,74 @@ async function copyFingerprint(): Promise<void> {
             <DepositStateTrack
                 v-if="!collapsed"
                 :step-index="5"
-                class="mt-3 pt-1 border-t border-border/60"
+                class="mt-3 border-t border-border/60 pt-1"
             />
 
             <div
-                class="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-3"
+                class="mt-3 flex flex-col gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-3 sm:flex-row sm:items-center sm:justify-between"
             >
-                <div class="flex items-start gap-2.5 min-w-0">
-                    <CheckCircle2 class="mt-0.5 size-4.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <div class="flex min-w-0 items-start gap-2.5">
+                    <CheckCircle2
+                        class="mt-0.5 size-4.5 shrink-0 text-emerald-600 dark:text-emerald-400"
+                    />
                     <div class="min-w-0 space-y-1 text-xs">
                         <div class="flex items-center gap-2">
                             <span class="font-semibold text-foreground">
-                                {{ t('oeuvres.show.depositedOn', { date: formatDate(mediaFile!.created_at, locale) }) }}
+                                {{
+                                    t('oeuvres.show.depositedOn', {
+                                        date: formatDate(
+                                            mediaFile!.created_at,
+                                            locale,
+                                        ),
+                                    })
+                                }}
                             </span>
-                            <span class="rounded bg-emerald-500/15 px-1.5 py-0.2 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+                            <span
+                                class="py-0.2 rounded bg-emerald-500/15 px-1.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300"
+                            >
                                 Certifié
                             </span>
                         </div>
 
-                        <div v-if="abbreviatedHash" class="flex flex-wrap items-center gap-x-2 text-[11px]">
-                            <span class="text-muted-foreground">{{ t('oeuvres.show.fingerprint') }} :</span>
-                            <span class="font-mono text-foreground font-medium bg-background/80 px-1.5 py-0.5 rounded border border-border/80">
+                        <div
+                            v-if="abbreviatedHash"
+                            class="flex flex-wrap items-center gap-x-2 text-[11px]"
+                        >
+                            <span class="text-muted-foreground"
+                                >{{ t('oeuvres.show.fingerprint') }} :</span
+                            >
+                            <span
+                                class="rounded border border-border/80 bg-background/80 px-1.5 py-0.5 font-mono font-medium text-foreground"
+                            >
                                 <bdi dir="ltr">{{ abbreviatedHash }}</bdi>
                             </span>
                             <button
                                 type="button"
-                                class="inline-flex items-center gap-1 text-onda-blue-600 hover:underline dark:text-onda-blue-400 cursor-pointer font-medium"
+                                class="inline-flex cursor-pointer items-center gap-1 font-medium text-onda-blue-600 hover:underline dark:text-onda-blue-400"
                                 @click="copyFingerprint"
                             >
-                                <component :is="fingerprintCopied ? Check : Copy" class="size-3" />
-                                <span>{{ fingerprintCopied ? 'Copié !' : t('oeuvres.show.copyFingerprint') }}</span>
+                                <component
+                                    :is="fingerprintCopied ? Check : Copy"
+                                    class="size-3"
+                                />
+                                <span>{{
+                                    fingerprintCopied
+                                        ? 'Copié !'
+                                        : t('oeuvres.show.copyFingerprint')
+                                }}</span>
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                <div
+                    class="flex shrink-0 items-center gap-2 self-end sm:self-center"
+                >
                     <Button
                         v-if="isPreviewable"
                         size="sm"
                         variant="outline"
-                        class="h-8 gap-1.5 text-xs font-semibold shadow-xs cursor-pointer border-border hover:border-onda-blue-500/50"
+                        class="h-8 cursor-pointer gap-1.5 border-border text-xs font-semibold shadow-xs hover:border-onda-blue-500/50"
                         @click="previewOpen = true"
                     >
                         <Eye class="size-3.5" />
@@ -532,19 +691,43 @@ async function copyFingerprint(): Promise<void> {
                 "
             >
                 <component
-                    :is="alertTone === 'quarantine' ? ShieldAlert : TriangleAlert"
+                    :is="
+                        alertTone === 'quarantine' ? ShieldAlert : TriangleAlert
+                    "
                     class="mt-0.5 size-4 shrink-0"
-                    :class="alertTone === 'quarantine' ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'"
+                    :class="
+                        alertTone === 'quarantine'
+                            ? 'text-amber-600 dark:text-amber-400'
+                            : 'text-destructive'
+                    "
                 />
                 <div class="min-w-0 flex-1 space-y-1.5" role="alert">
-                    <p v-if="mediaFile?.status === 'failed'" class="font-semibold text-foreground">
+                    <p
+                        v-if="mediaFile?.status === 'failed'"
+                        class="font-semibold text-foreground"
+                    >
                         {{ t('media.failedWithRef', { ref: reference }) }}
                     </p>
-                    <p v-else-if="mediaFile?.status === 'quarantined'" class="font-semibold text-foreground">
-                        {{ t('media.quarantineWithRef', { ref: reference, hotline: t('sidebar.hotline.number') }) }}
+                    <p
+                        v-else-if="mediaFile?.status === 'quarantined'"
+                        class="font-semibold text-foreground"
+                    >
+                        {{
+                            t('media.quarantineWithRef', {
+                                ref: reference,
+                                hotline: t('sidebar.hotline.number'),
+                            })
+                        }}
                     </p>
-                    <p v-else-if="uploadFile?.status === 'quota_exceeded'" class="font-semibold text-foreground">
-                        {{ t('upload.error.quotaExceeded', { hotline: t('sidebar.hotline.number') }) }}
+                    <p
+                        v-else-if="uploadFile?.status === 'quota_exceeded'"
+                        class="font-semibold text-foreground"
+                    >
+                        {{
+                            t('upload.error.quotaExceeded', {
+                                hotline: t('sidebar.hotline.number'),
+                            })
+                        }}
                     </p>
                     <p v-else-if="errorMessage" class="text-foreground">
                         {{ t(errorMessage.key) }}
@@ -554,7 +737,7 @@ async function copyFingerprint(): Promise<void> {
                         v-if="canResumeOrRetry"
                         size="sm"
                         variant="outline"
-                        class="h-7 text-xs font-semibold cursor-pointer"
+                        class="h-7 cursor-pointer text-xs font-semibold"
                         @click="emit('resume', uploadFile!.id)"
                     >
                         <RotateCcw class="me-1 size-3" />
@@ -568,17 +751,23 @@ async function copyFingerprint(): Promise<void> {
         <Dialog v-model:open="removeConfirmOpen">
             <DialogContent class="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>{{ t('oeuvres.files.removeTitle') }}</DialogTitle>
+                    <DialogTitle>{{
+                        t('oeuvres.files.removeTitle')
+                    }}</DialogTitle>
                     <DialogDescription>
                         <i18n-t keypath="oeuvres.files.removeBody" tag="span">
                             <template #name>
-                                <bdi class="font-semibold text-foreground">{{ filename }}</bdi>
+                                <bdi class="font-semibold text-foreground">{{
+                                    filename
+                                }}</bdi>
                             </template>
                         </i18n-t>
                     </DialogDescription>
                 </DialogHeader>
 
-                <p class="rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-xs leading-relaxed text-muted-foreground">
+                <p
+                    class="rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-xs leading-relaxed text-muted-foreground"
+                >
                     {{ t('oeuvres.files.removeBytes') }}
                 </p>
 
@@ -605,10 +794,16 @@ async function copyFingerprint(): Promise<void> {
         <Dialog v-model:open="cancelConfirmOpen">
             <DialogContent class="sm:max-w-sm">
                 <DialogHeader>
-                    <DialogTitle>{{ t('upload.cancel.confirmTitle') }}</DialogTitle>
+                    <DialogTitle>{{
+                        t('upload.cancel.confirmTitle')
+                    }}</DialogTitle>
                 </DialogHeader>
                 <p v-if="uploadFile" class="text-sm text-muted-foreground">
-                    {{ t('upload.cancel.confirmBody', { sent: formatBytes(uploadFile.bytesUploaded, locale) }) }}
+                    {{
+                        t('upload.cancel.confirmBody', {
+                            sent: formatBytes(uploadFile.bytesUploaded, locale),
+                        })
+                    }}
                 </p>
                 <DialogFooter class="gap-2 sm:gap-2">
                     <Button

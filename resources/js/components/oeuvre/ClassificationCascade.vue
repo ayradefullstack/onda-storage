@@ -1,15 +1,10 @@
 <script setup lang="ts">
+import { BadgeCheck, Check, Landmark, Scale, UserRound } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import {
-    BadgeCheck,
-    Check,
-    Landmark,
-    Scale,
-    UserRound,
-} from '@lucide/vue';
 import InputError from '@/components/InputError.vue';
-import SearchableSelect, { type SelectOption } from '@/components/ui/SearchableSelect.vue';
+import SearchableSelect from '@/components/ui/SearchableSelect.vue';
+import type { SelectOption } from '@/components/ui/SearchableSelect.vue';
 import type { ClassificationSelection, ClassificationTree } from './cascade';
 import {
     collegesFor,
@@ -62,15 +57,22 @@ const showGestionStep = computed(() => {
 });
 
 const showCollegeStep = computed(() => {
-    if (!type.value) return false;
+    if (!type.value) {
+        return false;
+    }
+
     if (isAuteur.value) {
         return selection.value.type_gestion_id !== null;
     }
+
     return selection.value.register_type_id !== null;
 });
 
 const showMemberStep = computed(() => {
-    return showCollegeStep.value && selection.value.register_type_college_id !== null;
+    return (
+        showCollegeStep.value &&
+        selection.value.register_type_college_id !== null
+    );
 });
 
 // Dynamic step numbers
@@ -144,6 +146,7 @@ function onSelectMember(val: string | number | null): void {
 /** Server messages are translation keys; anything else is shown as sent. */
 function errorFor(field: keyof ClassificationSelection): string | undefined {
     const message = props.errors[field];
+
     return message && te(message) ? t(message) : message;
 }
 </script>
@@ -152,11 +155,11 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
     <div class="relative space-y-5">
         <!-- STEP 1: Type de déclarant -->
         <div
-            class="group relative rounded-2xl border p-4 sm:p-5 transition-all duration-300"
+            class="group relative rounded-2xl border p-4 transition-all duration-300 sm:p-5"
             :class="[
                 selection.register_type_id !== null
                     ? 'border-border/80 bg-card/70 shadow-xs'
-                    : 'border-onda-blue-500/50 bg-card ring-2 ring-onda-blue-500/15 shadow-sm'
+                    : 'border-onda-blue-500/50 bg-card shadow-sm ring-2 ring-onda-blue-500/15',
             ]"
         >
             <div class="mb-3.5 flex items-start justify-between gap-3">
@@ -166,31 +169,39 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                         :class="[
                             selection.register_type_id !== null
                                 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                                : 'bg-onda-blue-600 text-white shadow-xs'
+                                : 'bg-onda-blue-600 text-white shadow-xs',
                         ]"
                     >
-                        <Check v-if="selection.register_type_id !== null" class="size-4 stroke-[2.5]" />
+                        <Check
+                            v-if="selection.register_type_id !== null"
+                            class="size-4 stroke-[2.5]"
+                        />
                         <span v-else>1</span>
                     </div>
 
                     <div>
                         <div class="flex items-center gap-2">
-                            <h3 class="text-sm font-semibold tracking-tight text-foreground">
+                            <h3
+                                class="text-sm font-semibold tracking-tight text-foreground"
+                            >
                                 {{ t('oeuvres.classification.type') }}
                             </h3>
-                            <span class="text-[11px] text-muted-foreground/80 font-mono">
+                            <span
+                                class="font-mono text-[11px] text-muted-foreground/80"
+                            >
                                 (1/{{ totalSteps }})
                             </span>
                         </div>
                         <p class="text-xs text-muted-foreground">
-                            Sélectionnez la catégorie légale sous laquelle vous déposez votre œuvre.
+                            Sélectionnez la catégorie légale sous laquelle vous
+                            déposez votre œuvre.
                         </p>
                     </div>
                 </div>
 
                 <span
                     v-if="type"
-                    class="hidden sm:inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300"
+                    class="hidden items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 sm:inline-flex dark:text-emerald-300"
                 >
                     <bdi dir="auto">{{ type.name }}</bdi>
                 </span>
@@ -222,11 +233,11 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
         >
             <div
                 v-if="showGestionStep"
-                class="group relative rounded-2xl border p-4 sm:p-5 transition-all duration-300"
+                class="group relative rounded-2xl border p-4 transition-all duration-300 sm:p-5"
                 :class="[
                     selection.type_gestion_id !== null
                         ? 'border-border/80 bg-card/70 shadow-xs'
-                        : 'border-onda-blue-500/50 bg-card ring-2 ring-onda-blue-500/15 shadow-sm'
+                        : 'border-onda-blue-500/50 bg-card shadow-sm ring-2 ring-onda-blue-500/15',
                 ]"
             >
                 <div class="mb-3.5 flex items-start justify-between gap-3">
@@ -236,33 +247,50 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                             :class="[
                                 selection.type_gestion_id !== null
                                     ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                                    : 'bg-onda-blue-600 text-white shadow-xs'
+                                    : 'bg-onda-blue-600 text-white shadow-xs',
                             ]"
                         >
-                            <Check v-if="selection.type_gestion_id !== null" class="size-4 stroke-[2.5]" />
+                            <Check
+                                v-if="selection.type_gestion_id !== null"
+                                class="size-4 stroke-[2.5]"
+                            />
                             <span v-else>{{ gestionStepNumber }}</span>
                         </div>
 
                         <div>
                             <div class="flex items-center gap-2">
-                                <h3 class="text-sm font-semibold tracking-tight text-foreground">
+                                <h3
+                                    class="text-sm font-semibold tracking-tight text-foreground"
+                                >
                                     {{ t('oeuvres.classification.gestion') }}
                                 </h3>
-                                <span class="text-[11px] text-muted-foreground/80 font-mono">
+                                <span
+                                    class="font-mono text-[11px] text-muted-foreground/80"
+                                >
                                     (2/{{ totalSteps }})
                                 </span>
                             </div>
                             <p class="text-xs text-muted-foreground">
-                                Déterminez le mode d'administration et de gestion des droits patrimoniaux.
+                                Déterminez le mode d'administration et de
+                                gestion des droits patrimoniaux.
                             </p>
                         </div>
                     </div>
 
                     <span
-                        v-if="selection.type_gestion_id && type?.gestions.find(g => g.id === selection.type_gestion_id)"
-                        class="hidden sm:inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300"
+                        v-if="
+                            selection.type_gestion_id &&
+                            type?.gestions.find(
+                                (g) => g.id === selection.type_gestion_id,
+                            )
+                        "
+                        class="hidden items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 sm:inline-flex dark:text-emerald-300"
                     >
-                        <bdi dir="auto">{{ type.gestions.find(g => g.id === selection.type_gestion_id)?.name }}</bdi>
+                        <bdi dir="auto">{{
+                            type.gestions.find(
+                                (g) => g.id === selection.type_gestion_id,
+                            )?.name
+                        }}</bdi>
                     </span>
                 </div>
 
@@ -272,7 +300,9 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                         name="type_gestion_id"
                         :model-value="selection.type_gestion_id"
                         :options="gestionOptions"
-                        :placeholder="t('oeuvres.classification.gestionPlaceholder')"
+                        :placeholder="
+                            t('oeuvres.classification.gestionPlaceholder')
+                        "
                         search-placeholder="Rechercher un mode de gestion..."
                         :clearable="true"
                         @update:model-value="onSelectGestion"
@@ -293,11 +323,11 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
         >
             <div
                 v-if="showCollegeStep"
-                class="group relative rounded-2xl border p-4 sm:p-5 transition-all duration-300"
+                class="group relative rounded-2xl border p-4 transition-all duration-300 sm:p-5"
                 :class="[
                     selection.register_type_college_id !== null
                         ? 'border-border/80 bg-card/70 shadow-xs'
-                        : 'border-onda-blue-500/50 bg-card ring-2 ring-onda-blue-500/15 shadow-sm'
+                        : 'border-onda-blue-500/50 bg-card shadow-sm ring-2 ring-onda-blue-500/15',
                 ]"
             >
                 <div class="mb-3.5 flex items-start justify-between gap-3">
@@ -307,34 +337,49 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                             :class="[
                                 selection.register_type_college_id !== null
                                     ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                                    : 'bg-onda-blue-600 text-white shadow-xs'
+                                    : 'bg-onda-blue-600 text-white shadow-xs',
                             ]"
                         >
-                            <Check v-if="selection.register_type_college_id !== null" class="size-4 stroke-[2.5]" />
+                            <Check
+                                v-if="
+                                    selection.register_type_college_id !== null
+                                "
+                                class="size-4 stroke-[2.5]"
+                            />
                             <span v-else>{{ collegeStepNumber }}</span>
                         </div>
 
                         <div>
                             <div class="flex items-center gap-2">
-                                <h3 class="text-sm font-semibold tracking-tight text-foreground">
+                                <h3
+                                    class="text-sm font-semibold tracking-tight text-foreground"
+                                >
                                     {{ t('oeuvres.classification.college') }}
                                 </h3>
-                                <span class="text-[11px] text-muted-foreground/80 font-mono">
+                                <span
+                                    class="font-mono text-[11px] text-muted-foreground/80"
+                                >
                                     ({{ collegeStepNumber }}/{{ totalSteps }})
                                 </span>
                             </div>
                             <p class="text-xs text-muted-foreground">
-                                Choisissez la discipline artistique ou le domaine spécifique de l'œuvre.
+                                Choisissez la discipline artistique ou le
+                                domaine spécifique de l'œuvre.
                             </p>
                         </div>
                     </div>
 
                     <span
                         v-if="college"
-                        class="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300"
+                        class="hidden items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 sm:inline-flex dark:text-emerald-300"
                     >
                         <bdi dir="auto">{{ college.name }}</bdi>
-                        <span class="font-mono text-[10px] text-muted-foreground"><bdi dir="ltr">[{{ college.code_college }}]</bdi></span>
+                        <span
+                            class="font-mono text-[10px] text-muted-foreground"
+                            ><bdi dir="ltr"
+                                >[{{ college.code_college }}]</bdi
+                            ></span
+                        >
                     </span>
                 </div>
 
@@ -344,12 +389,16 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                         name="register_type_college_id"
                         :model-value="selection.register_type_college_id"
                         :options="collegeOptions"
-                        :placeholder="t('oeuvres.classification.collegePlaceholder')"
+                        :placeholder="
+                            t('oeuvres.classification.collegePlaceholder')
+                        "
                         search-placeholder="Rechercher un collège ou code (ex. Musique, Dramatique...)..."
                         :clearable="true"
                         @update:model-value="onSelectCollege"
                     />
-                    <InputError :message="errorFor('register_type_college_id')" />
+                    <InputError
+                        :message="errorFor('register_type_college_id')"
+                    />
                 </div>
             </div>
         </transition>
@@ -365,11 +414,11 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
         >
             <div
                 v-if="showMemberStep"
-                class="group relative rounded-2xl border p-4 sm:p-5 transition-all duration-300"
+                class="group relative rounded-2xl border p-4 transition-all duration-300 sm:p-5"
                 :class="[
                     selection.register_type_member_id !== null
                         ? 'border-border/80 bg-card/70 shadow-xs'
-                        : 'border-onda-blue-500/50 bg-card ring-2 ring-onda-blue-500/15 shadow-sm'
+                        : 'border-onda-blue-500/50 bg-card shadow-sm ring-2 ring-onda-blue-500/15',
                 ]"
             >
                 <div class="mb-3.5 flex items-start justify-between gap-3">
@@ -379,33 +428,54 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                             :class="[
                                 selection.register_type_member_id !== null
                                     ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                                    : 'bg-onda-blue-600 text-white shadow-xs'
+                                    : 'bg-onda-blue-600 text-white shadow-xs',
                             ]"
                         >
-                            <Check v-if="selection.register_type_member_id !== null" class="size-4 stroke-[2.5]" />
+                            <Check
+                                v-if="
+                                    selection.register_type_member_id !== null
+                                "
+                                class="size-4 stroke-[2.5]"
+                            />
                             <span v-else>{{ memberStepNumber }}</span>
                         </div>
 
                         <div>
                             <div class="flex items-center gap-2">
-                                <h3 class="text-sm font-semibold tracking-tight text-foreground">
+                                <h3
+                                    class="text-sm font-semibold tracking-tight text-foreground"
+                                >
                                     {{ t('oeuvres.classification.member') }}
                                 </h3>
-                                <span class="text-[11px] text-muted-foreground/80 font-mono">
+                                <span
+                                    class="font-mono text-[11px] text-muted-foreground/80"
+                                >
                                     ({{ memberStepNumber }}/{{ totalSteps }})
                                 </span>
                             </div>
                             <p class="text-xs text-muted-foreground">
-                                Précisez votre qualité d'intervention sur l'œuvre (Auteur, Compositeur, etc.).
+                                Précisez votre qualité d'intervention sur
+                                l'œuvre (Auteur, Compositeur, etc.).
                             </p>
                         </div>
                     </div>
 
                     <span
-                        v-if="selection.register_type_member_id && members.find(m => m.id === selection.register_type_member_id)"
-                        class="hidden sm:inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300"
+                        v-if="
+                            selection.register_type_member_id &&
+                            members.find(
+                                (m) =>
+                                    m.id === selection.register_type_member_id,
+                            )
+                        "
+                        class="hidden items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 sm:inline-flex dark:text-emerald-300"
                     >
-                        <bdi dir="auto">{{ members.find(m => m.id === selection.register_type_member_id)?.name }}</bdi>
+                        <bdi dir="auto">{{
+                            members.find(
+                                (m) =>
+                                    m.id === selection.register_type_member_id,
+                            )?.name
+                        }}</bdi>
                     </span>
                 </div>
 
@@ -415,12 +485,16 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                         name="register_type_member_id"
                         :model-value="selection.register_type_member_id"
                         :options="memberOptions"
-                        :placeholder="t('oeuvres.classification.memberPlaceholder')"
+                        :placeholder="
+                            t('oeuvres.classification.memberPlaceholder')
+                        "
                         search-placeholder="Rechercher une qualité (Auteur, Compositeur, Adaptateur...)..."
                         :clearable="true"
                         @update:model-value="onSelectMember"
                     />
-                    <InputError :message="errorFor('register_type_member_id')" />
+                    <InputError
+                        :message="errorFor('register_type_member_id')"
+                    />
                 </div>
             </div>
         </transition>

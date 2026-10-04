@@ -101,7 +101,9 @@ const save = () => {
                     <tr
                         class="border-b border-border bg-muted/40 text-muted-foreground"
                     >
-                        <th class="w-12 px-3 py-2.5 text-center font-medium">#</th>
+                        <th class="w-12 px-3 py-2.5 text-center font-medium">
+                            #
+                        </th>
                         <th class="px-3 py-2.5 text-start font-medium">
                             {{ t('admin.referentiel.col.name') }}
                         </th>
@@ -122,7 +124,9 @@ const save = () => {
                         :key="row.uuid"
                         class="transition-colors hover:bg-accent/30"
                     >
-                        <td class="w-12 px-3 py-2 text-center text-xs font-medium text-muted-foreground">
+                        <td
+                            class="w-12 px-3 py-2 text-center text-xs font-medium text-muted-foreground"
+                        >
                             {{ (rows.from ?? 1) + index }}
                         </td>
                         <td class="px-3 py-2">
@@ -138,9 +142,7 @@ const save = () => {
                                 row.type ?? '—'
                             }}</bdi>
                         </td>
-                        <td
-                            class="px-3 py-2 text-end text-muted-foreground"
-                        >
+                        <td class="px-3 py-2 text-end text-muted-foreground">
                             <bdi>{{ row.colleges_count }}</bdi>
                         </td>
                         <td class="px-3 py-2 text-end">

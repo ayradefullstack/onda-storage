@@ -211,7 +211,10 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                 :variant="filters.needs_review ? 'default' : 'outline'"
                 class="h-9 cursor-pointer gap-1.5 text-xs"
                 @click="
-                    applyFilter('needs_review', filters.needs_review ? '0' : '1')
+                    applyFilter(
+                        'needs_review',
+                        filters.needs_review ? '0' : '1',
+                    )
                 "
             >
                 <AlertTriangle class="size-3.5" />
@@ -235,7 +238,11 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                         <tr
                             class="border-b border-border bg-muted/40 text-muted-foreground"
                         >
-                            <th class="w-12 px-3 py-2.5 text-center font-medium">#</th>
+                            <th
+                                class="w-12 px-3 py-2.5 text-center font-medium"
+                            >
+                                #
+                            </th>
                             <th class="px-3 py-2.5 text-start font-medium">
                                 {{ t('admin.referentiel.col.key') }}
                             </th>
@@ -272,7 +279,9 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                                     : '',
                             ]"
                         >
-                            <td class="w-12 px-3 py-2 text-center text-xs font-medium text-muted-foreground">
+                            <td
+                                class="w-12 px-3 py-2 text-center text-xs font-medium text-muted-foreground"
+                            >
                                 {{ (rows.from ?? 1) + index }}
                             </td>
                             <td
@@ -336,7 +345,9 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                                         v-if="row.has_conditions"
                                         class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
                                         :title="
-                                            t('admin.referentiel.col.conditionalHelp')
+                                            t(
+                                                'admin.referentiel.col.conditionalHelp',
+                                            )
                                         "
                                         >{{
                                             t(
@@ -348,7 +359,9 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                                         v-if="row.needs_review"
                                         class="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400"
                                         >{{
-                                            t('admin.referentiel.col.needsReview')
+                                            t(
+                                                'admin.referentiel.col.needsReview',
+                                            )
                                         }}</span
                                     >
                                 </div>

@@ -214,6 +214,7 @@ const getCategoryBadgeClass = (category: Work['category']) => {
 
 const activeFilters = computed(() => {
     const pills: { key: string; label: string; value: string }[] = [];
+
     if (searchQuery.value.trim() !== '') {
         pills.push({
             key: 'search',
@@ -221,14 +222,18 @@ const activeFilters = computed(() => {
             value: `"${searchQuery.value.trim()}"`,
         });
     }
+
     if (selectedStatus.value !== 'all') {
-        const found = statusTabs.value.find((tab) => tab.value === selectedStatus.value);
+        const found = statusTabs.value.find(
+            (tab) => tab.value === selectedStatus.value,
+        );
         pills.push({
             key: 'status',
             label: t('dashboard.table.colStatus', 'Statut'),
             value: found ? found.label : selectedStatus.value,
         });
     }
+
     return pills;
 });
 
@@ -300,15 +305,14 @@ const getStatusLabel = (status: Work['status']) => {
         <DataTableEmpty
             v-if="filteredWorks.length === 0"
             :title="t('dashboard.table.noWorks')"
-            :has-active-filters="Boolean(searchQuery.trim() || selectedStatus !== 'all')"
+            :has-active-filters="
+                Boolean(searchQuery.trim() || selectedStatus !== 'all')
+            "
             @clear-filters="clearFilters"
         />
 
         <!-- Responsive Table with Index Column -->
-        <table
-            v-else
-            class="w-full border-collapse text-start text-xs"
-        >
+        <table v-else class="w-full border-collapse text-start text-xs">
             <thead>
                 <tr
                     class="border-b border-border/70 bg-muted/40 font-semibold text-muted-foreground"
@@ -405,7 +409,7 @@ const getStatusLabel = (status: Work['status']) => {
                     <td class="hidden px-4 py-3.5 lg:table-cell">
                         <button
                             type="button"
-                            class="flex cursor-pointer items-center gap-1.5 rounded-md bg-muted/40 px-2 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            class="flex cursor-pointer items-center gap-1.5 rounded-md bg-muted/40 px-2 py-1 font-mono text-[11px] text-muted-foreground transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
                             :title="work.hash"
                             @click="copyHash(work.id, work.hash)"
                         >

@@ -207,6 +207,7 @@ const pendingResumesForOeuvre = computed(() =>
 
 function onReselect(id: string, file: File): void {
     const result = queue.resumeWithReselectedFile(id, file);
+
     if (!result.ok) {
         // toast handles in global banner
     }
@@ -221,8 +222,14 @@ const quotaRemaining = computed(() =>
 );
 
 const quotaPercent = computed(() => {
-    if (!props.quota.limit_bytes) return 0;
-    return Math.min(100, Math.round((props.quota.used_bytes / props.quota.limit_bytes) * 100));
+    if (!props.quota.limit_bytes) {
+        return 0;
+    }
+
+    return Math.min(
+        100,
+        Math.round((props.quota.used_bytes / props.quota.limit_bytes) * 100),
+    );
 });
 
 const reasonText = (reason: SubmissionReason) =>
@@ -247,7 +254,7 @@ const statusBadge = computed(() => {
             };
         case 'under_review':
             return {
-                label: 'En cours d\'examen',
+                label: "En cours d'examen",
                 class: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30',
                 dotClass: 'bg-purple-500 animate-pulse',
             };
@@ -288,7 +295,10 @@ const statusBadge = computed(() => {
                         class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold"
                         :class="statusBadge.class"
                     >
-                        <span class="size-1.5 rounded-full" :class="statusBadge.dotClass" />
+                        <span
+                            class="size-1.5 rounded-full"
+                            :class="statusBadge.dotClass"
+                        />
                         <span>{{ statusBadge.label }}</span>
                     </span>
 
@@ -296,29 +306,45 @@ const statusBadge = computed(() => {
                         v-if="oeuvre.code_college_snapshot"
                         class="rounded-md border border-border/80 bg-muted px-2 py-0.5 font-mono text-[11px] font-semibold text-muted-foreground"
                     >
-                        <bdi dir="ltr">[{{ oeuvre.code_college_snapshot }}]</bdi>
+                        <bdi dir="ltr"
+                            >[{{ oeuvre.code_college_snapshot }}]</bdi
+                        >
                     </span>
                 </div>
             </div>
 
             <!-- Title & CTA Bar -->
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div
+                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
                 <div class="min-w-0 space-y-1">
-                    <h1 class="truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                    <h1
+                        class="truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
+                    >
                         <bdi>{{ label }}</bdi>
                     </h1>
-                    <p v-if="oeuvre.description" class="text-sm text-muted-foreground">
+                    <p
+                        v-if="oeuvre.description"
+                        class="text-sm text-muted-foreground"
+                    >
                         {{ oeuvre.description }}
                     </p>
-                    <p v-else-if="oeuvre.college_name" class="text-xs text-muted-foreground">
-                        Discipline : <span class="font-medium text-foreground">{{ oeuvre.college_name }}</span> • Créée le {{ formatDate(oeuvre.created_at, locale) }}
+                    <p
+                        v-else-if="oeuvre.college_name"
+                        class="text-xs text-muted-foreground"
+                    >
+                        Discipline :
+                        <span class="font-medium text-foreground">{{
+                            oeuvre.college_name
+                        }}</span>
+                        • Créée le {{ formatDate(oeuvre.created_at, locale) }}
                     </p>
                 </div>
 
                 <!-- Direct Header Submit CTA if ready -->
                 <div v-if="submission.can_submit && editable" class="shrink-0">
                     <Button
-                        class="h-10 px-4 gap-2 text-xs font-semibold shadow-onda-card cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-500"
+                        class="h-10 cursor-pointer gap-2 bg-emerald-600 px-4 text-xs font-semibold text-white shadow-onda-card hover:bg-emerald-700 dark:bg-emerald-500"
                         @click="openSubmitDialog"
                     >
                         <Send class="size-3.5 rtl:rotate-180" />
@@ -339,17 +365,30 @@ const statusBadge = computed(() => {
             <!-- Modern Bento Stats Card: Documents Progress & Quota Bar -->
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <!-- 1. Documents Progress Card -->
-                <Card class="border-border/80 shadow-onda-card sm:col-span-2 lg:col-span-2">
-                    <CardContent class="p-5 sm:p-6 space-y-3.5" data-test="required-progress">
-                        <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <Card
+                    class="border-border/80 shadow-onda-card sm:col-span-2 lg:col-span-2"
+                >
+                    <CardContent
+                        class="space-y-3.5 p-5 sm:p-6"
+                        data-test="required-progress"
+                    >
+                        <div
+                            class="flex flex-wrap items-baseline justify-between gap-2"
+                        >
                             <div class="flex items-center gap-2">
-                                <Sparkles class="size-4 text-onda-blue-600 dark:text-onda-blue-400" />
-                                <h2 class="text-sm font-semibold tracking-tight text-foreground">
+                                <Sparkles
+                                    class="size-4 text-onda-blue-600 dark:text-onda-blue-400"
+                                />
+                                <h2
+                                    class="text-sm font-semibold tracking-tight text-foreground"
+                                >
                                     {{ t('oeuvres.step2.title') }}
                                 </h2>
                             </div>
 
-                            <span class="font-mono text-xs font-bold text-foreground">
+                            <span
+                                class="font-mono text-xs font-bold text-foreground"
+                            >
                                 {{ progressPercent }}% validé
                             </span>
                         </div>
@@ -369,8 +408,12 @@ const statusBadge = computed(() => {
                                 />
                             </div>
 
-                            <div class="flex items-center justify-between text-xs">
-                                <span class="font-semibold text-foreground tabular-nums">
+                            <div
+                                class="flex items-center justify-between text-xs"
+                            >
+                                <span
+                                    class="font-semibold text-foreground tabular-nums"
+                                >
                                     {{
                                         t('oeuvres.step2.progress', {
                                             satisfied: progress.satisfied,
@@ -378,7 +421,10 @@ const statusBadge = computed(() => {
                                         })
                                     }}
                                 </span>
-                                <span v-if="progress.conditional > 0" class="text-muted-foreground text-[11px]">
+                                <span
+                                    v-if="progress.conditional > 0"
+                                    class="text-[11px] text-muted-foreground"
+                                >
                                     {{
                                         t(
                                             'oeuvres.step2.mayNotApply',
@@ -390,7 +436,9 @@ const statusBadge = computed(() => {
                             </div>
                         </div>
 
-                        <p class="text-xs text-muted-foreground leading-relaxed">
+                        <p
+                            class="text-xs leading-relaxed text-muted-foreground"
+                        >
                             {{ t('oeuvres.step2.intro') }}
                         </p>
                     </CardContent>
@@ -398,20 +446,30 @@ const statusBadge = computed(() => {
 
                 <!-- 2. Sovereign Quota & Security Card -->
                 <Card class="border-border/80 shadow-onda-card">
-                    <CardContent class="p-5 sm:p-6 space-y-3.5 flex flex-col justify-between h-full">
+                    <CardContent
+                        class="flex h-full flex-col justify-between space-y-3.5 p-5 sm:p-6"
+                    >
                         <div class="space-y-2">
                             <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-2 text-xs font-semibold text-foreground">
-                                    <HardDrive class="size-4 text-onda-blue-600 dark:text-onda-blue-400" />
+                                <div
+                                    class="flex items-center gap-2 text-xs font-semibold text-foreground"
+                                >
+                                    <HardDrive
+                                        class="size-4 text-onda-blue-600 dark:text-onda-blue-400"
+                                    />
                                     <span>Espace de stockage</span>
                                 </div>
-                                <span class="text-xs font-bold font-mono text-foreground">
+                                <span
+                                    class="font-mono text-xs font-bold text-foreground"
+                                >
                                     {{ quotaPercent }}%
                                 </span>
                             </div>
 
                             <!-- Mini Quota Bar -->
-                            <div class="h-2 w-full overflow-hidden rounded-full bg-muted shadow-inner">
+                            <div
+                                class="h-2 w-full overflow-hidden rounded-full bg-muted shadow-inner"
+                            >
                                 <div
                                     class="h-full rounded-full transition-all duration-500"
                                     :class="[
@@ -419,26 +477,38 @@ const statusBadge = computed(() => {
                                             ? 'bg-rose-500'
                                             : quotaPercent > 75
                                               ? 'bg-amber-500'
-                                              : 'bg-onda-blue-600'
+                                              : 'bg-onda-blue-600',
                                     ]"
                                     :style="{ width: `${quotaPercent}%` }"
                                 />
                             </div>
 
-                            <div class="text-[11px] text-muted-foreground flex justify-between font-mono">
-                                <span>{{ formatBytes(quota.used_bytes, locale) }}</span>
-                                <span>{{ formatBytes(quota.limit_bytes, locale) }}</span>
+                            <div
+                                class="flex justify-between font-mono text-[11px] text-muted-foreground"
+                            >
+                                <span>{{
+                                    formatBytes(quota.used_bytes, locale)
+                                }}</span>
+                                <span>{{
+                                    formatBytes(quota.limit_bytes, locale)
+                                }}</span>
                             </div>
                         </div>
 
                         <!-- Trust lines -->
-                        <div class="space-y-1.5 border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
+                        <div
+                            class="space-y-1.5 border-t border-border/60 pt-3 text-[11px] text-muted-foreground"
+                        >
                             <div class="flex items-center gap-2">
-                                <Lock class="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                                <Lock
+                                    class="size-3.5 text-emerald-600 dark:text-emerald-400"
+                                />
                                 <span>Chiffrement au repos AES-256</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <ShieldCheck class="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                                <ShieldCheck
+                                    class="size-3.5 text-emerald-600 dark:text-emerald-400"
+                                />
                                 <span>Empreinte cryptographique certifiée</span>
                             </div>
                         </div>
@@ -455,8 +525,12 @@ const statusBadge = computed(() => {
             <!-- Sequence of Required Document Slots -->
             <div class="space-y-4">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-base font-bold tracking-tight text-foreground">
-                        Pièces exigées pour ce collège ({{ requirements.length }})
+                    <h2
+                        class="text-base font-bold tracking-tight text-foreground"
+                    >
+                        Pièces exigées pour ce collège ({{
+                            requirements.length
+                        }})
                     </h2>
                     <span class="text-xs text-muted-foreground">
                         Déposez les pièces conformément aux spécifications
@@ -485,9 +559,14 @@ const statusBadge = computed(() => {
             </div>
 
             <!-- Unassigned / Extra Files Section (if any) -->
-            <div v-if="grouped.unassigned.length > 0" class="space-y-3 pt-4 border-t border-border/80">
+            <div
+                v-if="grouped.unassigned.length > 0"
+                class="space-y-3 border-t border-border/80 pt-4"
+            >
                 <div>
-                    <h2 class="text-sm font-semibold tracking-tight text-foreground">
+                    <h2
+                        class="text-sm font-semibold tracking-tight text-foreground"
+                    >
                         {{ t('oeuvres.step2.otherFiles') }}
                     </h2>
                     <p class="text-xs text-muted-foreground">
@@ -536,13 +615,23 @@ const statusBadge = computed(() => {
                             class="text-xs text-muted-foreground"
                         >
                             <template #used>
-                                <bdi dir="ltr" class="font-mono">{{ formatBytes(quota.used_bytes, locale) }}</bdi>
+                                <bdi dir="ltr" class="font-mono">{{
+                                    formatBytes(quota.used_bytes, locale)
+                                }}</bdi>
                             </template>
                             <template #limit>
-                                <bdi dir="ltr" class="font-mono">{{ formatBytes(quota.limit_bytes, locale) }}</bdi>
+                                <bdi dir="ltr" class="font-mono">{{
+                                    formatBytes(quota.limit_bytes, locale)
+                                }}</bdi>
                             </template>
                             <template #remaining>
-                                <bdi dir="ltr" class="font-mono font-medium text-foreground">{{ formatBytes(quotaRemaining, locale) }}</bdi>
+                                <bdi
+                                    dir="ltr"
+                                    class="font-mono font-medium text-foreground"
+                                    >{{
+                                        formatBytes(quotaRemaining, locale)
+                                    }}</bdi
+                                >
                             </template>
                         </i18n-t>
                     </div>
@@ -560,14 +649,27 @@ const statusBadge = computed(() => {
                     @reselect="onReselect"
                 />
 
-                <Card v-if="entries.length === 0" class="border-dashed border-2">
-                    <CardContent class="py-12 text-center text-xs text-muted-foreground">
+                <Card
+                    v-if="entries.length === 0"
+                    class="border-2 border-dashed"
+                >
+                    <CardContent
+                        class="py-12 text-center text-xs text-muted-foreground"
+                    >
                         <i18n-t keypath="oeuvres.show.noFiles" tag="p">
                             <template #size>
-                                <bdi dir="ltr" class="font-mono font-semibold">{{ formatBytes(MAX_FILE_SIZE_BYTES, locale) }}</bdi>
+                                <bdi
+                                    dir="ltr"
+                                    class="font-mono font-semibold"
+                                    >{{
+                                        formatBytes(MAX_FILE_SIZE_BYTES, locale)
+                                    }}</bdi
+                                >
                             </template>
                             <template #extensions>
-                                <bdi dir="ltr" class="font-mono">{{ allowedExtensionList().join(', ') }}</bdi>
+                                <bdi dir="ltr" class="font-mono">{{
+                                    allowedExtensionList().join(', ')
+                                }}</bdi>
                             </template>
                         </i18n-t>
                     </CardContent>

@@ -2,7 +2,6 @@
 import { usePage } from '@inertiajs/vue3';
 import { ChevronsUpDown } from '@lucide/vue';
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -16,18 +15,22 @@ import {
 } from '@/components/ui/sidebar';
 import UserInfo from '@/components/UserInfo.vue';
 import UserMenuContent from '@/components/UserMenuContent.vue';
+import { useDirection } from '@/composables/useDirection';
 
 const page = usePage();
-const { locale } = useI18n();
 const user = computed(() => page.props.auth.user);
 const { isMobile, state } = useSidebar();
-const isRtl = computed(() => locale.value === 'ar');
+const { isRtl } = useDirection();
 
 const dropdownSide = computed(() => {
-    if (isMobile.value) return 'bottom';
+    if (isMobile.value) {
+        return 'bottom';
+    }
+
     if (state.value === 'collapsed') {
         return isRtl.value ? 'left' : 'right';
     }
+
     return 'bottom';
 });
 </script>

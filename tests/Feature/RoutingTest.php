@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Http\Middleware\SetLocale;
+use App\Domain\Localization\LanguageService;
 
 /**
  * Guards against non-locale-prefixed routes (e.g. `/uploads/...` in P3)
@@ -26,5 +26,5 @@ test('an unsupported first path segment does not get mistaken for a locale', fun
     // Reaches the controller (local-only guard applies) rather than 404ing
     // as if `_vault-doctor` were being matched against `{locale}`.
     expect($response->status())->not->toBe(404);
-    expect(SetLocale::SUPPORTED_LOCALES)->not->toContain('_vault-doctor');
+    expect(app(LanguageService::class)->isActive('_vault-doctor'))->toBeFalse();
 });

@@ -150,7 +150,9 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
                 @update:model-value="applyFilter('type', String($event))"
             >
                 <SelectTrigger class="h-9 w-48 text-sm">
-                    <SelectValue :placeholder="t('admin.referentiel.allTypes')" />
+                    <SelectValue
+                        :placeholder="t('admin.referentiel.allTypes')"
+                    />
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="all">{{
@@ -204,7 +206,11 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
                         <tr
                             class="border-b border-border bg-muted/40 text-muted-foreground"
                         >
-                            <th class="w-12 px-3 py-2.5 text-center font-medium">#</th>
+                            <th
+                                class="w-12 px-3 py-2.5 text-center font-medium"
+                            >
+                                #
+                            </th>
                             <th class="px-3 py-2.5 text-start font-medium">
                                 {{ t('admin.referentiel.col.code') }}
                             </th>
@@ -244,7 +250,9 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
                             :key="row.uuid"
                             class="transition-colors hover:bg-accent/30"
                         >
-                            <td class="w-12 px-3 py-2 text-center text-xs font-medium text-muted-foreground">
+                            <td
+                                class="w-12 px-3 py-2 text-center text-xs font-medium text-muted-foreground"
+                            >
                                 {{ (rows.from ?? 1) + index }}
                             </td>
                             <td
@@ -333,7 +341,9 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
                                         v-if="row.hidden_from_registration"
                                         class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
                                         :title="
-                                            t('admin.referentiel.flags.hiddenHelp')
+                                            t(
+                                                'admin.referentiel.flags.hiddenHelp',
+                                            )
                                         "
                                         >{{
                                             t('admin.referentiel.flags.hidden')
@@ -420,9 +430,7 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
                     <label class="flex items-start gap-2.5 text-xs">
                         <Checkbox
                             :model-value="form.status === 1"
-                            @update:model-value="
-                                form.status = $event ? 1 : 0
-                            "
+                            @update:model-value="form.status = $event ? 1 : 0"
                         />
                         <span>
                             <span class="block font-medium">{{

@@ -262,7 +262,9 @@
 .input-premium-teal:focus-within {
     border-color: var(--ring) !important;
     outline: none !important;
-    box-shadow: 0 0 0 2px var(--background), 0 0 0 4px color-mix(in srgb, var(--ring) 30%, transparent) !important;
+    box-shadow:
+        0 0 0 2px var(--background),
+        0 0 0 4px color-mix(in srgb, var(--ring) 30%, transparent) !important;
 }
 
 /* Accessible Reduced Motion Guarantee */

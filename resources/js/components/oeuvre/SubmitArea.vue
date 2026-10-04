@@ -42,7 +42,7 @@ const { t } = useI18n();
                 ? 'border-border/80 bg-card/60'
                 : submission.can_submit
                   ? 'border-emerald-500/40 bg-gradient-to-br from-emerald-500/5 via-card to-card shadow-onda-card ring-1 ring-emerald-500/20'
-                  : 'border-border/80 bg-card/70'
+                  : 'border-border/80 bg-card/70',
         ]"
     >
         <CardContent class="space-y-4 p-5 sm:p-6">
@@ -56,14 +56,20 @@ const { t } = useI18n();
                     </div>
                     <div class="space-y-1">
                         <div class="flex items-center gap-2">
-                            <h2 class="text-sm font-semibold tracking-tight text-foreground">
+                            <h2
+                                class="text-sm font-semibold tracking-tight text-foreground"
+                            >
                                 {{ t('oeuvres.frozen.title') }}
                             </h2>
-                            <span class="rounded bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground uppercase">
+                            <span
+                                class="rounded bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground uppercase"
+                            >
                                 {{ t(`oeuvres.status.${status}`) }}
                             </span>
                         </div>
-                        <p class="text-xs leading-relaxed text-muted-foreground">
+                        <p
+                            class="text-xs leading-relaxed text-muted-foreground"
+                        >
                             {{ t('oeuvres.frozen.body') }}
                         </p>
                     </div>
@@ -72,13 +78,15 @@ const { t } = useI18n();
 
             <!-- Active / Editable Submission Gate -->
             <template v-else>
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div
+                    class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                >
                     <div class="flex items-start gap-3.5">
                         <div
                             :class="[
                                 'flex size-10 shrink-0 items-center justify-center rounded-xl border transition-colors',
                                 submission.can_submit
-                                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 shadow-xs dark:text-emerald-400'
                                     : 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400',
                             ]"
                         >
@@ -90,7 +98,9 @@ const { t } = useI18n();
                         </div>
                         <div class="space-y-1">
                             <div class="flex items-center gap-2">
-                                <h2 class="text-sm font-semibold tracking-tight text-foreground">
+                                <h2
+                                    class="text-sm font-semibold tracking-tight text-foreground"
+                                >
                                     {{ t('oeuvres.gate.title') }}
                                 </h2>
                                 <span
@@ -100,7 +110,9 @@ const { t } = useI18n();
                                     Prêt pour dépôt
                                 </span>
                             </div>
-                            <p class="text-xs leading-relaxed text-muted-foreground">
+                            <p
+                                class="text-xs leading-relaxed text-muted-foreground"
+                            >
                                 {{
                                     submission.can_submit
                                         ? t('oeuvres.gate.readyBody')
@@ -113,7 +125,7 @@ const { t } = useI18n();
                     <!-- Direct Action Button when ready -->
                     <Button
                         v-if="submission.can_submit && editable"
-                        class="shrink-0 h-11 px-5 gap-2 text-xs font-semibold shadow-onda-card cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-500 dark:hover:bg-emerald-600"
+                        class="h-11 shrink-0 cursor-pointer gap-2 bg-emerald-600 px-5 text-xs font-semibold text-white shadow-onda-card hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
                         @click="$emit('submit')"
                     >
                         <Send class="size-4 rtl:rotate-180" />
@@ -135,7 +147,9 @@ const { t } = useI18n();
                             :key="`${blocker.code}-${i}`"
                             class="flex items-start gap-2.5 leading-relaxed text-foreground"
                         >
-                            <AlertTriangle class="mt-0.5 size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                            <AlertTriangle
+                                class="mt-0.5 size-3.5 shrink-0 text-amber-600 dark:text-amber-400"
+                            />
                             <span>{{ reasonText(blocker) }}</span>
                         </li>
                     </ul>
@@ -146,14 +160,18 @@ const { t } = useI18n();
                     v-if="submission.advisories.length > 0"
                     class="space-y-2 rounded-xl border border-border/80 bg-muted/40 p-4 text-xs"
                 >
-                    <div class="flex items-center gap-2 font-semibold text-foreground">
+                    <div
+                        class="flex items-center gap-2 font-semibold text-foreground"
+                    >
                         <Info class="size-3.5 text-muted-foreground" />
                         <span>{{ t('oeuvres.gate.advisoryTitle') }}</span>
                     </div>
-                    <p class="text-muted-foreground text-[11px]">
+                    <p class="text-[11px] text-muted-foreground">
                         {{ t('oeuvres.gate.advisoryBody') }}
                     </p>
-                    <ul class="ms-1 space-y-1 border-s-2 border-border/70 ps-3 text-muted-foreground font-mono text-[11px]">
+                    <ul
+                        class="ms-1 space-y-1 border-s-2 border-border/70 ps-3 font-mono text-[11px] text-muted-foreground"
+                    >
                         <li
                             v-for="(advisory, i) in submission.advisories"
                             :key="`${advisory.code}-${i}`"
@@ -163,9 +181,12 @@ const { t } = useI18n();
                     </ul>
                 </div>
 
-                <div v-if="!submission.can_submit" class="flex justify-end pt-1">
+                <div
+                    v-if="!submission.can_submit"
+                    class="flex justify-end pt-1"
+                >
                     <Button
-                        class="cursor-not-allowed gap-2 rounded-xl text-xs h-10 opacity-50"
+                        class="h-10 cursor-not-allowed gap-2 rounded-xl text-xs opacity-50"
                         disabled
                     >
                         <Send class="size-3.5 rtl:rotate-180" />

@@ -4,6 +4,7 @@ import {
     Files,
     FolderOpen,
     Headphones,
+    Languages,
     LayoutGrid,
     Library,
     Users,
@@ -29,19 +30,21 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useDirection } from '@/composables/useDirection';
 import { toUrl } from '@/lib/utils';
 import { dashboard as adminDashboard } from '@/routes/admin';
 import { index as adminAuthorsIndex } from '@/routes/admin/authors';
+import { index as adminLanguagesIndex } from '@/routes/admin/languages';
 import { index as adminOeuvresIndex } from '@/routes/admin/oeuvres';
 import { colleges as adminReferentielColleges } from '@/routes/admin/referentiel';
 import { dashboard as authorDashboard } from '@/routes/author';
 import { index as oeuvresIndex } from '@/routes/oeuvres';
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const page = usePage();
 const { isMobile, state } = useSidebar();
 
-const isRtl = computed(() => locale.value === 'ar');
+const { isRtl } = useDirection();
 const roles = computed(() => page.props.auth.roles);
 const isAuthor = computed(() => roles.value.includes('author'));
 const isAdmin = computed(() => roles.value.includes('admin'));
@@ -99,6 +102,12 @@ const adminNavItems = computed(() => [
         href: adminReferentielColleges(),
         icon: Library,
         active: page.url.startsWith('/admin/referentiel'),
+    },
+    {
+        title: t('sidebar.nav.languages'),
+        href: adminLanguagesIndex(),
+        icon: Languages,
+        active: isActive(adminLanguagesIndex()),
     },
 ]);
 
@@ -161,7 +170,7 @@ const homeHref = computed(() =>
                                     <component
                                         :is="item.icon"
                                         :stroke-width="1.75"
-                                        class="size-4 shrink-0 text-muted-foreground group-hover:text-foreground group-data-[active=true]:text-primary transition-colors"
+                                        class="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground group-data-[active=true]:text-primary"
                                     />
                                     <span class="truncate">{{
                                         item.title
@@ -206,7 +215,7 @@ const homeHref = computed(() =>
                                 <component
                                     :is="item.icon"
                                     :stroke-width="1.75"
-                                    class="size-4 shrink-0 text-muted-foreground group-hover:text-foreground group-data-[active=true]:text-primary transition-colors"
+                                    class="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground group-data-[active=true]:text-primary"
                                 />
                                 <span class="truncate">{{ item.title }}</span>
                             </Link>
@@ -253,7 +262,10 @@ const homeHref = computed(() =>
                                 class="flex size-8 items-center justify-center rounded-lg border border-border bg-card/60 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                                 :aria-label="t('sidebar.hotline.title')"
                             >
-                                <Headphones :stroke-width="1.75" class="size-4" />
+                                <Headphones
+                                    :stroke-width="1.75"
+                                    class="size-4"
+                                />
                             </a>
                         </TooltipTrigger>
                         <TooltipContent
@@ -261,19 +273,28 @@ const homeHref = computed(() =>
                             align="center"
                             :side-offset="8"
                             :hidden="state !== 'collapsed' || isMobile"
-                            class="p-2.5 shadow-md border border-border bg-popover"
+                            class="border border-border bg-popover p-2.5 shadow-md"
                         >
-                            <div class="space-y-1 min-w-[140px]">
+                            <div class="min-w-[140px] space-y-1">
                                 <div class="flex items-center gap-2">
-                                    <Headphones :stroke-width="1.75" class="size-3.5 shrink-0 text-primary" />
-                                    <span class="text-xs font-semibold text-foreground">
+                                    <Headphones
+                                        :stroke-width="1.75"
+                                        class="size-3.5 shrink-0 text-primary"
+                                    />
+                                    <span
+                                        class="text-xs font-semibold text-foreground"
+                                    >
                                         {{ t('sidebar.hotline.title') }}
                                     </span>
                                 </div>
-                                <p class="dir-ltr text-start font-mono text-xs font-semibold text-primary">
+                                <p
+                                    class="dir-ltr text-start font-mono text-xs font-semibold text-primary"
+                                >
                                     {{ t('sidebar.hotline.number') }}
                                 </p>
-                                <p class="text-[10px] text-muted-foreground whitespace-nowrap">
+                                <p
+                                    class="text-[10px] whitespace-nowrap text-muted-foreground"
+                                >
                                     Dimanche – Jeudi (08:30 - 16:30)
                                 </p>
                             </div>

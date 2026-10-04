@@ -143,8 +143,12 @@ const applyFilters = (page?: number) => {
             ...(searchQuery.value.trim() !== ''
                 ? { search: searchQuery.value.trim() }
                 : {}),
-            ...(selectedStatus.value !== '' ? { status: selectedStatus.value } : {}),
-            ...(selectedSort.value !== 'newest' ? { sort: selectedSort.value } : {}),
+            ...(selectedStatus.value !== ''
+                ? { status: selectedStatus.value }
+                : {}),
+            ...(selectedSort.value !== 'newest'
+                ? { sort: selectedSort.value }
+                : {}),
             ...(page && page > 1 ? { page } : {}),
         },
         {
@@ -389,6 +393,7 @@ const hasFilters = computed(
 
 const activeFilters = computed(() => {
     const pills: { key: string; label: string; value: string }[] = [];
+
     if (searchQuery.value && searchQuery.value.trim() !== '') {
         pills.push({
             key: 'search',
@@ -396,6 +401,7 @@ const activeFilters = computed(() => {
             value: `"${searchQuery.value.trim()}"`,
         });
     }
+
     if (selectedStatus.value !== '') {
         pills.push({
             key: 'status',
@@ -403,6 +409,7 @@ const activeFilters = computed(() => {
             value: getStatusMeta(selectedStatus.value).label,
         });
     }
+
     return pills;
 });
 
@@ -422,9 +429,7 @@ const resetFilters = () => {
 
 /** "4 / 6", or a dash for an oeuvre filed before classification existed. */
 const documentsLabel = (documents: DocumentsProgress) =>
-    documents.total === 0
-        ? '—'
-        : `${documents.satisfied} / ${documents.total}`;
+    documents.total === 0 ? '—' : `${documents.satisfied} / ${documents.total}`;
 
 const goToPage = (page: number) => {
     if (page >= 1 && page <= props.oeuvres.last_page) {
@@ -955,7 +960,9 @@ const goToPage = (page: number) => {
                     </div>
 
                     <!-- Meta Pills & Footer Actions -->
-                    <div class="mt-5 space-y-3.5 border-t border-border/60 pt-4">
+                    <div
+                        class="mt-5 space-y-3.5 border-t border-border/60 pt-4"
+                    >
                         <!-- Files & Date Ribbon -->
                         <div
                             class="flex items-center justify-between text-xs text-muted-foreground"
@@ -990,7 +997,11 @@ const goToPage = (page: number) => {
                                 @click="copyOeuvreUuid(oeuvre.uuid)"
                             >
                                 <component
-                                    :is="copiedUuid === oeuvre.uuid ? Check : Copy"
+                                    :is="
+                                        copiedUuid === oeuvre.uuid
+                                            ? Check
+                                            : Copy
+                                    "
                                     :class="[
                                         'size-3 shrink-0',
                                         copiedUuid === oeuvre.uuid
@@ -998,7 +1009,9 @@ const goToPage = (page: number) => {
                                             : 'text-muted-foreground',
                                     ]"
                                 />
-                                <span class="max-w-[75px] truncate sm:max-w-[90px]">
+                                <span
+                                    class="max-w-[75px] truncate sm:max-w-[90px]"
+                                >
                                     {{
                                         copiedUuid === oeuvre.uuid
                                             ? t('oeuvres.index.uuidCopied')
@@ -1017,7 +1030,9 @@ const goToPage = (page: number) => {
                                     <span>{{
                                         t('oeuvres.index.manageOeuvre')
                                     }}</span>
-                                    <ExternalLink class="size-3 rtl:rotate-180" />
+                                    <ExternalLink
+                                        class="size-3 rtl:rotate-180"
+                                    />
                                 </Link>
                             </Button>
                         </div>
@@ -1034,7 +1049,9 @@ const goToPage = (page: number) => {
                     <tr
                         class="border-b border-border/70 bg-muted/40 font-semibold text-muted-foreground"
                     >
-                        <th class="w-12 px-3 py-3 text-center font-medium">#</th>
+                        <th class="w-12 px-3 py-3 text-center font-medium">
+                            #
+                        </th>
                         <th class="px-4 py-3 text-start font-medium">
                             {{ t('oeuvres.table.colOeuvre') }}
                         </th>
@@ -1122,7 +1139,9 @@ const goToPage = (page: number) => {
                                             copyOeuvreUuid(oeuvre.uuid)
                                         "
                                     >
-                                        <bdi>{{ oeuvre.uuid.slice(0, 8) }}…</bdi>
+                                        <bdi
+                                            >{{ oeuvre.uuid.slice(0, 8) }}…</bdi
+                                        >
                                         <component
                                             :is="
                                                 copiedUuid === oeuvre.uuid
@@ -1150,7 +1169,9 @@ const goToPage = (page: number) => {
                                 class="block truncate text-muted-foreground"
                                 >{{ oeuvre.college_name }}</bdi
                             >
-                            <span v-else class="text-muted-foreground/60">—</span>
+                            <span v-else class="text-muted-foreground/60"
+                                >—</span
+                            >
                         </td>
 
                         <!-- Documents progress -->

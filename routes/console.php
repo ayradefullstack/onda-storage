@@ -41,7 +41,6 @@ Schedule::call(function (): void {
     }
 })->hourly()->name('vault:purge-temp')->onOneServer();
 
-
 Schedule::command('queue:work --stop-when-empty --max-time=3300 --timeout=3500 --tries=1')
     ->everyMinute()
     ->withoutOverlapping(60)

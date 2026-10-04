@@ -67,10 +67,10 @@ const mayNotApply = computed(
             state === 'deposited'
                 ? 'border-emerald-500/30 bg-card/90 shadow-xs'
                 : state === 'inProgress'
-                  ? 'border-onda-blue-500/50 bg-card ring-2 ring-onda-blue-500/15 shadow-sm'
+                  ? 'border-onda-blue-500/50 bg-card shadow-sm ring-2 ring-onda-blue-500/15'
                   : state === 'awaiting'
                     ? 'border-2 border-dashed border-amber-500/30 bg-card/60'
-                    : 'border-border/80 bg-card/60'
+                    : 'border-border/80 bg-card/60',
         ]"
     >
         <CardContent class="space-y-4 p-5 sm:p-6">
@@ -85,7 +85,7 @@ const mayNotApply = computed(
                                 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                                 : state === 'inProgress'
                                   ? 'bg-onda-blue-600 text-white shadow-xs'
-                                  : 'bg-muted text-foreground/80'
+                                  : 'bg-muted text-foreground/80',
                         ]"
                         aria-hidden="true"
                     >
@@ -94,60 +94,90 @@ const mayNotApply = computed(
 
                     <div class="min-w-0 space-y-1">
                         <div class="flex flex-wrap items-center gap-2">
-                            <h3 class="text-sm font-semibold tracking-tight text-foreground">
+                            <h3
+                                class="text-sm font-semibold tracking-tight text-foreground"
+                            >
                                 <bdi>{{ requirement.title }}</bdi>
                             </h3>
 
                             <span
                                 v-if="requirement.is_required"
-                                class="rounded bg-rose-500/10 px-1.5 py-0.2 text-[10px] font-semibold text-rose-600 dark:text-rose-400"
+                                class="py-0.2 rounded bg-rose-500/10 px-1.5 text-[10px] font-semibold text-rose-600 dark:text-rose-400"
                             >
                                 {{ t('oeuvres.step2.required') }}
                             </span>
                             <span
                                 v-else
-                                class="rounded bg-muted px-1.5 py-0.2 text-[10px] font-medium text-muted-foreground"
+                                class="py-0.2 rounded bg-muted px-1.5 text-[10px] font-medium text-muted-foreground"
                             >
                                 Optionnel
                             </span>
                         </div>
 
                         <!-- Technical Specs Chips -->
-                        <div class="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-muted-foreground">
-                            <span class="inline-flex items-center rounded-md border border-border/70 bg-muted/30 px-2 py-0.5 font-mono text-[11px] text-foreground">
-                                <bdi dir="ltr">{{ formatExtensions(requirement.extensions) }}</bdi>
+                        <div
+                            class="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-muted-foreground"
+                        >
+                            <span
+                                class="inline-flex items-center rounded-md border border-border/70 bg-muted/30 px-2 py-0.5 font-mono text-[11px] text-foreground"
+                            >
+                                <bdi dir="ltr">{{
+                                    formatExtensions(requirement.extensions)
+                                }}</bdi>
                             </span>
 
                             <span
                                 v-if="requirement.max_size_kb !== null"
                                 class="inline-flex items-center rounded-md border border-border/70 bg-muted/30 px-2 py-0.5 font-mono text-[11px] text-muted-foreground"
                             >
-                                Max <bdi dir="ltr">{{ formatBytes(requirement.max_size_kb * 1024, locale) }}</bdi>
+                                Max
+                                <bdi dir="ltr">{{
+                                    formatBytes(
+                                        requirement.max_size_kb * 1024,
+                                        locale,
+                                    )
+                                }}</bdi>
                             </span>
 
                             <span class="text-[11px] text-muted-foreground">
-                                • {{ requirement.allows_multiple ? 'Plusieurs fichiers autorisés' : 'Fichier unique' }}
+                                •
+                                {{
+                                    requirement.allows_multiple
+                                        ? 'Plusieurs fichiers autorisés'
+                                        : 'Fichier unique'
+                                }}
                             </span>
                         </div>
 
                         <!-- Advisory Condition Tooltip -->
-                        <TooltipProvider v-if="mayNotApply" :delay-duration="150">
+                        <TooltipProvider
+                            v-if="mayNotApply"
+                            :delay-duration="150"
+                        >
                             <Tooltip>
                                 <TooltipTrigger as-child>
                                     <button
                                         type="button"
-                                        class="mt-1 inline-flex items-center gap-1 text-xs text-amber-700 underline decoration-dotted underline-offset-2 dark:text-amber-400 cursor-pointer"
+                                        class="mt-1 inline-flex cursor-pointer items-center gap-1 text-xs text-amber-700 underline decoration-dotted underline-offset-2 dark:text-amber-400"
                                     >
                                         <Info class="size-3.5 shrink-0" />
-                                        {{ t('oeuvres.step2.mayNotApplyMarker') }}
+                                        {{
+                                            t('oeuvres.step2.mayNotApplyMarker')
+                                        }}
                                     </button>
                                 </TooltipTrigger>
                                 <TooltipContent class="max-w-sm">
-                                    <p>{{ t('oeuvres.step2.conditionHint') }}</p>
+                                    <p>
+                                        {{ t('oeuvres.step2.conditionHint') }}
+                                    </p>
                                     <pre
                                         dir="ltr"
                                         class="mt-1 font-mono text-[11px] whitespace-pre-wrap"
-                                    >{{ describeConditions(requirement.conditions!) }}</pre>
+                                        >{{
+                                            describeConditions(
+                                                requirement.conditions!,
+                                            )
+                                        }}</pre>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
@@ -191,9 +221,15 @@ const mayNotApply = computed(
 
             <!-- Uploaded Files in this slot -->
             <div v-if="entries.length > 0" class="space-y-3 pt-1">
-                <div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <div
+                    class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"
+                >
                     <FileCheck class="size-3.5" />
-                    <span>Fichiers associés à cette exigence ({{ entries.length }}) :</span>
+                    <span
+                        >Fichiers associés à cette exigence ({{
+                            entries.length
+                        }}) :</span
+                    >
                 </div>
 
                 <ul class="space-y-3">

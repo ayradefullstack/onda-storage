@@ -63,7 +63,10 @@ watch(query, () => {
 const tabHref = (tab: Tab) => `/admin/referentiel/${tab.key}`;
 
 const activeFilters = computed<ActiveFilter[]>(() => {
-    if (!query.value || query.value.trim() === '') return [];
+    if (!query.value || query.value.trim() === '') {
+        return [];
+    }
+
     return [
         {
             key: 'search',
@@ -144,9 +147,7 @@ const clearSearch = () => {
             v-if="legend && legend.length > 0"
             class="flex flex-col gap-1.5 rounded-lg border border-border/80 bg-muted/30 p-3 text-xs"
         >
-            <p
-                class="flex items-center gap-1.5 font-medium text-foreground"
-            >
+            <p class="flex items-center gap-1.5 font-medium text-foreground">
                 <Info class="size-3.5" />
                 {{ t('admin.referentiel.legend.title') }}
             </p>

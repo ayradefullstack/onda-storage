@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
 import { Globe } from '@lucide/vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
     DropdownMenu,
@@ -13,21 +14,18 @@ import {
     persistLocaleCookie,
     withLocaleSegment,
 } from '@/i18n';
-import type { SupportedLocale } from '@/i18n';
 import locale from '@/routes/locale';
+import type { Language } from '@/types/language';
 
 const { t, locale: activeLocale } = useI18n();
 const page = usePage();
 
-const languages: { code: SupportedLocale; key: string }[] = [
-    { code: 'ar', key: 'common.language.ar' },
-    { code: 'fr', key: 'common.language.fr' },
-    { code: 'en', key: 'common.language.en' },
-];
+// Active languages come from the backend (`languages` table) on every page.
+const languages = computed<Language[]>(() => page.props.languages ?? []);
 
 /**
- * Every UI string is already bundled client-side (vue-i18n loads ar/fr/en up
- * front), so switching locale needs no server round trip at all: flip the
+ * Every UI string is already bundled client-side (vue-i18n loads every
+ * locales/*.json up front), so switching locale needs no server round trip at all: flip the
  * reactive locale, update <html dir/lang>, and persist the choice to the
  * same cookie SetLocale reads on the next full load. A round trip would go
  * through Inertia and remount the current page component, wiping whatever
@@ -37,7 +35,9 @@ const languages: { code: SupportedLocale; key: string }[] = [
  * it still hits `locale.switch`, which does the same job server-side and
  * redirects back to the current page.
  */
-function switchLocale(event: MouseEvent, code: SupportedLocale) {
+function switchLocale(event: MouseEvent, language: Language) {
+    const code = language.code;
+
     if (
         event.defaultPrevented ||
         event.button !== 0 ||
@@ -56,10 +56,10 @@ function switchLocale(event: MouseEvent, code: SupportedLocale) {
     }
 
     activeLocale.value = code;
-    applyHtmlDirLang(code);
+    applyHtmlDirLang(language);
     persistLocaleCookie(code);
 
-    const target = withLocaleSegment(page.url, code);
+    const target = withLocaleSegment(page.url, code, languages.value);
     const current =
         window.location.pathname +
         window.location.search +
@@ -70,7 +70,7 @@ function switchLocale(event: MouseEvent, code: SupportedLocale) {
     }
 }
 
-function switchLocaleHref(code: SupportedLocale): string {
+function switchLocaleHref(code: string): string {
     return locale.switch.url(
         { locale: code },
         { query: { redirect: page.url } },
@@ -86,7 +86,7 @@ function switchLocaleHref(code: SupportedLocale): string {
         >
             <Globe class="size-4" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent v-if="languages.length > 1" align="end">
             <DropdownMenuItem
                 v-for="lang in languages"
                 :key="lang.code"
@@ -98,9 +98,9 @@ function switchLocaleHref(code: SupportedLocale): string {
                         activeLocale === lang.code ? 'page' : undefined
                     "
                     class="w-full aria-[current=page]:font-semibold aria-[current=page]:text-seal"
-                    @click="switchLocale($event, lang.code)"
+                    @click="switchLocale($event, lang)"
                 >
-                    {{ t(lang.key) }}
+                    {{ lang.native_name }}
                 </a>
             </DropdownMenuItem>
         </DropdownMenuContent>

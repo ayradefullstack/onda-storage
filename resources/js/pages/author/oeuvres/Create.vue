@@ -82,10 +82,23 @@ const totalSteps = computed(() => (isAuteur.value ? 4 : 3));
 
 const completedSteps = computed(() => {
     let count = 0;
-    if (form.register_type_id !== null) count++;
-    if (isAuteur.value && form.type_gestion_id !== null) count++;
-    if (form.register_type_college_id !== null) count++;
-    if (form.register_type_member_id !== null) count++;
+
+    if (form.register_type_id !== null) {
+        count++;
+    }
+
+    if (isAuteur.value && form.type_gestion_id !== null) {
+        count++;
+    }
+
+    if (form.register_type_college_id !== null) {
+        count++;
+    }
+
+    if (form.register_type_member_id !== null) {
+        count++;
+    }
+
     return count;
 });
 
@@ -133,7 +146,9 @@ watch(locale, () => {
         <!-- Top Hero Header -->
         <div class="space-y-3">
             <div class="flex flex-wrap items-center justify-between gap-3">
-                <div class="inline-flex items-center gap-2 rounded-full border border-onda-blue-500/20 bg-onda-blue-500/10 px-3 py-1 text-xs font-medium text-onda-blue-700 dark:text-onda-blue-300">
+                <div
+                    class="inline-flex items-center gap-2 rounded-full border border-onda-blue-500/20 bg-onda-blue-500/10 px-3 py-1 text-xs font-medium text-onda-blue-700 dark:text-onda-blue-300"
+                >
                     <Sparkles class="size-3.5" />
                     <span>ONDA • Espace Auteur & Dépôt Légal</span>
                 </div>
@@ -147,9 +162,13 @@ watch(locale, () => {
                 </Link>
             </div>
 
-            <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div
+                class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between"
+            >
                 <div>
-                    <h1 class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                    <h1
+                        class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
+                    >
                         {{ t('oeuvres.create.title') }}
                     </h1>
                     <p class="mt-1 max-w-2xl text-sm text-muted-foreground">
@@ -158,7 +177,7 @@ watch(locale, () => {
                 </div>
 
                 <!-- Step Progress Badge -->
-                <div class="mt-3 sm:mt-0 flex items-center gap-3">
+                <div class="mt-3 flex items-center gap-3 sm:mt-0">
                     <div class="text-end">
                         <span class="text-xs font-semibold text-foreground">
                             {{ completedSteps }} / {{ totalSteps }} étapes
@@ -167,8 +186,12 @@ watch(locale, () => {
                             {{ complete ? 'Prêt pour le dépôt' : 'En cours' }}
                         </div>
                     </div>
-                    <div class="relative size-10 flex items-center justify-center rounded-full border border-border bg-card shadow-xs">
-                        <span class="text-xs font-bold text-onda-blue-600 dark:text-onda-blue-400">
+                    <div
+                        class="relative flex size-10 items-center justify-center rounded-full border border-border bg-card shadow-xs"
+                    >
+                        <span
+                            class="text-xs font-bold text-onda-blue-600 dark:text-onda-blue-400"
+                        >
                             {{ progressPercent }}%
                         </span>
                     </div>
@@ -199,11 +222,20 @@ watch(locale, () => {
                             />
 
                             <!-- Help Callout -->
-                            <div class="flex items-start gap-3 rounded-xl border border-onda-blue-500/20 bg-onda-blue-500/5 p-4 text-xs text-muted-foreground">
-                                <Shield class="mt-0.5 size-4 shrink-0 text-onda-blue-600 dark:text-onda-blue-400" />
+                            <div
+                                class="flex items-start gap-3 rounded-xl border border-onda-blue-500/20 bg-onda-blue-500/5 p-4 text-xs text-muted-foreground"
+                            >
+                                <Shield
+                                    class="mt-0.5 size-4 shrink-0 text-onda-blue-600 dark:text-onda-blue-400"
+                                />
                                 <div>
-                                    <span class="font-medium text-foreground">Garantie juridique ONDA :</span>
-                                    Chaque choix détermine précisément les pièces requises et garantit l'opposabilité légale de votre certificat de dépôt sous l'Ordonnance 03-05.
+                                    <span class="font-medium text-foreground"
+                                        >Garantie juridique ONDA :</span
+                                    >
+                                    Chaque choix détermine précisément les
+                                    pièces requises et garantit l'opposabilité
+                                    légale de votre certificat de dépôt sous
+                                    l'Ordonnance 03-05.
                                 </div>
                             </div>
                         </form>
@@ -212,13 +244,21 @@ watch(locale, () => {
             </div>
 
             <!-- Right Column: Sticky Summary & Action Card (5 cols) -->
-            <div class="space-y-6 lg:sticky lg:top-6 lg:col-span-5 xl:col-span-5">
-                <Card class="border-border/80 shadow-onda-card overflow-hidden">
-                    <div class="border-b border-border/80 bg-muted/30 px-5 py-4">
+            <div
+                class="space-y-6 lg:sticky lg:top-6 lg:col-span-5 xl:col-span-5"
+            >
+                <Card class="overflow-hidden border-border/80 shadow-onda-card">
+                    <div
+                        class="border-b border-border/80 bg-muted/30 px-5 py-4"
+                    >
                         <div class="flex items-center justify-between gap-2">
                             <div class="flex items-center gap-2">
-                                <ListChecks class="size-4 text-onda-blue-600 dark:text-onda-blue-400" />
-                                <h2 class="text-sm font-semibold tracking-tight text-foreground">
+                                <ListChecks
+                                    class="size-4 text-onda-blue-600 dark:text-onda-blue-400"
+                                />
+                                <h2
+                                    class="text-sm font-semibold tracking-tight text-foreground"
+                                >
                                     {{ t('oeuvres.create.summaryTitle') }}
                                 </h2>
                             </div>
@@ -234,7 +274,9 @@ watch(locale, () => {
                                 v-else
                                 class="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400"
                             >
-                                <span class="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                <span
+                                    class="size-1.5 animate-pulse rounded-full bg-amber-500"
+                                />
                                 En attente
                             </span>
                         </div>
@@ -244,67 +286,145 @@ watch(locale, () => {
                         <!-- Path Recap List -->
                         <div class="space-y-3">
                             <!-- Type -->
-                            <div class="flex items-center justify-between gap-3 text-xs">
-                                <div class="flex items-center gap-2 text-muted-foreground">
+                            <div
+                                class="flex items-center justify-between gap-3 text-xs"
+                            >
+                                <div
+                                    class="flex items-center gap-2 text-muted-foreground"
+                                >
                                     <UserRound class="size-3.5" />
-                                    <span>{{ t('oeuvres.classification.type') }}</span>
+                                    <span>{{
+                                        t('oeuvres.classification.type')
+                                    }}</span>
                                 </div>
-                                <span v-if="summary.type" class="font-semibold text-foreground">
-                                    <bdi dir="auto">{{ summary.type.name }}</bdi>
+                                <span
+                                    v-if="summary.type"
+                                    class="font-semibold text-foreground"
+                                >
+                                    <bdi dir="auto">{{
+                                        summary.type.name
+                                    }}</bdi>
                                 </span>
-                                <span v-else class="text-muted-foreground/60 italic">Non sélectionné</span>
+                                <span
+                                    v-else
+                                    class="text-muted-foreground/60 italic"
+                                    >Non sélectionné</span
+                                >
                             </div>
 
                             <!-- Gestion (Auteur only) -->
-                            <div v-if="isAuteur" class="flex items-center justify-between gap-3 text-xs">
-                                <div class="flex items-center gap-2 text-muted-foreground">
+                            <div
+                                v-if="isAuteur"
+                                class="flex items-center justify-between gap-3 text-xs"
+                            >
+                                <div
+                                    class="flex items-center gap-2 text-muted-foreground"
+                                >
                                     <Scale class="size-3.5" />
-                                    <span>{{ t('oeuvres.classification.gestion') }}</span>
+                                    <span>{{
+                                        t('oeuvres.classification.gestion')
+                                    }}</span>
                                 </div>
-                                <span v-if="summary.gestion" class="font-semibold text-foreground">
-                                    <bdi dir="auto">{{ summary.gestion.name }}</bdi>
+                                <span
+                                    v-if="summary.gestion"
+                                    class="font-semibold text-foreground"
+                                >
+                                    <bdi dir="auto">{{
+                                        summary.gestion.name
+                                    }}</bdi>
                                 </span>
-                                <span v-else class="text-muted-foreground/60 italic">Non sélectionné</span>
+                                <span
+                                    v-else
+                                    class="text-muted-foreground/60 italic"
+                                    >Non sélectionné</span
+                                >
                             </div>
 
                             <!-- College -->
-                            <div class="flex items-center justify-between gap-3 text-xs">
-                                <div class="flex items-center gap-2 text-muted-foreground">
+                            <div
+                                class="flex items-center justify-between gap-3 text-xs"
+                            >
+                                <div
+                                    class="flex items-center gap-2 text-muted-foreground"
+                                >
                                     <Landmark class="size-3.5" />
-                                    <span>{{ t('oeuvres.classification.college') }}</span>
+                                    <span>{{
+                                        t('oeuvres.classification.college')
+                                    }}</span>
                                 </div>
-                                <div v-if="summary.college" class="flex items-center gap-1.5 text-end">
+                                <div
+                                    v-if="summary.college"
+                                    class="flex items-center gap-1.5 text-end"
+                                >
                                     <span class="font-semibold text-foreground">
-                                        <bdi dir="auto">{{ summary.college.name }}</bdi>
+                                        <bdi dir="auto">{{
+                                            summary.college.name
+                                        }}</bdi>
                                     </span>
-                                    <span class="font-mono text-[10px] text-muted-foreground">
-                                        <bdi dir="ltr">[{{ summary.college.code_college }}]</bdi>
+                                    <span
+                                        class="font-mono text-[10px] text-muted-foreground"
+                                    >
+                                        <bdi dir="ltr"
+                                            >[{{
+                                                summary.college.code_college
+                                            }}]</bdi
+                                        >
                                     </span>
                                 </div>
-                                <span v-else class="text-muted-foreground/60 italic">Non sélectionné</span>
+                                <span
+                                    v-else
+                                    class="text-muted-foreground/60 italic"
+                                    >Non sélectionné</span
+                                >
                             </div>
 
                             <!-- Qualité -->
-                            <div class="flex items-center justify-between gap-3 text-xs">
-                                <div class="flex items-center gap-2 text-muted-foreground">
+                            <div
+                                class="flex items-center justify-between gap-3 text-xs"
+                            >
+                                <div
+                                    class="flex items-center gap-2 text-muted-foreground"
+                                >
                                     <BadgeCheck class="size-3.5" />
-                                    <span>{{ t('oeuvres.classification.member') }}</span>
+                                    <span>{{
+                                        t('oeuvres.classification.member')
+                                    }}</span>
                                 </div>
-                                <span v-if="summary.member" class="font-semibold text-foreground">
-                                    <bdi dir="auto">{{ summary.member.name }}</bdi>
+                                <span
+                                    v-if="summary.member"
+                                    class="font-semibold text-foreground"
+                                >
+                                    <bdi dir="auto">{{
+                                        summary.member.name
+                                    }}</bdi>
                                 </span>
-                                <span v-else class="text-muted-foreground/60 italic">Non sélectionné</span>
+                                <span
+                                    v-else
+                                    class="text-muted-foreground/60 italic"
+                                    >Non sélectionné</span
+                                >
                             </div>
                         </div>
 
                         <!-- Next Step Preview Box -->
-                        <div class="rounded-xl border border-border/80 bg-muted/30 p-3.5 space-y-1.5">
-                            <div class="flex items-center gap-2 text-xs font-semibold text-foreground">
-                                <FileUp class="size-4 text-onda-blue-600 dark:text-onda-blue-400" />
+                        <div
+                            class="space-y-1.5 rounded-xl border border-border/80 bg-muted/30 p-3.5"
+                        >
+                            <div
+                                class="flex items-center gap-2 text-xs font-semibold text-foreground"
+                            >
+                                <FileUp
+                                    class="size-4 text-onda-blue-600 dark:text-onda-blue-400"
+                                />
                                 <span>Étape suivante : Dépôt des fichiers</span>
                             </div>
-                            <p class="text-[11px] text-muted-foreground leading-relaxed">
-                                Les emplacements de téléversement (manuscrits, partitions, enregistrements audio...) seront générés automatiquement dès la validation de cette étape.
+                            <p
+                                class="text-[11px] leading-relaxed text-muted-foreground"
+                            >
+                                Les emplacements de téléversement (manuscrits,
+                                partitions, enregistrements audio...) seront
+                                générés automatiquement dès la validation de
+                                cette étape.
                             </p>
                         </div>
 
@@ -317,10 +437,13 @@ watch(locale, () => {
                             <Button
                                 type="button"
                                 :disabled="!complete || form.processing"
-                                class="w-full gap-2 text-xs font-semibold shadow-onda-card h-11"
+                                class="h-11 w-full gap-2 text-xs font-semibold shadow-onda-card"
                                 @click="submit"
                             >
-                                <Spinner v-if="form.processing" class="size-4 text-white" />
+                                <Spinner
+                                    v-if="form.processing"
+                                    class="size-4 text-white"
+                                />
                                 <span>
                                     {{
                                         form.processing
@@ -328,12 +451,22 @@ watch(locale, () => {
                                             : t('oeuvres.create.submit')
                                     }}
                                 </span>
-                                <ArrowRight v-if="!form.processing" class="size-4 rtl:rotate-180" />
+                                <ArrowRight
+                                    v-if="!form.processing"
+                                    class="size-4 rtl:rotate-180"
+                                />
                             </Button>
 
-                            <div class="flex items-center justify-center gap-1.5 pt-1 text-[11px] text-muted-foreground">
-                                <ShieldCheck class="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                                <span>Chiffrement et empreinte SHA-256 certifiée</span>
+                            <div
+                                class="flex items-center justify-center gap-1.5 pt-1 text-[11px] text-muted-foreground"
+                            >
+                                <ShieldCheck
+                                    class="size-3.5 text-emerald-600 dark:text-emerald-400"
+                                />
+                                <span
+                                    >Chiffrement et empreinte SHA-256
+                                    certifiée</span
+                                >
                             </div>
                         </div>
                     </CardContent>

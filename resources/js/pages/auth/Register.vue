@@ -552,9 +552,7 @@ function handlePhoneInput(event: Event) {
                 <Spinner v-if="processing" />
                 <span v-else class="flex items-center justify-center gap-2">
                     <span>{{ t('auth.registerBtn') }}</span>
-                    <ArrowRight
-                        class="size-4 rtl:rotate-180"
-                    />
+                    <ArrowRight class="size-4 rtl:rotate-180" />
                 </span>
             </Button>
         </div>
