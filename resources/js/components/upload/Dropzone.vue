@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { LockIcon, ShieldCheckIcon, UploadCloudIcon } from '@lucide/vue';
+import { AlertCircle, CloudUpload, UploadCloud } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Button } from '@/components/ui/button';
@@ -20,13 +20,7 @@ import {
 
 const props = defineProps<{
     oeuvreId: number;
-    /**
-     * Uploads go into this required-document slot and are validated against
-     * its own formats and size cap. Omitted: the unclassified oeuvre's
-     * single dropzone, against the global whitelist — unchanged.
-     */
     requirement?: RequirementSlot | null;
-    /** Tighter layout for a slot card; the trust lines are shown once by the page. */
     compact?: boolean;
     disabled?: boolean;
 }>();
@@ -77,7 +71,6 @@ function onDragEnter(): void {
 
 function onDragLeave(): void {
     dragDepth.value = Math.max(0, dragDepth.value - 1);
-
     if (dragDepth.value === 0) {
         isDragging.value = false;
     }
@@ -103,58 +96,60 @@ function onInputChange(event: Event): void {
 <template>
     <div>
         <div
-            class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed text-center transition-colors"
+            class="group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed text-center transition-all duration-200 select-none cursor-pointer"
             :class="[
                 compact
-                    ? 'gap-2 p-4 sm:flex-row sm:justify-between sm:text-start'
-                    : 'gap-3 p-10',
-                isDragging ? 'border-primary bg-primary/5' : 'border-input',
-                disabled ? 'pointer-events-none opacity-50' : '',
+                    ? 'gap-3 p-4 sm:flex-row sm:justify-between sm:text-start'
+                    : 'gap-4 p-8 sm:p-10',
+                isDragging
+                    ? 'border-onda-blue-500 bg-onda-blue-500/10 shadow-lg shadow-onda-blue-500/10 scale-[1.008]'
+                    : 'border-border/80 bg-muted/20 hover:border-onda-blue-500/50 hover:bg-muted/35',
+                disabled ? 'pointer-events-none opacity-40 cursor-not-allowed' : '',
             ]"
             @dragover.prevent
             @dragenter.prevent="onDragEnter"
             @dragleave.prevent="onDragLeave"
             @drop.prevent="onDrop"
+            @click="onBrowse"
         >
-            <UploadCloudIcon
-                v-if="!compact"
-                class="size-8 text-muted-foreground"
-            />
-            <div>
-                <p
-                    :class="
-                        compact
-                            ? 'text-xs text-muted-foreground'
-                            : 'text-sm font-medium'
-                    "
+            <div class="flex items-center gap-3">
+                <div
+                    class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-onda-blue-500/10 text-onda-blue-600 dark:text-onda-blue-400 transition-transform duration-200 group-hover:scale-105"
+                    :class="{ 'animate-bounce': isDragging }"
                 >
-                    {{ t('upload.dropzone.title') }}
-                </p>
-                <i18n-t
-                    v-if="!compact"
-                    keypath="upload.dropzone.hint"
-                    tag="p"
-                    class="text-xs text-muted-foreground"
-                >
-                    <template #size
-                        ><bdi dir="ltr">{{
-                            formatBytes(sizeLimit, locale)
-                        }}</bdi></template
+                    <CloudUpload class="size-5" />
+                </div>
+
+                <div class="space-y-0.5">
+                    <p class="text-xs sm:text-sm font-semibold tracking-tight text-foreground">
+                        {{ t('upload.dropzone.title') }}
+                    </p>
+                    <i18n-t
+                        keypath="upload.dropzone.hint"
+                        tag="p"
+                        class="text-[11px] text-muted-foreground"
                     >
-                    <template #extensions
-                        ><bdi dir="ltr">{{ extensionsLabel }}</bdi></template
-                    >
-                </i18n-t>
+                        <template #size>
+                            <bdi dir="ltr" class="font-mono">{{ formatBytes(sizeLimit, locale) }}</bdi>
+                        </template>
+                        <template #extensions>
+                            <bdi dir="ltr" class="font-mono text-foreground/80 font-medium">{{ extensionsLabel }}</bdi>
+                        </template>
+                    </i18n-t>
+                </div>
             </div>
+
             <Button
                 type="button"
                 variant="outline"
                 size="sm"
+                class="shrink-0 h-8 px-3 text-xs font-semibold cursor-pointer border-border hover:border-onda-blue-500 hover:bg-onda-blue-500/10"
                 :disabled="disabled"
-                @click="onBrowse"
+                @click.stop="onBrowse"
             >
                 {{ t('upload.dropzone.browse') }}
             </Button>
+
             <input
                 ref="fileInput"
                 type="file"
@@ -165,56 +160,36 @@ function onInputChange(event: Event): void {
             />
         </div>
 
-        <ul v-if="rejections.length > 0" class="mt-2 space-y-1">
+        <!-- Rejections Notice -->
+        <ul v-if="rejections.length > 0" class="mt-2.5 space-y-1.5">
             <li
                 v-for="(rejection, index) in rejections"
                 :key="index"
-                class="text-xs text-destructive"
+                class="flex items-start gap-2 rounded-lg border border-destructive/25 bg-destructive/10 p-2.5 text-xs text-destructive"
             >
-                <i18n-t
-                    v-if="rejection.reason === 'extension'"
-                    keypath="upload.reject.extension"
-                >
-                    <template #filename
-                        ><bdi>{{
-                            truncateFilenameMiddle(rejection.filename)
-                        }}</bdi></template
+                <AlertCircle class="mt-0.5 size-4 shrink-0" />
+                <div class="flex-1">
+                    <i18n-t
+                        v-if="rejection.reason === 'extension'"
+                        keypath="upload.reject.extension"
                     >
-                    <template #extensions
-                        ><bdi dir="ltr">{{ extensionsLabel }}</bdi></template
-                    >
-                </i18n-t>
-                <i18n-t v-else keypath="upload.reject.size">
-                    <template #filename
-                        ><bdi>{{
-                            truncateFilenameMiddle(rejection.filename)
-                        }}</bdi></template
-                    >
-                    <template #size
-                        ><bdi dir="ltr">{{
-                            formatBytes(sizeLimit, locale)
-                        }}</bdi></template
-                    >
-                </i18n-t>
+                        <template #filename>
+                            <bdi class="font-semibold">{{ truncateFilenameMiddle(rejection.filename) }}</bdi>
+                        </template>
+                        <template #extensions>
+                            <bdi dir="ltr" class="font-mono">{{ extensionsLabel }}</bdi>
+                        </template>
+                    </i18n-t>
+                    <i18n-t v-else keypath="upload.reject.size">
+                        <template #filename>
+                            <bdi class="font-semibold">{{ truncateFilenameMiddle(rejection.filename) }}</bdi>
+                        </template>
+                        <template #size>
+                            <bdi dir="ltr" class="font-mono">{{ formatBytes(sizeLimit, locale) }}</bdi>
+                        </template>
+                    </i18n-t>
+                </div>
             </li>
         </ul>
-
-        <div
-            v-if="!compact"
-            class="mt-3 space-y-1 text-xs text-muted-foreground"
-        >
-            <p class="flex items-center gap-1.5">
-                <LockIcon class="size-3.5 shrink-0" />
-                {{ t('upload.trust.encrypted') }}
-            </p>
-            <p class="flex items-center gap-1.5">
-                <ShieldCheckIcon class="size-3.5 shrink-0" />
-                {{ t('upload.trust.fingerprint') }}
-            </p>
-            <p class="flex items-center gap-1.5">
-                <ShieldCheckIcon class="size-3.5 shrink-0" />
-                {{ t('upload.trust.audit') }}
-            </p>
-        </div>
     </div>
 </template>

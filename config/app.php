@@ -84,6 +84,10 @@ return [
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
 
+    'languages' => explode(',', env('APP_LANGUAGES', 'ar,en,fr')),
+
+    'default_language' => env('APP_DEFAULT_LANGUAGE', 'ar'),
+
     /*
     |--------------------------------------------------------------------------
     | Encryption Key
@@ -122,5 +126,7 @@ return [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
+
+    
 
 ];

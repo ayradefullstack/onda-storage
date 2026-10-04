@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { Check } from '@lucide/vue';
 import { RAIL_LENGTH } from '@/components/upload/depositJourney';
 import type { RailTone } from '@/components/upload/depositJourney';
 
@@ -7,53 +8,85 @@ const props = withDefaults(
     defineProps<{
         stepIndex: number;
         tone?: RailTone;
+        compact?: boolean;
     }>(),
     {
         tone: 'active',
+        compact: false,
     },
 );
 
+const stepLabels = [
+    'Initialisation',
+    'Téléversement',
+    'Assemblage',
+    'Antivirus',
+    'Traitement',
+    'Scellé',
+];
+
 const steps = computed(() => Array.from({ length: RAIL_LENGTH }, (_, i) => i));
 
-function dotClass(step: number): string {
+function nodeClass(step: number): string {
     if (step < props.stepIndex) {
-        return 'bg-onda-teal-600';
+        return 'bg-emerald-600 text-white dark:bg-emerald-500 shadow-xs';
     }
 
     if (step === props.stepIndex) {
         if (props.tone === 'paused') {
-            return 'bg-muted-foreground/60';
+            return 'bg-amber-500 text-white ring-2 ring-amber-500/20';
         }
 
         return step === RAIL_LENGTH - 1
-            ? 'bg-onda-teal-600'
-            : 'bg-primary animate-pulse';
+            ? 'bg-emerald-600 text-white dark:bg-emerald-500 shadow-xs'
+            : 'bg-onda-blue-600 text-white shadow-xs ring-4 ring-onda-blue-500/25 animate-pulse';
     }
 
-    return 'bg-muted';
+    return 'bg-muted text-muted-foreground/50 border border-border/80';
 }
 
 function connectorClass(step: number): string {
-    return step < props.stepIndex ? 'bg-onda-teal-600' : 'bg-muted';
+    if (step < props.stepIndex) {
+        return 'bg-emerald-600 dark:bg-emerald-500';
+    }
+    return 'bg-border/80';
 }
 </script>
 
 <template>
     <div
-        class="flex items-center"
+        class="flex items-center gap-1.5 py-1"
         role="img"
-        :aria-label="`${stepIndex + 1}/${RAIL_LENGTH}`"
+        :aria-label="`${stepLabels[stepIndex] ?? stepIndex + 1} (${stepIndex + 1}/${RAIL_LENGTH})`"
     >
         <template v-for="step in steps" :key="step">
-            <span
-                class="size-2 shrink-0 rounded-full transition-colors duration-300"
-                :class="dotClass(step)"
-            />
-            <span
+            <!-- Node -->
+            <div
+                class="group relative flex size-4.5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold transition-all duration-300"
+                :class="nodeClass(step)"
+                :title="`${step + 1}. ${stepLabels[step]}`"
+            >
+                <Check v-if="step < stepIndex || (step === stepIndex && step === RAIL_LENGTH - 1)" class="size-2.5 stroke-[3]" />
+                <span v-else>{{ step + 1 }}</span>
+
+                <!-- Hover Tooltip -->
+                <div
+                    class="pointer-events-none absolute -bottom-6 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-1.5 py-0.5 text-[9px] font-medium text-background opacity-0 shadow-md transition-opacity duration-150 group-hover:opacity-100"
+                >
+                    {{ stepLabels[step] }}
+                </div>
+            </div>
+
+            <!-- Connector -->
+            <div
                 v-if="step < steps.length - 1"
-                class="h-px w-4 shrink-0 transition-colors duration-300"
+                class="h-0.5 flex-1 min-w-3 max-w-7 rounded-full transition-colors duration-300"
                 :class="connectorClass(step)"
             />
         </template>
+
+        <span class="ms-2 hidden sm:inline-block font-mono text-[10px] text-muted-foreground">
+            {{ stepLabels[stepIndex] ?? '' }}
+        </span>
     </div>
 </template>

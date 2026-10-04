@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import {
-    CheckCircle2Icon,
-    CircleDashedIcon,
-    InfoIcon,
-    LoaderCircleIcon,
+    CheckCircle2,
+    CircleDashed,
+    FileCheck,
+    Info,
+    Loader2,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -28,16 +29,10 @@ import { formatBytes } from '@/lib/format';
 
 const props = defineProps<{
     requirement: RequirementSlot;
-    /** 1-based position, in display_order. */
     position: number;
     oeuvreId: number;
     entries: DepositEntry[];
     quota: { used_bytes: number; limit_bytes: number };
-    /**
-     * Whether this oeuvre is still the author's to change. False hides the
-     * dropzone and the per-file remove control — a submitted deposit is
-     * read-only, and the server refuses both regardless.
-     */
     editable?: boolean;
 }>();
 
@@ -54,16 +49,12 @@ const state = computed(() =>
     slotStateOf(props.entries, props.requirement.is_required),
 );
 
-// A single-file slot refuses a second file (InitUpload does too) while one
-// is deposited or on its way; a slot whose file failed can be retried.
 const locked = computed(
     () =>
         !props.requirement.allows_multiple &&
         (state.value === 'deposited' || state.value === 'inProgress'),
 );
 
-// Not evaluated — see RequirementSlot.conditions. Once the slot holds a
-// deposited file the question is moot, so the marker goes.
 const mayNotApply = computed(
     () => props.requirement.conditions !== null && state.value !== 'deposited',
 );
@@ -71,127 +62,125 @@ const mayNotApply = computed(
 
 <template>
     <Card
-        :class="
+        class="overflow-hidden transition-all duration-300"
+        :class="[
             state === 'deposited'
-                ? 'border-primary/40'
-                : state === 'awaiting'
-                  ? 'border-dashed'
-                  : ''
-        "
+                ? 'border-emerald-500/30 bg-card/90 shadow-xs'
+                : state === 'inProgress'
+                  ? 'border-onda-blue-500/50 bg-card ring-2 ring-onda-blue-500/15 shadow-sm'
+                  : state === 'awaiting'
+                    ? 'border-2 border-dashed border-amber-500/30 bg-card/60'
+                    : 'border-border/80 bg-card/60'
+        ]"
     >
-        <CardContent class="space-y-3 py-5">
+        <CardContent class="space-y-4 p-5 sm:p-6">
+            <!-- Header Section -->
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="flex min-w-0 items-start gap-3">
+                    <!-- Position indicator -->
                     <span
-                        class="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium tabular-nums"
+                        class="flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums transition-colors"
+                        :class="[
+                            state === 'deposited'
+                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                : state === 'inProgress'
+                                  ? 'bg-onda-blue-600 text-white shadow-xs'
+                                  : 'bg-muted text-foreground/80'
+                        ]"
                         aria-hidden="true"
-                        >{{ position }}</span
                     >
+                        {{ position }}
+                    </span>
+
                     <div class="min-w-0 space-y-1">
-                        <h3 class="text-sm leading-6 font-medium">
-                            <bdi>{{ requirement.title }}</bdi>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h3 class="text-sm font-semibold tracking-tight text-foreground">
+                                <bdi>{{ requirement.title }}</bdi>
+                            </h3>
+
                             <span
                                 v-if="requirement.is_required"
-                                class="ms-1 text-destructive"
-                                :title="t('oeuvres.step2.required')"
-                                aria-hidden="true"
-                                >*</span
+                                class="rounded bg-rose-500/10 px-1.5 py-0.2 text-[10px] font-semibold text-rose-600 dark:text-rose-400"
                             >
+                                {{ t('oeuvres.step2.required') }}
+                            </span>
                             <span
-                                v-if="requirement.is_required"
-                                class="sr-only"
-                                >{{ t('oeuvres.step2.required') }}</span
+                                v-else
+                                class="rounded bg-muted px-1.5 py-0.2 text-[10px] font-medium text-muted-foreground"
                             >
-                        </h3>
-                        <p
-                            class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground"
-                        >
-                            <i18n-t keypath="oeuvres.step2.formats" tag="span">
-                                <template #extensions
-                                    ><bdi dir="ltr">{{
-                                        formatExtensions(requirement.extensions)
-                                    }}</bdi></template
-                                >
-                            </i18n-t>
-                            <i18n-t
+                                Optionnel
+                            </span>
+                        </div>
+
+                        <!-- Technical Specs Chips -->
+                        <div class="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-muted-foreground">
+                            <span class="inline-flex items-center rounded-md border border-border/70 bg-muted/30 px-2 py-0.5 font-mono text-[11px] text-foreground">
+                                <bdi dir="ltr">{{ formatExtensions(requirement.extensions) }}</bdi>
+                            </span>
+
+                            <span
                                 v-if="requirement.max_size_kb !== null"
-                                keypath="oeuvres.step2.maxSize"
-                                tag="span"
+                                class="inline-flex items-center rounded-md border border-border/70 bg-muted/30 px-2 py-0.5 font-mono text-[11px] text-muted-foreground"
                             >
-                                <template #size
-                                    ><bdi dir="ltr">{{
-                                        formatBytes(
-                                            requirement.max_size_kb * 1024,
-                                            locale,
-                                        )
-                                    }}</bdi></template
-                                >
-                            </i18n-t>
-                            <span v-if="!requirement.allows_multiple">{{
-                                t('oeuvres.step2.singleFile')
-                            }}</span>
-                        </p>
-                        <TooltipProvider
-                            v-if="mayNotApply"
-                            :delay-duration="150"
-                        >
+                                Max <bdi dir="ltr">{{ formatBytes(requirement.max_size_kb * 1024, locale) }}</bdi>
+                            </span>
+
+                            <span class="text-[11px] text-muted-foreground">
+                                • {{ requirement.allows_multiple ? 'Plusieurs fichiers autorisés' : 'Fichier unique' }}
+                            </span>
+                        </div>
+
+                        <!-- Advisory Condition Tooltip -->
+                        <TooltipProvider v-if="mayNotApply" :delay-duration="150">
                             <Tooltip>
                                 <TooltipTrigger as-child>
                                     <button
                                         type="button"
-                                        class="inline-flex items-center gap-1 text-xs text-amber-700 underline decoration-dotted underline-offset-2 dark:text-amber-400"
+                                        class="mt-1 inline-flex items-center gap-1 text-xs text-amber-700 underline decoration-dotted underline-offset-2 dark:text-amber-400 cursor-pointer"
                                     >
-                                        <InfoIcon class="size-3.5 shrink-0" />
-                                        {{
-                                            t('oeuvres.step2.mayNotApplyMarker')
-                                        }}
+                                        <Info class="size-3.5 shrink-0" />
+                                        {{ t('oeuvres.step2.mayNotApplyMarker') }}
                                     </button>
                                 </TooltipTrigger>
                                 <TooltipContent class="max-w-sm">
-                                    <p>
-                                        {{ t('oeuvres.step2.conditionHint') }}
-                                    </p>
+                                    <p>{{ t('oeuvres.step2.conditionHint') }}</p>
                                     <pre
                                         dir="ltr"
                                         class="mt-1 font-mono text-[11px] whitespace-pre-wrap"
-                                        >{{
-                                            describeConditions(
-                                                requirement.conditions!,
-                                            )
-                                        }}</pre>
+                                    >{{ describeConditions(requirement.conditions!) }}</pre>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
                     </div>
                 </div>
 
-                <Badge
-                    :variant="
-                        state === 'deposited'
-                            ? 'default'
-                            : state === 'inProgress'
-                              ? 'secondary'
-                              : 'outline'
-                    "
-                    :class="
-                        state === 'awaiting'
-                            ? 'border-destructive/40 text-destructive'
-                            : ''
-                    "
-                >
-                    <CheckCircle2Icon v-if="state === 'deposited'" />
-                    <LoaderCircleIcon
+                <!-- Status Badge -->
+                <div class="shrink-0">
+                    <span
+                        v-if="state === 'deposited'"
+                        class="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300"
+                    >
+                        <CheckCircle2 class="size-3.5" />
+                        {{ t(`oeuvres.step2.state.${state}`) }}
+                    </span>
+                    <span
                         v-else-if="state === 'inProgress'"
-                        class="animate-spin"
-                    />
-                    <CircleDashedIcon v-else />
-                    {{ t(`oeuvres.step2.state.${state}`) }}
-                </Badge>
+                        class="inline-flex items-center gap-1.5 rounded-full border border-onda-blue-500/30 bg-onda-blue-500/10 px-3 py-1 text-xs font-semibold text-onda-blue-700 dark:text-onda-blue-300"
+                    >
+                        <Loader2 class="size-3.5 animate-spin" />
+                        {{ t(`oeuvres.step2.state.${state}`) }}
+                    </span>
+                    <span
+                        v-else
+                        class="inline-flex items-center gap-1.5 rounded-full border border-dashed border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-400"
+                    >
+                        <CircleDashed class="size-3.5" />
+                        {{ t(`oeuvres.step2.state.${state}`) }}
+                    </span>
+                </div>
             </div>
 
-            <!-- A frozen deposit shows its files and no way to add to
-                 them. InitUpload refuses the upload anyway; this is so the
-                 author is not offered something the server will reject. -->
+            <!-- Dropzone for this slot -->
             <Dropzone
                 v-if="editable"
                 :oeuvre-id="oeuvreId"
@@ -200,19 +189,27 @@ const mayNotApply = computed(
                 compact
             />
 
-            <ul v-if="entries.length > 0" class="space-y-3">
-                <li v-for="entry in entries" :key="entryKey(entry)">
-                    <DepositCard
-                        :entry="entry"
-                        :quota="quota"
-                        :editable="editable"
-                        @pause="emit('pause', $event)"
-                        @resume="emit('resume', $event)"
-                        @cancel="emit('cancel', $event)"
-                        @remove="emit('remove', $event)"
-                    />
-                </li>
-            </ul>
+            <!-- Uploaded Files in this slot -->
+            <div v-if="entries.length > 0" class="space-y-3 pt-1">
+                <div class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <FileCheck class="size-3.5" />
+                    <span>Fichiers associés à cette exigence ({{ entries.length }}) :</span>
+                </div>
+
+                <ul class="space-y-3">
+                    <li v-for="entry in entries" :key="entryKey(entry)">
+                        <DepositCard
+                            :entry="entry"
+                            :quota="quota"
+                            :editable="editable"
+                            @pause="emit('pause', $event)"
+                            @resume="emit('resume', $event)"
+                            @cancel="emit('cancel', $event)"
+                            @remove="emit('remove', $event)"
+                        />
+                    </li>
+                </ul>
+            </div>
         </CardContent>
     </Card>
 </template>

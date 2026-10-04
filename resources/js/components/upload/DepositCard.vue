@@ -1,13 +1,25 @@
 <script setup lang="ts">
 import {
-    CheckCircle2Icon,
-    FileIcon,
-    PauseIcon,
-    PlayIcon,
-    RotateCcwIcon,
-    ShieldAlertIcon,
-    Trash2Icon,
-    TriangleAlertIcon,
+    Activity,
+    ArrowUpRight,
+    Check,
+    CheckCircle2,
+    CodeXml,
+    Copy,
+    Eye,
+    File,
+    FileText,
+    Film,
+    Image,
+    Lock,
+    Music,
+    Pause,
+    Play,
+    RotateCcw,
+    ShieldAlert,
+    ShieldCheck,
+    Trash2,
+    TriangleAlert,
 } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -43,12 +55,6 @@ import {
 const props = defineProps<{
     entry: DepositEntry;
     quota?: { used_bytes: number; limit_bytes: number } | null;
-    /**
-     * Whether this oeuvre is still the author's to change. False for a
-     * submitted, under-review or registered deposit, which renders its
-     * files read-only. The server enforces it either way — this only
-     * decides whether to draw the control.
-     */
     editable?: boolean;
 }>();
 
@@ -81,12 +87,38 @@ const collapsed = computed(
 );
 const isReady = computed(() => mediaFile.value?.status === 'ready');
 
-// Matches MediaPreviewDialog's own `previewKind` — kept in sync by hand
-// rather than shared, since this side only needs a yes/no and importing
-// the dialog's internal classification for one boolean isn't worth it.
+// Upload percentage calculation
+const uploadPercent = computed(() => {
+    const f = uploadFile.value;
+    if (!f || f.size === 0) return 0;
+    return Math.min(100, Math.max(0, Math.round((f.bytesUploaded / f.size) * 100)));
+});
+
+// File icon and tone based on extension / MIME
+const fileDetails = computed(() => {
+    const ext = (uploadFile.value?.extension || mediaFile.value?.extension || '').toLowerCase();
+    const mime = (uploadFile.value?.mime || mediaFile.value?.mime || '').toLowerCase();
+
+    if (mime.startsWith('audio/') || ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'aiff'].includes(ext)) {
+        return { icon: Music, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10' };
+    }
+    if (mime.startsWith('video/') || ['mp4', 'mkv', 'mov', 'avi', 'webm'].includes(ext)) {
+        return { icon: Film, color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-500/10' };
+    }
+    if (mime === 'application/pdf' || ['pdf', 'doc', 'docx', 'txt', 'rtf'].includes(ext)) {
+        return { icon: FileText, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+    }
+    if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'svg', 'gif'].includes(ext)) {
+        return { icon: Image, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
+    }
+    if (['zip', 'tar', 'gz', 'json', 'xml', 'py', 'js', 'ts'].includes(ext)) {
+        return { icon: CodeXml, color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-500/10' };
+    }
+    return { icon: File, color: 'text-muted-foreground', bg: 'bg-muted/40' };
+});
+
 const isPreviewable = computed(() => {
     const mime = mediaFile.value?.mime ?? '';
-
     return (
         mime.startsWith('image/') ||
         mime.startsWith('video/') ||
@@ -98,21 +130,16 @@ const previewOpen = ref(false);
 
 const dimensions = computed(() => {
     const m = mediaFile.value;
-
     return m?.width && m?.height ? `${m.width}×${m.height}` : null;
 });
 
-// ETA display: held back until the rate has settled (etaEligible), then
-// smoothed on top of the store's own EMA speed so a swing doesn't visibly
-// jump. State lives in this component instance, one per file (:key'd by
-// entryKey in the parent), not in the store — this is a display concern.
+// ETA display: smoothed on top of EMA speed
 const smoothEta = createEtaSmoother();
 const displayedEtaSeconds = ref<number | null>(null);
 
 watch(
     () => {
         const f = uploadFile.value;
-
         return f && etaEligible(f) ? f.etaSeconds : null;
     },
     (raw) => {
@@ -128,7 +155,6 @@ const canPause = computed(
 );
 const canResumeOrRetry = computed(() => {
     const f = uploadFile.value;
-
     return (
         !!f &&
         (f.status === 'paused' || f.status === 'failed') &&
@@ -139,11 +165,9 @@ const canResumeOrRetry = computed(() => {
 const errorMessage = computed<{ key: string; chunk: number | null } | null>(
     () => {
         const f = uploadFile.value;
-
         if (!f || f.status !== 'failed' || !f.errorCode) {
             return null;
         }
-
         return { key: `upload.error.${f.errorCode}`, chunk: f.errorChunkIndex };
     },
 );
@@ -159,7 +183,6 @@ const quotaForFileRemaining = computed(() => {
     if (!props.quota || !uploadFile.value) {
         return null;
     }
-
     return Math.max(
         0,
         props.quota.limit_bytes -
@@ -168,30 +191,18 @@ const quotaForFileRemaining = computed(() => {
     );
 });
 
-// --- remove: taking a deposited file off the oeuvre. Confirmed, like
-// cancel, and for a reason cancel does not have — the bytes stay on disk
-// and the quota does not come back today, which the dialog says.
 const removeConfirmOpen = ref(false);
-
 const onRemoveConfirm = () => {
     if (mediaFile.value !== null) {
         emit('remove', mediaFile.value.uuid);
     }
-
     removeConfirmOpen.value = false;
 };
 
-// --- cancel: pause is safe and instant; cancel is destructive once bytes
-// have actually been sent, so it asks first and names what would be lost.
 const cancelConfirmOpen = ref(false);
-
 function onCancelClick(): void {
     const f = uploadFile.value;
-
-    if (!f) {
-        return;
-    }
-
+    if (!f) return;
     if (f.bytesUploaded > 0) {
         cancelConfirmOpen.value = true;
     } else {
@@ -203,26 +214,18 @@ function confirmCancel(): void {
     if (uploadFile.value) {
         emit('cancel', uploadFile.value.id);
     }
-
     cancelConfirmOpen.value = false;
 }
 
-// --- fingerprint receipt
 const fingerprintCopied = ref(false);
-
 const abbreviatedHash = computed(() => {
     const hash = mediaFile.value?.sha256_plain;
-
     return hash ? `${hash.slice(0, 12)}…${hash.slice(-8)}` : null;
 });
 
 async function copyFingerprint(): Promise<void> {
     const hash = mediaFile.value?.sha256_plain;
-
-    if (!hash) {
-        return;
-    }
-
+    if (!hash) return;
     try {
         await navigator.clipboard.writeText(hash);
         fingerprintCopied.value = true;
@@ -230,422 +233,352 @@ async function copyFingerprint(): Promise<void> {
             fingerprintCopied.value = false;
         }, 2000);
     } catch {
-        // Clipboard API unavailable (permissions/insecure context) — the
-        // hash is still shown in full via the abbreviated+title text.
+        // Fallback
     }
 }
 </script>
 
 <template>
     <div
-        class="rounded-lg border p-3"
-        :class="{
-            'border-destructive/40': alertTone === 'error',
-            'border-amber-500/50': alertTone === 'quarantine',
-        }"
+        class="group/card relative overflow-hidden rounded-2xl border p-4 transition-all duration-300"
+        :class="[
+            alertTone === 'error'
+                ? 'border-destructive/40 bg-destructive/5'
+                : alertTone === 'quarantine'
+                  ? 'border-amber-500/50 bg-amber-500/5'
+                  : isReady
+                    ? 'border-emerald-500/30 bg-card/80 shadow-xs'
+                    : uploadFile?.status === 'uploading'
+                      ? 'border-onda-blue-500/50 bg-card shadow-sm ring-1 ring-onda-blue-500/20'
+                      : 'border-border/80 bg-card/60'
+        ]"
     >
-        <div class="flex items-center gap-3">
-            <FileIcon class="size-5 shrink-0 text-muted-foreground" />
-            <p
-                class="min-w-0 flex-1 truncate text-sm font-medium"
-                :title="filename"
-            >
-                <bdi>{{ displayName }}</bdi>
-            </p>
+        <!-- File Header Row -->
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+                <!-- File Icon -->
+                <div
+                    class="flex size-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover/card:scale-105"
+                    :class="fileDetails.bg"
+                >
+                    <component :is="fileDetails.icon" class="size-5 shrink-0" :class="fileDetails.color" />
+                </div>
 
-            <div v-if="uploadFile" class="flex shrink-0 items-center gap-1">
-                <Button
-                    v-if="canPause"
-                    variant="ghost"
-                    size="icon-sm"
-                    :aria-label="t('upload.actions.pause')"
-                    @click="emit('pause', uploadFile.id)"
-                >
-                    <PauseIcon />
-                </Button>
-                <Button
-                    v-if="canResumeOrRetry"
-                    variant="ghost"
-                    size="icon-sm"
-                    :aria-label="
-                        uploadFile.status === 'failed'
-                            ? t('upload.actions.retry')
-                            : t('upload.actions.resume')
-                    "
-                    @click="emit('resume', uploadFile.id)"
-                >
-                    <PlayIcon v-if="uploadFile.status === 'paused'" />
-                    <RotateCcwIcon v-else />
-                </Button>
-                <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    :aria-label="t('upload.actions.cancel')"
-                    @click="onCancelClick"
-                >
-                    <Trash2Icon />
-                </Button>
+                <!-- Name & Meta -->
+                <div class="min-w-0 flex-1">
+                    <p
+                        class="truncate text-sm font-semibold tracking-tight text-foreground"
+                        :title="filename"
+                    >
+                        <bdi>{{ displayName }}</bdi>
+                    </p>
+
+                    <div
+                        v-if="mediaFile"
+                        class="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs text-muted-foreground"
+                    >
+                        <span class="font-medium text-foreground/80 font-mono">
+                            <bdi dir="ltr">{{ formatBytes(mediaFile.size_bytes, locale) }}</bdi>
+                        </span>
+                        <span v-if="mediaFile.duration_sec !== null" class="font-mono">
+                            • <bdi dir="ltr">{{ formatDuration(mediaFile.duration_sec) }}</bdi>
+                        </span>
+                        <span v-if="dimensions" class="font-mono">
+                            • <bdi dir="ltr">{{ dimensions }}</bdi>
+                        </span>
+                        <span v-if="mediaFile.variant_count > 0" class="text-emerald-600 dark:text-emerald-400">
+                            • {{ t('oeuvres.show.variantCount', { count: mediaFile.variant_count }) }}
+                        </span>
+                    </div>
+
+                    <!-- Uploading Mini Meta -->
+                    <div
+                        v-else-if="uploadFile"
+                        class="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground"
+                    >
+                        <span class="font-medium text-foreground/80 font-mono">
+                            <bdi dir="ltr">{{ formatBytes(uploadFile.size, locale) }}</bdi>
+                        </span>
+                        <span>•</span>
+                        <span
+                            v-if="uploadFile.status === 'uploading'"
+                            class="inline-flex items-center gap-1 text-onda-blue-600 dark:text-onda-blue-400 font-medium"
+                        >
+                            <Activity class="size-3 animate-pulse" />
+                            <bdi dir="ltr">{{ formatSpeed(uploadFile.speedBps, locale) }}</bdi>
+                        </span>
+                        <span v-else-if="uploadFile.status === 'paused'" class="text-amber-600 dark:text-amber-400 font-medium">
+                            {{ t('upload.status.paused') }}
+                        </span>
+                        <span v-else class="text-muted-foreground">
+                            {{ t(`upload.status.${uploadFile.status}`) }}
+                        </span>
+                    </div>
+                </div>
             </div>
 
-            <!-- A deposited file. The control is drawn whenever the oeuvre
-                 is editable, and merely disabled while this file's pipeline
-                 is still running over it — "not yet, and here is why" is
-                 more use than a control that silently is not there. -->
-            <div
-                v-else-if="mediaFile && editable"
-                class="flex shrink-0 items-center gap-1"
-            >
-                <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    class="text-rose-600 hover:bg-rose-500/10 hover:text-rose-700 dark:text-rose-400"
-                    :disabled="!mediaFile.can_remove"
-                    :aria-label="t('oeuvres.files.remove')"
-                    :title="
-                        mediaFile.can_remove
-                            ? t('oeuvres.files.remove')
-                            : t('oeuvres.files.removeBusy')
-                    "
-                    @click="removeConfirmOpen = true"
-                >
-                    <Trash2Icon />
-                </Button>
+            <!-- Action Controls -->
+            <div class="flex shrink-0 items-center gap-1.5">
+                <template v-if="uploadFile">
+                    <Button
+                        v-if="canPause"
+                        variant="ghost"
+                        size="icon-sm"
+                        class="size-8 rounded-lg cursor-pointer text-muted-foreground hover:bg-muted hover:text-foreground"
+                        :aria-label="t('upload.actions.pause')"
+                        @click="emit('pause', uploadFile.id)"
+                    >
+                        <Pause class="size-4" />
+                    </Button>
+                    <Button
+                        v-if="canResumeOrRetry"
+                        variant="ghost"
+                        size="icon-sm"
+                        class="size-8 rounded-lg cursor-pointer text-onda-blue-600 hover:bg-onda-blue-500/10 hover:text-onda-blue-700 dark:text-onda-blue-400"
+                        :aria-label="
+                            uploadFile.status === 'failed'
+                                ? t('upload.actions.retry')
+                                : t('upload.actions.resume')
+                        "
+                        @click="emit('resume', uploadFile.id)"
+                    >
+                        <Play v-if="uploadFile.status === 'paused'" class="size-4" />
+                        <RotateCcw v-else class="size-4" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        class="size-8 rounded-lg cursor-pointer text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        :aria-label="t('upload.actions.cancel')"
+                        @click="onCancelClick"
+                    >
+                        <Trash2 class="size-4" />
+                    </Button>
+                </template>
+
+                <template v-else-if="mediaFile && editable">
+                    <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        class="size-8 rounded-lg cursor-pointer text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        :disabled="!mediaFile.can_remove"
+                        :aria-label="t('oeuvres.files.remove')"
+                        :title="
+                            mediaFile.can_remove
+                                ? t('oeuvres.files.remove')
+                                : t('oeuvres.files.removeBusy')
+                        "
+                        @click="removeConfirmOpen = true"
+                    >
+                        <Trash2 class="size-4" />
+                    </Button>
+                </template>
             </div>
         </div>
 
+        <!-- ANIMATED PROGRESS SECTION (Uploading & Chunk transfer) -->
         <div
-            v-if="mediaFile"
-            class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground"
+            v-if="uploadFile && (uploadFile.status === 'uploading' || uploadFile.status === 'paused' || uploadFile.status === 'completing')"
+            class="mt-3.5 space-y-2 rounded-xl bg-muted/40 p-3"
         >
-            <bdi dir="ltr">{{ formatBytes(mediaFile.size_bytes, locale) }}</bdi>
-            <bdi v-if="mediaFile.duration_sec !== null" dir="ltr">{{
-                formatDuration(mediaFile.duration_sec)
-            }}</bdi>
-            <bdi v-if="dimensions" dir="ltr">{{ dimensions }}</bdi>
-            <i18n-t
-                v-if="mediaFile.variant_count > 0"
-                keypath="oeuvres.show.variantCount"
-            >
-                <template #count
-                    ><bdi dir="ltr">{{
-                        mediaFile.variant_count
-                    }}</bdi></template
+            <div class="flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2">
+                    <span class="font-bold text-foreground font-mono">
+                        {{ uploadPercent }}%
+                    </span>
+                    <span
+                        v-if="uploadFile.status === 'uploading'"
+                        class="inline-flex items-center gap-1 text-[11px] text-onda-blue-600 dark:text-onda-blue-400"
+                    >
+                        <ArrowUpRight class="size-3" />
+                        {{ t('upload.persistence.line') }}
+                    </span>
+                </div>
+
+                <div class="flex items-center gap-2 text-[11px] text-muted-foreground font-mono">
+                    <bdi dir="ltr">
+                        {{ formatBytes(uploadFile.bytesUploaded, locale) }} / {{ formatBytes(uploadFile.size, locale) }}
+                    </bdi>
+                    <span v-if="displayedEtaSeconds !== null && uploadFile.status === 'uploading'">
+                        • {{ formatDuration(displayedEtaSeconds) }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Dynamic Animated Bar with Shimmer Effect -->
+            <div class="relative h-2 w-full overflow-hidden rounded-full bg-muted shadow-inner">
+                <div
+                    class="h-full rounded-full transition-all duration-300 ease-out"
+                    :class="[
+                        uploadFile.status === 'paused'
+                            ? 'bg-amber-500'
+                            : 'bg-gradient-to-r from-onda-blue-600 via-onda-blue-500 to-onda-teal-500 shadow-onda-glow-blue'
+                    ]"
+                    :style="{ width: `${uploadPercent}%` }"
                 >
-            </i18n-t>
+                    <!-- Animated Shimmer Stripe -->
+                    <div
+                        v-if="uploadFile.status === 'uploading'"
+                        class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse"
+                    />
+                </div>
+            </div>
+
+            <!-- Custody Rail Mini Tracking -->
+            <DepositStateTrack :step-index="stepIndex" :tone="railTone" class="pt-1" />
         </div>
 
-        <!-- Deposited: the one moment that should feel different in kind,
-             not just another rail step. Collapses to just the seal once
-             it was already ready when the page loaded. -->
-        <template v-if="isReady">
+        <!-- SERVER PROCESSING STAGES (Assembling, Scanning, Processing) -->
+        <div
+            v-else-if="mediaFile && ['assembling', 'scanning', 'processing'].includes(mediaFile.status)"
+            class="mt-3.5 space-y-2.5 rounded-xl border border-onda-blue-500/20 bg-onda-blue-500/5 p-3"
+        >
+            <div class="flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2 text-onda-blue-700 dark:text-onda-blue-300 font-medium">
+                    <span class="relative flex size-2">
+                        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-onda-blue-500 opacity-75" />
+                        <span class="relative inline-flex size-2 rounded-full bg-onda-blue-600" />
+                    </span>
+                    <span>
+                        {{
+                            mediaFile.status === 'assembling'
+                                ? t('oeuvres.show.stage.finishing')
+                                : mediaFile.status === 'scanning'
+                                  ? t('oeuvres.show.stage.checking')
+                                  : t('oeuvres.show.stage.preparing')
+                        }}
+                    </span>
+                </div>
+
+                <span class="text-[11px] text-muted-foreground font-mono">
+                    Sécurisation ONDA
+                </span>
+            </div>
+
+            <!-- Indeterminate Animated Bar -->
+            <div class="relative h-1.5 w-full overflow-hidden rounded-full bg-muted/60">
+                <div
+                    class="h-full w-1/3 rounded-full bg-gradient-to-r from-onda-blue-600 to-onda-teal-500 animate-[indeterminate_1.5s_infinite_linear]"
+                />
+            </div>
+
+            <!-- Custody Rail -->
+            <DepositStateTrack :step-index="stepIndex" :tone="railTone" />
+        </div>
+
+        <!-- DEPOSITED & READY SEALED STATE -->
+        <template v-else-if="isReady">
             <DepositStateTrack
                 v-if="!collapsed"
                 :step-index="5"
-                class="mt-2.5"
+                class="mt-3 pt-1 border-t border-border/60"
             />
+
             <div
-                class="mt-2 flex items-start gap-2 rounded-md border border-onda-teal-600/25 bg-onda-teal-600/5 p-2.5"
+                class="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-3"
             >
-                <CheckCircle2Icon
-                    class="mt-0.5 size-4 shrink-0 text-onda-teal-600"
-                />
-                <div class="min-w-0 space-y-1 text-xs">
-                    <i18n-t
-                        keypath="oeuvres.show.depositedOn"
-                        tag="p"
-                        class="font-medium text-foreground"
-                    >
-                        <template #date
-                            ><bdi dir="ltr">{{
-                                formatDate(mediaFile!.created_at, locale)
-                            }}</bdi></template
-                        >
-                    </i18n-t>
-                    <div
-                        v-if="abbreviatedHash"
-                        class="flex flex-wrap items-center gap-x-2 gap-y-1"
-                    >
-                        <span class="text-muted-foreground">{{
-                            t('oeuvres.show.fingerprint')
-                        }}</span>
-                        <bdi dir="ltr" class="font-mono">{{
-                            abbreviatedHash
-                        }}</bdi>
-                        <button
-                            type="button"
-                            class="text-onda-blue-600 hover:underline dark:text-onda-blue-400"
-                            @click="copyFingerprint"
-                        >
-                            {{
-                                fingerprintCopied
-                                    ? t('oeuvres.show.fingerprintCopied')
-                                    : t('oeuvres.show.copyFingerprint')
-                            }}
-                        </button>
+                <div class="flex items-start gap-2.5 min-w-0">
+                    <CheckCircle2 class="mt-0.5 size-4.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                    <div class="min-w-0 space-y-1 text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="font-semibold text-foreground">
+                                {{ t('oeuvres.show.depositedOn', { date: formatDate(mediaFile!.created_at, locale) }) }}
+                            </span>
+                            <span class="rounded bg-emerald-500/15 px-1.5 py-0.2 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">
+                                Certifié
+                            </span>
+                        </div>
+
+                        <div v-if="abbreviatedHash" class="flex flex-wrap items-center gap-x-2 text-[11px]">
+                            <span class="text-muted-foreground">{{ t('oeuvres.show.fingerprint') }} :</span>
+                            <span class="font-mono text-foreground font-medium bg-background/80 px-1.5 py-0.5 rounded border border-border/80">
+                                <bdi dir="ltr">{{ abbreviatedHash }}</bdi>
+                            </span>
+                            <button
+                                type="button"
+                                class="inline-flex items-center gap-1 text-onda-blue-600 hover:underline dark:text-onda-blue-400 cursor-pointer font-medium"
+                                @click="copyFingerprint"
+                            >
+                                <component :is="fingerprintCopied ? Check : Copy" class="size-3" />
+                                <span>{{ fingerprintCopied ? 'Copié !' : t('oeuvres.show.copyFingerprint') }}</span>
+                            </button>
+                        </div>
                     </div>
-                    <p class="text-muted-foreground">
-                        {{ t('oeuvres.show.auditNotice') }}
-                    </p>
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
                     <Button
                         v-if="isPreviewable"
                         size="sm"
                         variant="outline"
-                        class="h-7 text-xs"
+                        class="h-8 gap-1.5 text-xs font-semibold shadow-xs cursor-pointer border-border hover:border-onda-blue-500/50"
                         @click="previewOpen = true"
                     >
-                        {{ t('oeuvres.show.view') }}
+                        <Eye class="size-3.5" />
+                        <span>{{ t('oeuvres.show.view') }}</span>
                     </Button>
                 </div>
             </div>
         </template>
 
-        <!-- Failed / quarantined / expired / quota exceeded: an alert to
-             read and act on, never a colored rail segment. -->
+        <!-- ALERTS: Failed / Quarantined / Quota exceeded -->
         <template v-else-if="alertTone">
             <div
-                class="mt-2 flex items-start gap-2 rounded-md border p-2.5 text-xs"
+                class="mt-3 flex items-start gap-2.5 rounded-xl border p-3 text-xs"
                 :class="
                     alertTone === 'quarantine'
-                        ? 'border-amber-500/40 bg-amber-500/5'
-                        : 'border-destructive/30 bg-destructive/5'
+                        ? 'border-amber-500/40 bg-amber-500/10'
+                        : 'border-destructive/30 bg-destructive/10'
                 "
             >
                 <component
-                    :is="
-                        alertTone === 'quarantine'
-                            ? ShieldAlertIcon
-                            : TriangleAlertIcon
-                    "
+                    :is="alertTone === 'quarantine' ? ShieldAlert : TriangleAlert"
                     class="mt-0.5 size-4 shrink-0"
-                    :class="
-                        alertTone === 'quarantine'
-                            ? 'text-amber-600'
-                            : 'text-destructive'
-                    "
+                    :class="alertTone === 'quarantine' ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'"
                 />
-                <div class="min-w-0 space-y-1.5" role="alert">
-                    <i18n-t
-                        v-if="mediaFile?.status === 'failed'"
-                        keypath="media.failedWithRef"
-                        tag="p"
-                    >
-                        <template #ref
-                            ><bdi dir="ltr" class="font-mono">{{
-                                reference
-                            }}</bdi></template
-                        >
-                    </i18n-t>
-
-                    <i18n-t
-                        v-else-if="mediaFile?.status === 'quarantined'"
-                        keypath="media.quarantineWithRef"
-                        tag="p"
-                    >
-                        <template #ref
-                            ><bdi dir="ltr" class="font-mono">{{
-                                reference
-                            }}</bdi></template
-                        >
-                        <template #hotline
-                            ><bdi dir="ltr">{{
-                                t('sidebar.hotline.number')
-                            }}</bdi></template
-                        >
-                    </i18n-t>
-
-                    <template
-                        v-else-if="uploadFile?.status === 'quota_exceeded'"
-                    >
-                        <i18n-t
-                            v-if="uploadFile.remainingQuotaBytes !== null"
-                            keypath="upload.error.quotaExceededWithRemaining"
-                            tag="p"
-                        >
-                            <template #remaining
-                                ><bdi dir="ltr">{{
-                                    formatBytes(
-                                        uploadFile.remainingQuotaBytes,
-                                        locale,
-                                    )
-                                }}</bdi></template
-                            >
-                            <template #hotline
-                                ><bdi dir="ltr">{{
-                                    t('sidebar.hotline.number')
-                                }}</bdi></template
-                            >
-                        </i18n-t>
-                        <i18n-t
-                            v-else
-                            keypath="upload.error.quotaExceeded"
-                            tag="p"
-                        >
-                            <template #hotline
-                                ><bdi dir="ltr">{{
-                                    t('sidebar.hotline.number')
-                                }}</bdi></template
-                            >
-                        </i18n-t>
-                    </template>
-
-                    <p
-                        v-else-if="
-                            uploadFile?.status === 'expired' &&
-                            uploadFile.errorCode === 'authExpired'
-                        "
-                    >
-                        {{ t('upload.error.authExpired') }}
+                <div class="min-w-0 flex-1 space-y-1.5" role="alert">
+                    <p v-if="mediaFile?.status === 'failed'" class="font-semibold text-foreground">
+                        {{ t('media.failedWithRef', { ref: reference }) }}
                     </p>
-                    <p v-else-if="uploadFile?.status === 'expired'">
-                        {{ t('upload.error.expired') }}
+                    <p v-else-if="mediaFile?.status === 'quarantined'" class="font-semibold text-foreground">
+                        {{ t('media.quarantineWithRef', { ref: reference, hotline: t('sidebar.hotline.number') }) }}
                     </p>
-
-                    <template v-else-if="errorMessage">
-                        <i18n-t
-                            v-if="errorMessage.chunk !== null"
-                            :keypath="`${errorMessage.key}WithChunk`"
-                            tag="p"
-                        >
-                            <template #index
-                                ><bdi dir="ltr">{{
-                                    errorMessage.chunk
-                                }}</bdi></template
-                            >
-                        </i18n-t>
-                        <p v-else>{{ t(errorMessage.key) }}</p>
-                    </template>
+                    <p v-else-if="uploadFile?.status === 'quota_exceeded'" class="font-semibold text-foreground">
+                        {{ t('upload.error.quotaExceeded', { hotline: t('sidebar.hotline.number') }) }}
+                    </p>
+                    <p v-else-if="errorMessage" class="text-foreground">
+                        {{ t(errorMessage.key) }}
+                    </p>
 
                     <Button
                         v-if="canResumeOrRetry"
                         size="sm"
                         variant="outline"
-                        class="h-7 text-xs"
+                        class="h-7 text-xs font-semibold cursor-pointer"
                         @click="emit('resume', uploadFile!.id)"
                     >
+                        <RotateCcw class="me-1 size-3" />
                         {{ t('upload.actions.retry') }}
                     </Button>
                 </div>
             </div>
         </template>
 
-        <!-- In progress: the custody rail plus one honest line for the
-             current stage. Never a fake percentage inside a processing
-             stage the backend hasn't reported progress for. -->
-        <template v-else>
-            <DepositStateTrack
-                :step-index="stepIndex"
-                :tone="railTone"
-                class="mt-2.5"
-            />
-
-            <div class="mt-1.5 text-xs text-muted-foreground">
-                <template
-                    v-if="
-                        uploadFile?.status === 'uploading' ||
-                        uploadFile?.status === 'paused'
-                    "
-                >
-                    <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                        <bdi dir="ltr"
-                            >{{
-                                formatBytes(uploadFile.bytesUploaded, locale)
-                            }}
-                            / {{ formatBytes(uploadFile.size, locale) }}</bdi
-                        >
-                        <bdi
-                            v-if="uploadFile.status === 'uploading'"
-                            dir="ltr"
-                            >{{ formatSpeed(uploadFile.speedBps, locale) }}</bdi
-                        >
-                        <i18n-t
-                            v-if="
-                                uploadFile.status === 'uploading' &&
-                                displayedEtaSeconds !== null
-                            "
-                            keypath="upload.eta"
-                            tag="span"
-                        >
-                            <template #time
-                                ><bdi dir="ltr">{{
-                                    formatDuration(displayedEtaSeconds)
-                                }}</bdi></template
-                            >
-                        </i18n-t>
-                    </div>
-                    <p class="mt-1">
-                        {{
-                            uploadFile.status === 'uploading'
-                                ? t('upload.persistence.line')
-                                : t('upload.status.paused')
-                        }}
-                    </p>
-                </template>
-
-                <template
-                    v-else-if="
-                        uploadFile?.status === 'queued' ||
-                        uploadFile?.status === 'initializing'
-                    "
-                >
-                    <p>{{ t('oeuvres.show.stage.queued') }}</p>
-                    <i18n-t
-                        v-if="
-                            showQuotaForFile && quotaForFileRemaining !== null
-                        "
-                        keypath="oeuvres.show.quotaForFile"
-                        tag="p"
-                        class="mt-0.5"
-                    >
-                        <template #size
-                            ><bdi dir="ltr">{{
-                                formatBytes(uploadFile.size, locale)
-                            }}</bdi></template
-                        >
-                        <template #remaining
-                            ><bdi dir="ltr">{{
-                                formatBytes(quotaForFileRemaining, locale)
-                            }}</bdi></template
-                        >
-                    </i18n-t>
-                </template>
-
-                <p v-else-if="uploadFile?.status === 'completing'">
-                    {{ t('oeuvres.show.stage.finishing') }}
-                </p>
-                <p v-else-if="mediaFile?.status === 'assembling'">
-                    {{ t('oeuvres.show.stage.finishing') }}
-                </p>
-                <p v-else-if="mediaFile?.status === 'scanning'">
-                    {{ t('oeuvres.show.stage.checking') }}
-                </p>
-                <p v-else-if="mediaFile?.status === 'processing'">
-                    {{ t('oeuvres.show.stage.preparing') }}
-                </p>
-            </div>
-        </template>
-
+        <!-- REMOVE DIALOG -->
         <Dialog v-model:open="removeConfirmOpen">
             <DialogContent class="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>{{
-                        t('oeuvres.files.removeTitle')
-                    }}</DialogTitle>
+                    <DialogTitle>{{ t('oeuvres.files.removeTitle') }}</DialogTitle>
                     <DialogDescription>
                         <i18n-t keypath="oeuvres.files.removeBody" tag="span">
                             <template #name>
-                                <bdi class="font-semibold text-foreground">{{
-                                    filename
-                                }}</bdi>
+                                <bdi class="font-semibold text-foreground">{{ filename }}</bdi>
                             </template>
                         </i18n-t>
                     </DialogDescription>
                 </DialogHeader>
 
-                <!-- Same two facts as deleting a whole oeuvre: the bytes
-                     stay, and the quota does not come back today. -->
-                <p
-                    class="rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-xs leading-relaxed text-muted-foreground"
-                >
+                <p class="rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-xs leading-relaxed text-muted-foreground">
                     {{ t('oeuvres.files.removeBytes') }}
                 </p>
 
@@ -668,26 +601,16 @@ async function copyFingerprint(): Promise<void> {
             </DialogContent>
         </Dialog>
 
+        <!-- CANCEL DIALOG -->
         <Dialog v-model:open="cancelConfirmOpen">
             <DialogContent class="sm:max-w-sm">
                 <DialogHeader>
-                    <DialogTitle>{{
-                        t('upload.cancel.confirmTitle')
-                    }}</DialogTitle>
+                    <DialogTitle>{{ t('upload.cancel.confirmTitle') }}</DialogTitle>
                 </DialogHeader>
-                <i18n-t
-                    v-if="uploadFile"
-                    keypath="upload.cancel.confirmBody"
-                    tag="p"
-                    class="text-sm text-muted-foreground"
-                >
-                    <template #sent
-                        ><bdi dir="ltr">{{
-                            formatBytes(uploadFile.bytesUploaded, locale)
-                        }}</bdi></template
-                    >
-                </i18n-t>
-                <DialogFooter>
+                <p v-if="uploadFile" class="text-sm text-muted-foreground">
+                    {{ t('upload.cancel.confirmBody', { sent: formatBytes(uploadFile.bytesUploaded, locale) }) }}
+                </p>
+                <DialogFooter class="gap-2 sm:gap-2">
                     <Button
                         variant="outline"
                         @click="cancelConfirmOpen = false"
@@ -701,6 +624,7 @@ async function copyFingerprint(): Promise<void> {
             </DialogContent>
         </Dialog>
 
+        <!-- PREVIEW MODAL -->
         <MediaPreviewDialog
             v-if="mediaFile"
             :open="previewOpen"
@@ -709,3 +633,14 @@ async function copyFingerprint(): Promise<void> {
         />
     </div>
 </template>
+
+<style scoped>
+@keyframes indeterminate {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(400%);
+    }
+}
+</style>
