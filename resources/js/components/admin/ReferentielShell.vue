@@ -85,13 +85,17 @@ const clearSearch = () => {
     <Head :title="t(`admin.referentiel.tabs.${active}`)" />
 
     <div class="mx-auto w-full max-w-[110rem] space-y-5 p-4 sm:p-6">
-        <div class="space-y-1">
-            <h1 class="text-xl font-semibold tracking-tight">
-                {{ t('admin.referentiel.title') }}
-            </h1>
-            <p class="text-sm text-muted-foreground">
-                {{ t('admin.referentiel.subtitle') }}
-            </p>
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="space-y-1">
+                <h1 class="text-xl font-semibold tracking-tight">
+                    {{ t('admin.referentiel.title') }}
+                </h1>
+                <p class="text-sm text-muted-foreground">
+                    {{ t('admin.referentiel.subtitle') }}
+                </p>
+            </div>
+            <!-- Each tab's "create" button. -->
+            <slot name="actions" />
         </div>
 
         <!-- One route per tab: a deep link works and a refresh stays put. -->

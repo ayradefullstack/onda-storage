@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin\Referentiel;
 
+use App\Http\Controllers\Concerns\ResolvesPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\CollegeOeuvreFile;
 use App\Models\ReferenceDataChange;
@@ -34,6 +35,8 @@ use Inertia\Response;
  */
 abstract class ReferentielController extends Controller
 {
+    use ResolvesPerPage;
+
     protected const PER_PAGE = 25;
 
     /**
@@ -117,5 +120,31 @@ abstract class ReferentielController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Reference data updated.')]);
 
         return back();
+    }
+
+    protected function created(): RedirectResponse
+    {
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Reference data created.')]);
+
+        return back();
+    }
+
+    /**
+     * Resolves a filter or parent value, which travels as a uuid — no
+     * sequential id ever appears in a URL or a page prop — to the id the
+     * queries use. Anything that is not a live row's uuid is `null`, so a
+     * malformed filter simply filters nothing.
+     *
+     * @param  class-string<Model>  $model
+     */
+    protected function idForUuid(string $model, mixed $uuid): ?int
+    {
+        if (! is_string($uuid) || $uuid === '') {
+            return null;
+        }
+
+        $id = $model::query()->where('uuid', $uuid)->value('id');
+
+        return is_numeric($id) ? (int) $id : null;
     }
 }

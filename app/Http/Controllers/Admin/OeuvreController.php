@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Admin;
 use App\Domain\Deposit\OeuvreStatus;
 use App\Domain\Deposit\SubmissionGate;
 use App\Http\Controllers\Author\OeuvreController as AuthorOeuvreController;
+use App\Http\Controllers\Concerns\ResolvesPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -25,6 +26,8 @@ use Inertia\Response;
  */
 final class OeuvreController extends Controller
 {
+    use ResolvesPerPage;
+
     private const PER_PAGE = 25;
 
     /**
@@ -74,7 +77,7 @@ final class OeuvreController extends Controller
             // in January and submitted today belongs at the top.
             ->orderByDesc('submitted_at')
             ->orderByDesc('id')
-            ->paginate(self::PER_PAGE)
+            ->paginate($this->perPage($request, self::PER_PAGE))
             ->withQueryString();
 
         return Inertia::render('admin/oeuvres/Index', [

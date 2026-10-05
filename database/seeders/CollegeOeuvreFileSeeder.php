@@ -22,8 +22,17 @@ use RuntimeException;
  * ---------------------------------------------------------------------
  * THIS SEEDER AND THE ADMIN REFERENCE-DATA UI SHARE THIS TABLE.
  * ---------------------------------------------------------------------
- * `/admin/referentiel/documents` lets an officer edit these rows, so the
- * two own different columns:
+ * `/admin/referentiel/documents` lets an officer edit AND CREATE these rows.
+ * Admin-created documents are safe from this seeder by construction, not by
+ * a flag: it only visits colleges named in documentsByCode() (resolved by
+ * `code_college`), and within them only the (college, document_key) pairs it
+ * lists — a document an admin adds under any other key, or under an
+ * admin-created college, is never matched, updated or reset. A key the admin
+ * picks that the seeder also lists cannot coexist with it (unique index),
+ * and the admin form rejects it. There is deliberately no `is_system` column
+ * on this table: nothing here needs to tell the two kinds apart.
+ *
+ * The two own different columns:
  *
  *   SEEDER-OWNED (the UI renders these read-only)
  *     document_key, register_type_college_id, title, conditions

@@ -100,14 +100,27 @@ test('document_key cannot be changed, even by a direct request', function () {
         ->and($document->title_en)->toBe('Proof of exploitation');
 });
 
-test('a member\'s code_qlt, name and college cannot be changed', function () {
+test('a member\'s code_qlt and college cannot be changed, and a system member\'s name is refused', function () {
     $member = RegisterTypeMember::whereNotNull('code_qlt')->firstOrFail();
     $original = $member->only(['code_qlt', 'name', 'register_type_college_id']);
 
+    // The seeded row is a system row: its `name` is a seeder match key, so a
+    // request carrying one is refused as a whole (it used to be silently
+    // ignored, before names became editable on admin-created rows).
+    $this->actingAs(editAdmin())
+        ->patch(route('admin.referentiel.membres.update', $member), [
+            'name' => 'Renamed',
+            'is_disabled' => true,
+        ])
+        ->assertSessionHasErrors(['name' => 'admin.referentiel.errors.systemName']);
+
+    expect($member->fresh()->name)->toBe($original['name'])
+        ->and($member->fresh()->is_disabled)->toBeFalse();
+
+    // The frozen fields are not rules at all: carried along, they change nothing.
     $this->actingAs(editAdmin())
         ->patch(route('admin.referentiel.membres.update', $member), [
             'code_qlt' => 'HACKED',
-            'name' => 'Renamed',
             'register_type_college_id' => $member->register_type_college_id + 1,
             'is_disabled' => true,
         ])

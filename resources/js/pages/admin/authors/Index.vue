@@ -378,7 +378,7 @@ function clearFilters(): void {
             </table>
 
             <template #pagination>
-                <DataTablePagination :paginated="authors" />
+                <DataTablePagination :paginated="authors" show-page-size />
             </template>
         </DataTable>
     </div>

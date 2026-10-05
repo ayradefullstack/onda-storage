@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Concerns\HasUuidColumn;
 use Database\Factories\TypeGestionFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -26,6 +27,8 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string|null $name_ar
  * @property string|null $name_en
+ * @property int $status
+ * @property bool $is_system
  * @property-read string $name_global
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -44,19 +47,35 @@ class TypeGestion extends Model
 
     public const VALUES = [self::COLLECTIVE, self::INDIVIDUAL, self::SIMPLE];
 
+    public const STATUS_ACTIVE = 1;
+
     protected $fillable = [
         'register_type_id',
         'type_gestion',
         'name',
         'name_ar',
         'name_en',
+        'status',
     ];
 
     protected function casts(): array
     {
         return [
             'type_gestion' => 'integer',
+            'status' => 'integer',
+            'is_system' => 'boolean',
         ];
+    }
+
+    /**
+     * Gestions a type's classification flow currently offers.
+     *
+     * @param  Builder<TypeGestion>  $query
+     * @return Builder<TypeGestion>
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_ACTIVE);
     }
 
     /**

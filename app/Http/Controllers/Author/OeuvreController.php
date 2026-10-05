@@ -11,6 +11,7 @@ use App\Domain\Deposit\RemovalGate;
 use App\Domain\Deposit\SlotProgressQuery;
 use App\Domain\Deposit\SubmissionGate;
 use App\Domain\Quota\QuotaPolicy;
+use App\Http\Controllers\Concerns\ResolvesPerPage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Author\StoreOeuvreRequest;
 use App\Models\CollegeOeuvreFile;
@@ -38,6 +39,8 @@ use Inertia\Response;
  */
 final class OeuvreController extends Controller
 {
+    use ResolvesPerPage;
+
     private const PER_PAGE = 15;
 
     /**
@@ -103,7 +106,7 @@ final class OeuvreController extends Controller
             ))
             ->when(in_array($status, self::STATUSES, true), fn ($query) => $query->where('status', $status))
             ->tap(fn (Builder $query) => $this->applySort($query, $sort))
-            ->paginate(self::PER_PAGE)
+            ->paginate($this->perPage($request, self::PER_PAGE))
             ->withQueryString();
 
         $progress = $slotProgress->forPage($oeuvres->getCollection());
@@ -459,7 +462,7 @@ final class OeuvreController extends Controller
         $types = RegisterType::query()
             ->active()
             ->with([
-                'typeGestions' => fn ($query) => $query->orderBy('type_gestion'),
+                'typeGestions' => fn ($query) => $query->active()->orderBy('type_gestion'),
                 'registerTypeColleges' => fn ($query) => $query
                     ->where('status', RegisterTypeCollege::STATUS_ACTIVE)
                     ->where('code_college', '!=', RegisterTypeCollege::CODE_REFERENTIEL_HORS_ADHESION)
@@ -476,24 +479,36 @@ final class OeuvreController extends Controller
             'types' => $types->map(fn (RegisterType $type): array => [
                 'id' => $type->id,
                 'name' => trim($type->name_global),
-                'is_auteur' => $type->slug === StoreOeuvreRequest::AUTEUR_SLUG,
+                // Despite the name (kept so the cascade component and its
+                // tests are untouched), this means "this type has a gestion
+                // level": it has at least one active gestion — the same
+                // predicate StoreOeuvreRequest validates with.
+                'is_auteur' => $type->typeGestions->isNotEmpty(),
                 'is_disabled' => $type->is_disabled,
                 'gestions' => $type->typeGestions->map(fn (TypeGestion $gestion): array => [
                     'id' => $gestion->id,
                     'name' => trim($gestion->name_global),
                 ])->values()->all(),
-                'colleges' => $type->registerTypeColleges->map(fn (RegisterTypeCollege $college): array => [
-                    'id' => $college->id,
-                    'name' => trim($college->name_global),
-                    'code_college' => $college->code_college,
-                    'type_gestion_id' => $college->type_gestion_id,
-                    'is_disabled' => $college->is_disabled,
-                    'members' => $college->registerTypeMembers->map(fn (RegisterTypeMember $member): array => [
-                        'id' => $member->id,
-                        'name' => trim($member->name_global),
-                        'available_in_registration' => $member->available_in_registration,
+                // A type with a gestion level offers only colleges under an
+                // active gestion; one without offers only gestion-less
+                // colleges. Anything else would be a branch the form cannot
+                // complete.
+                'colleges' => $type->registerTypeColleges
+                    ->filter(fn (RegisterTypeCollege $college): bool => $type->typeGestions->isNotEmpty()
+                        ? $type->typeGestions->contains('id', $college->type_gestion_id)
+                        : $college->type_gestion_id === null)
+                    ->map(fn (RegisterTypeCollege $college): array => [
+                        'id' => $college->id,
+                        'name' => trim($college->name_global),
+                        'code_college' => $college->code_college,
+                        'type_gestion_id' => $college->type_gestion_id,
+                        'is_disabled' => $college->is_disabled,
+                        'members' => $college->registerTypeMembers->map(fn (RegisterTypeMember $member): array => [
+                            'id' => $member->id,
+                            'name' => trim($member->name_global),
+                            'available_in_registration' => $member->available_in_registration,
+                        ])->values()->all(),
                     ])->values()->all(),
-                ])->values()->all(),
             ])->values()->all(),
         ];
     }

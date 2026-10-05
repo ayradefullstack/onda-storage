@@ -1266,9 +1266,8 @@ const goToPage = (page: number) => {
 
             <template #pagination>
                 <DataTablePagination
-                    v-if="props.oeuvres.last_page > 1"
                     :paginated="props.oeuvres"
-                    :show-page-size="false"
+                    :show-page-size="true"
                 />
             </template>
         </DataTable>

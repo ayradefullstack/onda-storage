@@ -40,8 +40,19 @@ use Illuminate\Support\Str;
  * ---------------------------------------------------------------------
  * THIS SEEDER AND THE ADMIN REFERENCE-DATA UI SHARE THESE TABLES.
  * ---------------------------------------------------------------------
- * `/admin/referentiel` lets an officer edit reference rows. The two can
- * only coexist if they own DIFFERENT columns, so they do:
+ * `/admin/referentiel` lets an officer edit AND CREATE reference rows. The
+ * two can only coexist if they own different ROWS and different COLUMNS.
+ *
+ * ROWS — `is_system`. Every row this seeder creates or updates is marked
+ * `is_system = true`; a row an admin creates keeps the default `false`.
+ * The seeder only ever looks at `is_system` rows: the `code_college` reset
+ * below, every identity match and every update are scoped to them, so a
+ * re-run can neither null an admin college's code nor adopt an admin row
+ * that happens to share a match key. (The one thing it cannot prevent is a
+ * seeded code colliding with a code an admin already chose: the unique
+ * index makes the run fail loudly inside its transaction, not silently.)
+ *
+ * COLUMNS — for the rows it does own:
  *
  *   SEEDER-OWNED (identity and structure — the UI renders these read-only)
  *     colleges : name, code_college, code_dv, type_gestion, type_gestion_id,
@@ -54,8 +65,8 @@ use Illuminate\Support\Str;
  *     colleges : is_disabled, status, adhesion, name_ar, name_en
  *     members  : available_in_registration, is_disabled, status
  *
- * Why identity stays here: this seeder NULLs every `code_college` before
- * re-assigning (see run()), and matches colleges on
+ * Why identity stays here: this seeder NULLs every system `code_college`
+ * before re-assigning (see run()), and matches colleges on
  * (register_type_id, name, type_gestion). A college renamed through the UI
  * would therefore not match, would be left with code_college = NULL
  * permanently, and a duplicate would be created — orphaning its
@@ -98,15 +109,18 @@ class MembershipTypeSeeder extends Seeder
 
             // Reset semantic business key before re-assignment to avoid collisions
             // when legacy/partial seed runs left stale values.
-            RegisterTypeCollege::query()->whereNotNull('code_college')->update(['code_college' => null]);
+            // System rows only: an admin-created college's code is its identity
+            // and nothing here would ever assign it back.
+            RegisterTypeCollege::query()->where('is_system', true)->whereNotNull('code_college')->update(['code_college' => null]);
 
             foreach ($registerTypes as $typeId => $typeName) {
-                $registerType = RegisterType::firstOrCreate(['name' => $typeName], ['slug' => Str::slug($typeName)]);
+                $registerType = $this->systemRow(RegisterType::class, ['name' => $typeName], ['slug' => Str::slug($typeName)]);
                 $createdRegisterTypes[$typeId] = $registerType;
 
                 if (isset($typeGestionLabels[$typeId])) {
                     foreach ($typeGestionLabels[$typeId] as $value => $labels) {
-                        $typeGestionIds[$typeId][$value] = TypeGestion::firstOrCreate(
+                        $typeGestionIds[$typeId][$value] = $this->systemRow(
+                            TypeGestion::class,
                             ['register_type_id' => $registerType->id, 'type_gestion' => $value],
                             $labels,
                         )->id;
@@ -232,7 +246,7 @@ class MembershipTypeSeeder extends Seeder
             'code_dv' => $codeDv,
         ];
 
-        $existing = RegisterTypeCollege::query()->where($identity)->first();
+        $existing = RegisterTypeCollege::query()->where('is_system', true)->where($identity)->first();
 
         if ($existing instanceof RegisterTypeCollege) {
             $existing->update($structure);
@@ -240,11 +254,40 @@ class MembershipTypeSeeder extends Seeder
             return $existing;
         }
 
-        return RegisterTypeCollege::query()->create([
+        $college = new RegisterTypeCollege;
+        $college->forceFill([
             ...$identity,
             ...$structure,
             'is_disabled' => $isDisabled,
-        ]);
+            'is_system' => true,
+        ])->save();
+
+        return $college;
+    }
+
+    /**
+     * firstOrCreate over system rows only. `is_system` is not mass-assignable
+     * (so no request can ever set it), hence forceFill.
+     *
+     * @template TModel of RegisterType|TypeGestion
+     *
+     * @param  class-string<TModel>  $model
+     * @param  array<string, mixed>  $match
+     * @param  array<string, mixed>  $defaults
+     * @return TModel
+     */
+    private function systemRow(string $model, array $match, array $defaults): RegisterType|TypeGestion
+    {
+        $existing = $model::query()->where('is_system', true)->where($match)->first();
+
+        if ($existing instanceof $model) {
+            return $existing;
+        }
+
+        $row = new $model;
+        $row->forceFill([...$match, ...$defaults, 'is_system' => true])->save();
+
+        return $row;
     }
 
     /**
@@ -687,7 +730,7 @@ class MembershipTypeSeeder extends Seeder
         $available = $member['available_in_registration'];
         $legacyNames = $member['legacy_names'];
 
-        $base = RegisterTypeMember::query()->where('register_type_college_id', $collegeId);
+        $base = RegisterTypeMember::query()->where('is_system', true)->where('register_type_college_id', $collegeId);
 
         $existing = null;
         if ($codeQlt !== null) {
@@ -714,10 +757,12 @@ class MembershipTypeSeeder extends Seeder
             return;
         }
 
-        RegisterTypeMember::query()->create([
+        $created = new RegisterTypeMember;
+        $created->forceFill([
             'register_type_college_id' => $collegeId,
             ...$identity,
             'available_in_registration' => $available,
-        ]);
+            'is_system' => true,
+        ])->save();
     }
 }

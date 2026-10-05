@@ -32,6 +32,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $code_dv
  * @property bool $adhesion
  * @property bool $is_disabled
+ * @property bool $is_system
  * @property-read string $name_global
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -87,6 +88,7 @@ class RegisterTypeCollege extends Model
             'type_gestion' => 'integer',
             'adhesion' => 'boolean',
             'is_disabled' => 'boolean',
+            'is_system' => 'boolean',
         ];
     }
 
@@ -131,6 +133,26 @@ class RegisterTypeCollege extends Model
     public function collegeOeuvreFiles(): HasMany
     {
         return $this->hasMany(CollegeOeuvreFile::class);
+    }
+
+    /**
+     * Required-document rows an author could upload into. A retired row is
+     * soft-deleted, so the default scope already excludes it.
+     */
+    public function activeDocumentsCount(): int
+    {
+        return $this->collegeOeuvreFiles()->count();
+    }
+
+    /**
+     * Whether step 1 would offer this college right now: enabled, active,
+     * not one of the reference-only codes.
+     */
+    public function isReachable(): bool
+    {
+        return $this->status === self::STATUS_ACTIVE
+            && ! $this->is_disabled
+            && ! in_array($this->code_college, self::CODES_HIDDEN_FROM_REGISTRATION, true);
     }
 
     /**

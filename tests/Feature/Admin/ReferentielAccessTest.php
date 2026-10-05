@@ -102,7 +102,7 @@ test('the colleges filter narrows by type, and search by name or code', function
         );
 
     $this->actingAs($admin)
-        ->get(route('admin.referentiel.colleges', ['type' => $musique->register_type_id]))
+        ->get(route('admin.referentiel.colleges', ['type' => $musique->registerType->uuid]))
         ->assertInertia(fn (Assert $page) => $page
             ->where('rows.total', RegisterTypeCollege::where('register_type_id', $musique->register_type_id)->count())
         );
@@ -157,7 +157,8 @@ test('a tab\'s query count does not grow with its rows', function (string $tab, 
     // filter dropdowns.
     $pinned = [
         'types' => 7,
-        'gestions' => 8,
+        // 8 + the declarant types for the create form's parent select.
+        'gestions' => 9,
         'colleges' => 11,
         'membres' => 9,
         'documents' => 9,
@@ -184,8 +185,22 @@ test('no route deletes a reference row', function () {
         ->values()
         ->all();
 
-    // Reads and edits only. A collège with deposits filed under it must
-    // never disappear, and soft-deleting one would leave those oeuvres
-    // pointing at a trashed parent.
-    expect($referentielRoutes)->toBe(['GET', 'PATCH']);
+    // Reads, creates (POST) and edits (PATCH) only — never DELETE. A collège
+    // with deposits filed under it must never disappear, and soft-deleting
+    // one would leave those oeuvres pointing at a trashed parent.
+    expect($referentielRoutes)->toBe(['GET', 'PATCH', 'POST']);
+});
+
+it('honours an allowed per_page on every reference tab and ignores anything else', function () {
+    $admin = referentielAdmin();
+
+    foreach (['types', 'gestions', 'colleges', 'membres', 'documents'] as $tab) {
+        $this->actingAs($admin)
+            ->get(route("admin.referentiel.{$tab}", ['per_page' => 10]))
+            ->assertInertia(fn ($page) => $page->where('rows.per_page', 10));
+
+        $this->actingAs($admin)
+            ->get(route("admin.referentiel.{$tab}", ['per_page' => 100000]))
+            ->assertInertia(fn ($page) => $page->where('rows.per_page', 25));
+    }
 });
