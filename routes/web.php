@@ -20,6 +20,10 @@ Route::get('locale/{locale}', LocaleController::class)
     ->where(['locale' => Language::CODE_PATTERN])
     ->name('locale.switch');
 
+// Public technical presentation (architecture & choices). No auth, no
+// layout — the page opts out itself via defineOptions({ layout }).
+Route::inertia('/presentation', 'Presentation')->name('presentation');
+
 Route::prefix('{locale}')
     ->where(['locale' => Language::CODE_PATTERN])
     ->group(function () {
