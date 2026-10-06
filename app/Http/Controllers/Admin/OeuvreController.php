@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Access\AccessLogger;
 use App\Domain\Deposit\OeuvreStatus;
 use App\Domain\Deposit\SubmissionGate;
 use App\Http\Controllers\Author\OeuvreController as AuthorOeuvreController;
@@ -11,7 +12,9 @@ use App\Http\Controllers\Concerns\ResolvesPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,9 +23,11 @@ use Inertia\Response;
  * author (see AuthorController's docblock for the aggregate-query
  * rationale, which this mirrors).
  *
- * A `draft` is an author's private working state, never a submission — it
- * is excluded by `whereIn` on the base query below, not filtered out in the
- * Vue template, so it can never leak onto the page even transiently.
+ * A `draft` is an author's private working state, never a submission. It is
+ * hidden from the default list by the `excludingDrafts` scope (in the query,
+ * not the Vue template) and appears only when the status filter is explicitly
+ * set to `draft`. It is always read-only for an admin: see
+ * OeuvrePolicy::decide().
  */
 final class OeuvreController extends Controller
 {
@@ -31,16 +36,17 @@ final class OeuvreController extends Controller
     private const PER_PAGE = 25;
 
     /**
-     * Every status an admin may ever be shown. `draft` is deliberately
-     * absent — see class docblock.
+     * What the status filter offers. `draft` is last and only ever shown
+     * when selected explicitly — see class docblock.
      *
      * @var list<string>
      */
-    private const REVIEWABLE_STATUSES = [
+    private const FILTERABLE_STATUSES = [
         OeuvreStatus::SUBMITTED,
         OeuvreStatus::UNDER_REVIEW,
         OeuvreStatus::REGISTERED,
         OeuvreStatus::REJECTED,
+        OeuvreStatus::DRAFT,
     ];
 
     public function index(Request $request): Response
@@ -52,7 +58,7 @@ final class OeuvreController extends Controller
         $to = trim((string) $request->string('to'));
 
         $oeuvres = Oeuvre::query()
-            ->whereIn('status', self::REVIEWABLE_STATUSES)
+            ->when($status !== OeuvreStatus::DRAFT, fn ($query) => $query->excludingDrafts())
             ->with(['author:id,uuid,name', 'registerTypeCollege'])
             ->withCount('mediaFiles')
             ->selectRaw('(select coalesce(sum(mf.size_bytes), 0) from media_files mf where mf.oeuvre_id = oeuvres.id and mf.deleted_at is null) as files_size_bytes')
@@ -65,7 +71,7 @@ final class OeuvreController extends Controller
                 "where mf.oeuvre_id = oeuvres.id and mf.deleted_at is null and mf.status in ('failed', 'quarantined')) as has_blocking_file"
             )
             ->when($search !== '', fn ($query) => $query->where('title', 'like', "%{$search}%"))
-            ->when($status !== '' && in_array($status, self::REVIEWABLE_STATUSES, true), fn ($query) => $query->where('status', $status))
+            ->when($status !== '' && in_array($status, self::FILTERABLE_STATUSES, true), fn ($query) => $query->where('status', $status))
             ->when($author !== '', fn ($query) => $query->whereHas(
                 'author',
                 fn ($q) => $q->where('uuid', $author)->orWhere('name', 'like', "%{$author}%")->orWhere('email', 'like', "%{$author}%")
@@ -74,7 +80,10 @@ final class OeuvreController extends Controller
             ->when($to !== '', fn ($query) => $query->whereDate('created_at', '<=', $to))
             // The queue is ordered by when a deposit last entered it,
             // not by when the author created the record — a draft filed
-            // in January and submitted today belongs at the top.
+            // in January and submitted today belongs at the top. A draft
+            // has no `submitted_at`; the explicit null test keeps those
+            // rows last on every driver instead of relying on NULL order.
+            ->orderByRaw('oeuvres.submitted_at is null')
             ->orderByDesc('submitted_at')
             ->orderByDesc('id')
             ->paginate($this->perPage($request, self::PER_PAGE))
@@ -101,13 +110,16 @@ final class OeuvreController extends Controller
                 'from' => $from,
                 'to' => $to,
             ],
-            'statuses' => self::REVIEWABLE_STATUSES,
+            'statuses' => self::FILTERABLE_STATUSES,
         ]);
     }
 
     public function show(Request $request, Oeuvre $oeuvre, SubmissionGate $gate): Response
     {
-        abort_if($oeuvre->status === OeuvreStatus::DRAFT, 404);
+        /** @var User $admin */
+        $admin = $request->user();
+
+        Gate::forUser($admin)->authorize('inspect', $oeuvre);
 
         $oeuvre->load(['author:id,uuid,name,first_name,last_name', 'registerTypeCollege', 'reviewer:id,uuid,name']);
 
@@ -134,6 +146,19 @@ final class OeuvreController extends Controller
                 ];
             });
 
+        // Reading someone else's unsubmitted work is a privileged act: one
+        // ledger row per file, naming the officer. Other statuses are
+        // unchanged — their reads are logged where bytes are actually served.
+        if ($oeuvre->status === OeuvreStatus::DRAFT) {
+            $oeuvre->mediaFiles()->get()->each(fn (MediaFile $file) => AccessLogger::record(
+                $file,
+                $admin->id,
+                'inspect',
+                $request->ip() ?? 'unknown',
+                $request->userAgent(),
+            ));
+        }
+
         return Inertia::render('admin/oeuvres/Show', [
             'oeuvre' => [
                 'uuid' => $oeuvre->uuid,
@@ -146,6 +171,7 @@ final class OeuvreController extends Controller
                 'submitted_at' => $oeuvre->submitted_at,
                 'reviewed_at' => $oeuvre->reviewed_at,
                 'registered_at' => $oeuvre->registered_at,
+                'is_draft' => $oeuvre->status === OeuvreStatus::DRAFT,
             ],
             'files' => $files,
             // Who holds this deposit right now, and whether that is the

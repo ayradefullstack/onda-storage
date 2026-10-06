@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import { FileEdit } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import MediaFileInspectionCard from '@/components/admin/MediaFileInspectionCard.vue';
 import StatusBadge from '@/components/admin/StatusBadge.vue';
 import StreamOriginalDialog from '@/components/admin/StreamOriginalDialog.vue';
 import { oeuvreLabel } from '@/components/oeuvre/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatDate } from '@/lib/format';
 import { dashboard } from '@/routes/admin';
 import { show as authorShow } from '@/routes/admin/authors';
@@ -39,6 +41,7 @@ const props = defineProps<{
         author: { uuid: string; name: string } | null;
         created_at: string;
         registered_at: string | null;
+        is_draft?: boolean;
     };
     files: MediaFileDetail[];
 }>();
@@ -71,6 +74,13 @@ function openStreamDialog(file: MediaFileDetail): void {
     <Head :title="label" />
 
     <div class="mx-auto w-full max-w-4xl space-y-6 p-4 md:p-6">
+        <Alert v-if="oeuvre.is_draft" role="status">
+            <FileEdit />
+            <AlertDescription>
+                {{ t('admin.oeuvres.draftBanner') }}
+            </AlertDescription>
+        </Alert>
+
         <div>
             <div class="flex flex-wrap items-center gap-2">
                 <h1 class="text-2xl font-semibold tracking-tight">
@@ -90,7 +100,7 @@ function openStreamDialog(file: MediaFileDetail): void {
                     :href="authorShow(oeuvre.author.uuid)"
                     class="hover:underline"
                 >
-                    {{ oeuvre.author.name }}
+                    <bdi>{{ oeuvre.author.name }}</bdi>
                 </Link>
                 <span class="text-muted-foreground">
                     ·

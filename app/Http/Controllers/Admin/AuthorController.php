@@ -123,7 +123,7 @@ final class AuthorController extends Controller
         // page links somewhere that actually renders rather than 404ing.
         $oeuvres = Oeuvre::query()
             ->where('author_id', $user->id)
-            ->where('status', '!=', 'draft')
+            ->excludingDrafts()
             ->with('registerTypeCollege')
             ->withCount('mediaFiles')
             ->selectRaw('(select coalesce(sum(mf.size_bytes), 0) from media_files mf where mf.oeuvre_id = oeuvres.id and mf.deleted_at is null) as files_size_bytes')

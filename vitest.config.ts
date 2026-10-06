@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url';
+import vue from '@vitejs/plugin-vue';
 import { defineConfig } from 'vitest/config';
 
 /**
@@ -8,6 +9,8 @@ import { defineConfig } from 'vitest/config';
  * resources/js. Only the `@` alias (see tsconfig.json) is mirrored here.
  */
 export default defineConfig({
+    // Only so a .vue page can be server-rendered in a test; no DOM env needed.
+    plugins: [vue()],
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./resources/js', import.meta.url)),
