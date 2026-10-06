@@ -73,4 +73,26 @@ final class OeuvrePolicy
         return $user->id === $oeuvre->author_id
             && OeuvreStatus::isAuthorEditable($oeuvre->status);
     }
+
+    /**
+     * An officer opening a deposit in the admin console. Drafts are
+     * readable (read-only, logged) — see `decide()` for why they are not
+     * decidable.
+     */
+    public function inspect(User $user, Oeuvre $oeuvre): bool
+    {
+        return $user->hasRole('admin');
+    }
+
+    /**
+     * Open a review, approve or reject. Refused for a draft: it is still the
+     * author's to change or delete at any moment, so a decision would be
+     * made on content that can move underneath it. The status machine has no
+     * draft -> reviewed edge either; this refuses earlier, as a 403, so the
+     * direct request never reaches it.
+     */
+    public function decide(User $user, Oeuvre $oeuvre): bool
+    {
+        return $user->hasRole('admin') && $oeuvre->status !== OeuvreStatus::DRAFT;
+    }
 }

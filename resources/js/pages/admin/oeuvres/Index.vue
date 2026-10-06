@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { oeuvreLabel } from '@/components/oeuvre/label';
+import { Button } from '@/components/ui/button';
 import {
     DataTable,
     DataTableToolbar,
@@ -11,7 +12,6 @@ import {
     DataTableFilterPills,
     DataTableStatusBadge,
     DataTablePagination,
-    DataTableEmpty,
 } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/input';
 import {
@@ -40,6 +40,7 @@ interface OeuvreRow {
     all_ready: boolean;
     has_blocking_file: boolean;
     created_at: string;
+    submitted_at: string | null;
 }
 
 const props = defineProps<{
@@ -61,6 +62,14 @@ const props = defineProps<{
 }>();
 
 const { t, locale } = useI18n();
+
+// reka-ui refuses an empty-string SelectItem value, so "no status filter"
+// travels as this sentinel and is mapped back to '' at the boundary.
+const ALL_STATUSES = '__all';
+
+// Search + author + status + date range columns; the empty-state row spans
+// all of them.
+const COLUMN_COUNT = 9;
 
 defineOptions({
     layout: {
@@ -92,8 +101,6 @@ function applyFilters(overrides: Record<string, string> = {}): void {
         { preserveState: true, replace: true },
     );
 }
-
-const hasResults = computed(() => props.oeuvres.data.length > 0);
 
 const hasActiveFilters = computed(() =>
     Boolean(
@@ -207,9 +214,15 @@ function clearFilters(): void {
                         />
 
                         <Select
-                            :model-value="filters.status"
+                            :model-value="filters.status || ALL_STATUSES"
                             @update:model-value="
-                                (v) => applyFilters({ status: String(v ?? '') })
+                                (v) =>
+                                    applyFilters({
+                                        status:
+                                            !v || v === ALL_STATUSES
+                                                ? ''
+                                                : String(v),
+                                    })
                             "
                         >
                             <SelectTrigger class="h-9 w-40 text-xs">
@@ -220,7 +233,7 @@ function clearFilters(): void {
                                 />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">{{
+                                <SelectItem :value="ALL_STATUSES">{{
                                     t('admin.oeuvres.allStatuses')
                                 }}</SelectItem>
                                 <SelectItem
@@ -262,17 +275,8 @@ function clearFilters(): void {
                 </DataTableToolbar>
             </template>
 
-            <!-- Empty State -->
-            <DataTableEmpty
-                v-if="!hasResults"
-                :title="t('admin.oeuvres.empty')"
-                :description="t('admin.oeuvres.emptyDescription')"
-                :has-active-filters="hasActiveFilters"
-                @clear-filters="clearFilters"
-            />
-
-            <!-- Enterprise Table -->
-            <table v-else class="w-full border-collapse text-xs">
+            <!-- The header always renders; an empty result is a row, never an absent table. -->
+            <table class="w-full border-collapse text-xs">
                 <thead>
                     <tr
                         class="border-b border-border/70 bg-muted/40 font-semibold text-muted-foreground"
@@ -301,9 +305,41 @@ function clearFilters(): void {
                         <th class="px-4 py-3 text-start font-medium">
                             {{ t('admin.oeuvres.colReady') }}
                         </th>
+                        <th class="px-4 py-3 text-start font-medium">
+                            {{ t('admin.oeuvres.colActions') }}
+                        </th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border/60">
+                    <tr v-if="oeuvres.data.length === 0">
+                        <td
+                            :colspan="COLUMN_COUNT"
+                            class="px-4 py-12 text-center"
+                        >
+                            <p class="text-sm font-medium text-foreground">
+                                {{
+                                    hasActiveFilters
+                                        ? t('admin.oeuvres.emptyFiltered')
+                                        : t('admin.oeuvres.emptyNone')
+                                }}
+                            </p>
+                            <p
+                                v-if="!hasActiveFilters"
+                                class="mt-1 text-xs text-muted-foreground"
+                            >
+                                {{ t('admin.oeuvres.emptyDraftsHint') }}
+                            </p>
+                            <Button
+                                v-else
+                                variant="outline"
+                                size="sm"
+                                class="mt-3 h-8 text-xs"
+                                @click="clearFilters"
+                            >
+                                {{ t('admin.oeuvres.resetFilters') }}
+                            </Button>
+                        </td>
+                    </tr>
                     <tr
                         v-for="(oeuvre, index) in oeuvres.data"
                         :key="oeuvre.uuid"
@@ -334,7 +370,7 @@ function clearFilters(): void {
                                 :href="authorShow(oeuvre.author.uuid)"
                                 class="hover:text-foreground hover:underline"
                             >
-                                {{ oeuvre.author.name }}
+                                <bdi>{{ oeuvre.author.name }}</bdi>
                             </Link>
                             <span v-else class="text-muted-foreground">—</span>
                         </td>
@@ -366,7 +402,9 @@ function clearFilters(): void {
                         </td>
                         <td class="px-4 py-3 text-muted-foreground">
                             <bdi dir="ltr">{{
-                                formatDate(oeuvre.created_at, locale)
+                                oeuvre.submitted_at
+                                    ? formatDate(oeuvre.submitted_at, locale)
+                                    : '—'
                             }}</bdi>
                         </td>
                         <td class="px-4 py-3">
@@ -375,6 +413,14 @@ function clearFilters(): void {
                                 class="size-4 text-emerald-600 dark:text-emerald-400"
                             />
                             <span v-else class="text-muted-foreground">—</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <Link
+                                :href="oeuvreShow(oeuvre.uuid)"
+                                class="font-medium text-primary hover:underline"
+                            >
+                                {{ t('admin.oeuvres.view') }}
+                            </Link>
                         </td>
                     </tr>
                 </tbody>

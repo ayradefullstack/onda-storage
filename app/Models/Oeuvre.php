@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Concerns\HasUuidColumn;
 use App\Domain\Deposit\OeuvreStatus;
 use Database\Factories\OeuvreFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -58,6 +59,18 @@ class Oeuvre extends Model
             'reviewed_at' => 'datetime',
             'registered_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Everything except an author's private working state. The one place
+     * "what the admin list shows by default" is defined.
+     *
+     * @param  Builder<Oeuvre>  $query
+     * @return Builder<Oeuvre>
+     */
+    public function scopeExcludingDrafts(Builder $query): Builder
+    {
+        return $query->where('oeuvres.status', '!=', OeuvreStatus::DRAFT);
     }
 
     /**

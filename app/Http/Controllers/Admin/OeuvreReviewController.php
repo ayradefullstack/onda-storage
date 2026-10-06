@@ -14,6 +14,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Oeuvre;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -35,6 +36,8 @@ final class OeuvreReviewController extends Controller
 {
     public function review(Request $request, Oeuvre $oeuvre, OpenReview $open): RedirectResponse
     {
+        Gate::forUser($request->user())->authorize('decide', $oeuvre);
+
         $validated = $request->validate([
             'take_over' => ['sometimes', 'boolean'],
         ]);
@@ -50,6 +53,8 @@ final class OeuvreReviewController extends Controller
 
     public function approve(Request $request, Oeuvre $oeuvre, ApproveOeuvre $approve): RedirectResponse
     {
+        Gate::forUser($request->user())->authorize('decide', $oeuvre);
+
         $validated = $request->validate([
             'take_over' => ['sometimes', 'boolean'],
         ]);
@@ -67,6 +72,8 @@ final class OeuvreReviewController extends Controller
 
     public function reject(Request $request, Oeuvre $oeuvre, RejectOeuvre $reject): RedirectResponse
     {
+        Gate::forUser($request->user())->authorize('decide', $oeuvre);
+
         // Validated here as well as in the machine: `required` gives the
         // officer an inline field error as they type, where the domain
         // exception can only be a page-level refusal. The machine stays
