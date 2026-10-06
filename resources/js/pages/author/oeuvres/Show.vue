@@ -1,6 +1,18 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
-import { LockIcon, ShieldCheckIcon } from '@lucide/vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import {
+    ArrowLeft,
+    CheckCircle2,
+    Database,
+    FileCheck2,
+    HardDrive,
+    Lock,
+    Send,
+    Shield,
+    ShieldAlert,
+    ShieldCheck,
+    Sparkles,
+} from '@lucide/vue';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ClassificationCard from '@/components/oeuvre/ClassificationCard.vue';
@@ -8,6 +20,7 @@ import type { OeuvreClassification } from '@/components/oeuvre/ClassificationCar
 import { oeuvreLabel } from '@/components/oeuvre/label';
 import OeuvreSubmitDialog from '@/components/oeuvre/OeuvreSubmitDialog.vue';
 import SubmitArea from '@/components/oeuvre/SubmitArea.vue';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import DepositCard from '@/components/upload/DepositCard.vue';
 import type { DepositEntry } from '@/components/upload/depositJourney';
@@ -21,7 +34,7 @@ import type { RequirementSlot } from '@/components/upload/requirement';
 import RequirementSlotCard from '@/components/upload/RequirementSlotCard.vue';
 import ResumeBanner from '@/components/upload/ResumeBanner.vue';
 import { useUploadQueue } from '@/composables/useUploadQueue';
-import { formatBytes } from '@/lib/format';
+import { formatBytes, formatDate } from '@/lib/format';
 import {
     allowedExtensionList,
     MAX_FILE_SIZE_BYTES,
@@ -40,25 +53,19 @@ interface OeuvreDetail {
     status: string;
     created_at: string;
     submitted_at: string | null;
-    /** OeuvrePolicy's answer, not the template's guess. */
     can: { edit: boolean; delete: boolean };
 }
 
-/** One blocker or advisory from SubmissionGate. */
 interface SubmissionReason {
     code: string;
     params: Record<string, string | number | null>;
-    /** English source string — the UI renders `code` instead. */
     message: string;
 }
 
 interface Submission {
     can_submit: boolean;
-    /** Every reason at once, never just the first one found. */
     blockers: SubmissionReason[];
-    /** Empty CONDITIONAL required slots. Advisory; they never block. */
     advisories: SubmissionReason[];
-    /** False once the deposit is frozen — neither button nor blockers apply. */
     is_open: boolean;
 }
 
@@ -67,11 +74,9 @@ interface Quota {
     limit_bytes: number;
 }
 
-/** `Oeuvre::requiredDocumentsProgress()` — counts only files at `ready`. */
 interface RequiredDocumentsProgress {
     satisfied: number;
     total: number;
-    /** Unsatisfied required slots whose (unevaluated) condition may exclude them. */
     conditional: number;
 }
 
@@ -80,7 +85,6 @@ const props = defineProps<{
     classification: OeuvreClassification | null;
     mediaFiles: MediaFileSummary[];
     quota: Quota;
-    /** One upload slot per required document; empty for an unclassified oeuvre. */
     requirements: RequirementSlot[];
     progress: RequiredDocumentsProgress;
     submission: Submission;
@@ -88,18 +92,12 @@ const props = defineProps<{
 
 const { t, locale } = useI18n();
 
-// defineOptions()'s argument is hoisted out of setup() at compile time, so
-// it cannot reference `props` (a runtime value) — only a static breadcrumb
-// is possible here, unlike Index/Create which have no dynamic segment.
 defineOptions({
     layout: {
         breadcrumbs: [{ title: 'Works', href: index() }],
     },
 });
 
-// --- the submit area. `editable` is the policy's answer, carried on the
-// oeuvre prop; everything the page offers keys off it, and the server
-// refuses regardless (OeuvrePolicy, InitUpload's status guard).
 const editable = computed(() => props.oeuvre.can.edit);
 
 const submitDialogFor = ref<{ uuid: string; label: string } | null>(null);
@@ -108,33 +106,16 @@ const openSubmitDialog = () => {
     submitDialogFor.value = { uuid: props.oeuvre.uuid, label: label.value };
 };
 
-/**
- * Taking a file off the deposit. The confirmation already happened inside
- * DepositCard; this only issues the request. `preserveScroll` so a long
- * slot list does not jump back to the top on every removal.
- */
 const removeFile = (uuid: string) => {
     router.delete(destroyFile(uuid).url, { preserveScroll: true });
 };
 
-// A deposit that was already `ready` when this page loaded collapses to
-// just the seal — its journey isn't news. One reached during this visit
-// stays on the full rail for the rest of the visit. Captured once, at
-// setup time, deliberately not reactive to the polling reloads below.
 const readyAtLoadUuids = new Set(
     props.mediaFiles
         .filter((mediaFile) => mediaFile.status === 'ready')
         .map((mediaFile) => mediaFile.uuid),
 );
 
-// --- status polling: backs off 2s -> 5s -> 15s, stops once every file has
-// reached a terminal state. Reuses the Show route itself via Inertia's
-// partial-reload mechanism rather than a bespoke JSON endpoint. `quota` is
-// included every time — a partial reload only refreshes the props named
-// here, so a figure completed uploads charge against would otherwise go
-// stale until a full page reload.
-// `progress` rides along: it only moves when a file reaches `ready`, which
-// is exactly what these reloads detect.
 const RELOAD_PROPS = ['mediaFiles', 'quota', 'progress'] as const;
 const TERMINAL_STATUSES: MediaFileStatus[] = ['ready', 'failed', 'quarantined'];
 const POLL_INTERVALS_MS = [2000, 5000, 15000];
@@ -178,11 +159,6 @@ onBeforeUnmount(() => {
     }
 });
 
-// A file completing (P3's `complete`) doesn't itself refresh this page's
-// props — the upload store and this page are independent. Watching for a
-// newly-completed upload belonging to this oeuvre and reloading once picks
-// up the new MediaFile row immediately, instead of waiting for the next
-// scheduled poll tick.
 const queue = useUploadQueue();
 const completedForThisOeuvre = computed(
     () =>
@@ -197,10 +173,6 @@ watch(completedForThisOeuvre, (next, previous) => {
     }
 });
 
-// --- the merged deposit list: an in-flight upload and its eventual
-// MediaFile row are the same file, one row, never disappearing and
-// reappearing. See `mergeDepositEntries` for why `completed` uploads are
-// excluded.
 const entries = computed<DepositEntry[]>(() =>
     mergeDepositEntries(
         queue.files.value,
@@ -210,8 +182,6 @@ const entries = computed<DepositEntry[]>(() =>
     ),
 );
 
-// Step 2: a classified oeuvre gets one card per required document; an
-// unclassified one keeps the single dropzone and flat list below.
 const hasRequirements = computed(() => props.requirements.length > 0);
 
 const grouped = computed(() =>
@@ -227,8 +197,6 @@ const progressPercent = computed(() =>
         : Math.round((props.progress.satisfied / props.progress.total) * 100),
 );
 
-// Collège, classification and requirement titles are resolved server-side in
-// the request locale.
 watch(locale, () => {
     router.reload({ only: ['classification', 'requirements'] });
 });
@@ -241,8 +209,7 @@ function onReselect(id: string, file: File): void {
     const result = queue.resumeWithReselectedFile(id, file);
 
     if (!result.ok) {
-        // ResumeBanner in the global sheet already surfaces the same
-        // failure via a toast; this inline copy stays quiet on success.
+        // toast handles in global banner
     }
 }
 
@@ -254,165 +221,358 @@ const quotaRemaining = computed(() =>
     Math.max(0, props.quota.limit_bytes - props.quota.used_bytes),
 );
 
-/**
- * A gate reason, rendered in the reader's language. The gate emits a
- * stable `code` plus parameters rather than a sentence — this project has
- * no server-side `lang/`, so the prose lives in the locale files and the
- * server stays language-agnostic (see SubmissionReason).
- */
+const quotaPercent = computed(() => {
+    if (!props.quota.limit_bytes) {
+        return 0;
+    }
+
+    return Math.min(
+        100,
+        Math.round((props.quota.used_bytes / props.quota.limit_bytes) * 100),
+    );
+});
+
 const reasonText = (reason: SubmissionReason) =>
     t(`oeuvres.gate.${reason.code}`, {
         name: String(reason.params.name ?? ''),
         status: t(`media.status.${String(reason.params.status ?? 'failed')}`),
     });
 
+const statusBadge = computed(() => {
+    switch (props.oeuvre.status) {
+        case 'registered':
+            return {
+                label: 'Enregistré & Protégé',
+                class: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+                dotClass: 'bg-emerald-500',
+            };
+        case 'submitted':
+            return {
+                label: 'Soumis pour examen',
+                class: 'bg-onda-blue-500/10 text-onda-blue-700 dark:text-onda-blue-300 border-onda-blue-500/30',
+                dotClass: 'bg-onda-blue-500 animate-pulse',
+            };
+        case 'under_review':
+            return {
+                label: "En cours d'examen",
+                class: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30',
+                dotClass: 'bg-purple-500 animate-pulse',
+            };
+        case 'rejected':
+            return {
+                label: 'Rejeté',
+                class: 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30',
+                dotClass: 'bg-rose-500',
+            };
+        case 'draft':
+        default:
+            return {
+                label: 'Brouillon (Dépôt des pièces)',
+                class: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30',
+                dotClass: 'bg-amber-500 animate-pulse',
+            };
+    }
+});
 </script>
 
 <template>
     <Head :title="label" />
 
-    <div class="mx-auto w-full max-w-4xl space-y-6 p-4 sm:p-6 lg:p-8">
-        <div>
-            <h1 class="text-xl font-semibold tracking-tight">
-                <bdi>{{ label }}</bdi>
-            </h1>
-            <p
-                v-if="oeuvre.description"
-                class="mt-1 text-sm text-muted-foreground"
+    <div class="mx-auto w-full max-w-5xl space-y-8 p-4 sm:p-6 lg:p-8">
+        <!-- Top Hero Navigation & Meta Header -->
+        <div class="space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <Link
+                    :href="index()"
+                    class="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+                >
+                    <ArrowLeft class="size-3.5 rtl:rotate-180" />
+                    <span>Retour au catalogue des œuvres</span>
+                </Link>
+
+                <div class="flex items-center gap-2">
+                    <span
+                        class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold"
+                        :class="statusBadge.class"
+                    >
+                        <span
+                            class="size-1.5 rounded-full"
+                            :class="statusBadge.dotClass"
+                        />
+                        <span>{{ statusBadge.label }}</span>
+                    </span>
+
+                    <span
+                        v-if="oeuvre.code_college_snapshot"
+                        class="rounded-md border border-border/80 bg-muted px-2 py-0.5 font-mono text-[11px] font-semibold text-muted-foreground"
+                    >
+                        <bdi dir="ltr"
+                            >[{{ oeuvre.code_college_snapshot }}]</bdi
+                        >
+                    </span>
+                </div>
+            </div>
+
+            <!-- Title & CTA Bar -->
+            <div
+                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
             >
-                {{ oeuvre.description }}
-            </p>
+                <div class="min-w-0 space-y-1">
+                    <h1
+                        class="truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
+                    >
+                        <bdi>{{ label }}</bdi>
+                    </h1>
+                    <p
+                        v-if="oeuvre.description"
+                        class="text-sm text-muted-foreground"
+                    >
+                        {{ oeuvre.description }}
+                    </p>
+                    <p
+                        v-else-if="oeuvre.college_name"
+                        class="text-xs text-muted-foreground"
+                    >
+                        Discipline :
+                        <span class="font-medium text-foreground">{{
+                            oeuvre.college_name
+                        }}</span>
+                        • Créée le {{ formatDate(oeuvre.created_at, locale) }}
+                    </p>
+                </div>
+
+                <!-- Direct Header Submit CTA if ready -->
+                <div v-if="submission.can_submit && editable" class="shrink-0">
+                    <Button
+                        class="h-10 cursor-pointer gap-2 bg-emerald-600 px-4 text-xs font-semibold text-white shadow-onda-card hover:bg-emerald-700 dark:bg-emerald-500"
+                        @click="openSubmitDialog"
+                    >
+                        <Send class="size-3.5 rtl:rotate-180" />
+                        <span>{{ t('oeuvres.table.submit') }}</span>
+                    </Button>
+                </div>
+            </div>
         </div>
 
+        <!-- Official Classification Card -->
         <ClassificationCard
             v-if="classification"
             :classification="classification"
         />
 
+        <!-- STEP 2: DOCUMENTS DEPOSIT JOURNEY -->
         <template v-if="hasRequirements">
-            <Card>
-                <CardContent class="space-y-3 py-6">
-                    <div
-                        class="flex flex-wrap items-baseline justify-between gap-3"
+            <!-- Modern Bento Stats Card: Documents Progress & Quota Bar -->
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <!-- 1. Documents Progress Card -->
+                <Card
+                    class="border-border/80 shadow-onda-card sm:col-span-2 lg:col-span-2"
+                >
+                    <CardContent
+                        class="space-y-3.5 p-5 sm:p-6"
+                        data-test="required-progress"
                     >
-                        <h2 class="text-sm font-medium">
-                            {{ t('oeuvres.step2.title') }}
-                        </h2>
-                        <i18n-t
-                            keypath="oeuvres.show.quota"
-                            tag="span"
-                            class="text-xs text-muted-foreground"
-                        >
-                            <template #used
-                                ><bdi dir="ltr">{{
-                                    formatBytes(quota.used_bytes, locale)
-                                }}</bdi></template
-                            >
-                            <template #limit
-                                ><bdi dir="ltr">{{
-                                    formatBytes(quota.limit_bytes, locale)
-                                }}</bdi></template
-                            >
-                            <template #remaining
-                                ><bdi dir="ltr">{{
-                                    formatBytes(quotaRemaining, locale)
-                                }}</bdi></template
-                            >
-                        </i18n-t>
-                    </div>
-
-                    <div class="space-y-2" data-test="required-progress">
-                        <p class="text-sm">
-                            <span class="font-semibold tabular-nums">{{
-                                t('oeuvres.step2.progress', {
-                                    satisfied: progress.satisfied,
-                                    total: progress.total,
-                                })
-                            }}</span>
-                            <span
-                                v-if="progress.conditional > 0"
-                                class="text-muted-foreground"
-                            >
-                                —
-                                {{
-                                    t(
-                                        'oeuvres.step2.mayNotApply',
-                                        { count: progress.conditional },
-                                        progress.conditional,
-                                    )
-                                }}</span
-                            >
-                        </p>
                         <div
-                            class="h-2 overflow-hidden rounded-full bg-muted"
-                            role="progressbar"
-                            :aria-valuenow="progress.satisfied"
-                            aria-valuemin="0"
-                            :aria-valuemax="progress.total"
+                            class="flex flex-wrap items-baseline justify-between gap-2"
                         >
-                            <div
-                                class="h-full rounded-full bg-primary transition-[width] duration-500"
-                                :style="{ width: progressPercent + '%' }"
-                            />
+                            <div class="flex items-center gap-2">
+                                <Sparkles
+                                    class="size-4 text-onda-blue-600 dark:text-onda-blue-400"
+                                />
+                                <h2
+                                    class="text-sm font-semibold tracking-tight text-foreground"
+                                >
+                                    {{ t('oeuvres.step2.title') }}
+                                </h2>
+                            </div>
+
+                            <span
+                                class="font-mono text-xs font-bold text-foreground"
+                            >
+                                {{ progressPercent }}% validé
+                            </span>
                         </div>
-                        <p class="text-xs text-muted-foreground">
+
+                        <!-- Progress Bar -->
+                        <div class="space-y-1.5">
+                            <div
+                                class="relative h-2.5 w-full overflow-hidden rounded-full bg-muted shadow-inner"
+                                role="progressbar"
+                                :aria-valuenow="progress.satisfied"
+                                aria-valuemin="0"
+                                :aria-valuemax="progress.total"
+                            >
+                                <div
+                                    class="h-full rounded-full bg-gradient-to-r from-onda-blue-600 via-onda-blue-500 to-onda-teal-500 transition-all duration-500 ease-out"
+                                    :style="{ width: `${progressPercent}%` }"
+                                />
+                            </div>
+
+                            <div
+                                class="flex items-center justify-between text-xs"
+                            >
+                                <span
+                                    class="font-semibold text-foreground tabular-nums"
+                                >
+                                    {{
+                                        t('oeuvres.step2.progress', {
+                                            satisfied: progress.satisfied,
+                                            total: progress.total,
+                                        })
+                                    }}
+                                </span>
+                                <span
+                                    v-if="progress.conditional > 0"
+                                    class="text-[11px] text-muted-foreground"
+                                >
+                                    {{
+                                        t(
+                                            'oeuvres.step2.mayNotApply',
+                                            { count: progress.conditional },
+                                            progress.conditional,
+                                        )
+                                    }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <p
+                            class="text-xs leading-relaxed text-muted-foreground"
+                        >
                             {{ t('oeuvres.step2.intro') }}
                         </p>
-                    </div>
+                    </CardContent>
+                </Card>
 
-                    <div class="space-y-1 text-xs text-muted-foreground">
-                        <p class="flex items-center gap-1.5">
-                            <LockIcon class="size-3.5 shrink-0" />
-                            {{ t('upload.trust.encrypted') }}
-                        </p>
-                        <p class="flex items-center gap-1.5">
-                            <ShieldCheckIcon class="size-3.5 shrink-0" />
-                            {{ t('upload.trust.fingerprint') }}
-                        </p>
-                    </div>
-                </CardContent>
-            </Card>
+                <!-- 2. Sovereign Quota & Security Card -->
+                <Card class="border-border/80 shadow-onda-card">
+                    <CardContent
+                        class="flex h-full flex-col justify-between space-y-3.5 p-5 sm:p-6"
+                    >
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <div
+                                    class="flex items-center gap-2 text-xs font-semibold text-foreground"
+                                >
+                                    <HardDrive
+                                        class="size-4 text-onda-blue-600 dark:text-onda-blue-400"
+                                    />
+                                    <span>Espace de stockage</span>
+                                </div>
+                                <span
+                                    class="font-mono text-xs font-bold text-foreground"
+                                >
+                                    {{ quotaPercent }}%
+                                </span>
+                            </div>
 
+                            <!-- Mini Quota Bar -->
+                            <div
+                                class="h-2 w-full overflow-hidden rounded-full bg-muted shadow-inner"
+                            >
+                                <div
+                                    class="h-full rounded-full transition-all duration-500"
+                                    :class="[
+                                        quotaPercent > 90
+                                            ? 'bg-rose-500'
+                                            : quotaPercent > 75
+                                              ? 'bg-amber-500'
+                                              : 'bg-onda-blue-600',
+                                    ]"
+                                    :style="{ width: `${quotaPercent}%` }"
+                                />
+                            </div>
+
+                            <div
+                                class="flex justify-between font-mono text-[11px] text-muted-foreground"
+                            >
+                                <span>{{
+                                    formatBytes(quota.used_bytes, locale)
+                                }}</span>
+                                <span>{{
+                                    formatBytes(quota.limit_bytes, locale)
+                                }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Trust lines -->
+                        <div
+                            class="space-y-1.5 border-t border-border/60 pt-3 text-[11px] text-muted-foreground"
+                        >
+                            <div class="flex items-center gap-2">
+                                <Lock
+                                    class="size-3.5 text-emerald-600 dark:text-emerald-400"
+                                />
+                                <span>Chiffrement au repos AES-256</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <ShieldCheck
+                                    class="size-3.5 text-emerald-600 dark:text-emerald-400"
+                                />
+                                <span>Empreinte cryptographique certifiée</span>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <!-- Resume Banner (when interrupted uploads can be recovered) -->
             <ResumeBanner
                 :files="pendingResumesForOeuvre"
                 @reselect="onReselect"
             />
 
-            <ol class="space-y-4">
-                <li
-                    v-for="(requirement, position) in requirements"
-                    :key="requirement.id"
-                >
-                    <RequirementSlotCard
-                        :requirement="requirement"
-                        :position="position + 1"
-                        :oeuvre-id="oeuvre.id"
-                        :entries="grouped.bySlot.get(requirement.id) ?? []"
-                        :quota="quota"
-                        :editable="editable"
-                        @pause="queue.pauseFile"
-                        @resume="queue.resumeFile"
-                        @cancel="queue.cancelFile"
-                        @remove="removeFile"
-                    />
-                </li>
-            </ol>
+            <!-- Sequence of Required Document Slots -->
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2
+                        class="text-base font-bold tracking-tight text-foreground"
+                    >
+                        Pièces exigées pour ce collège ({{
+                            requirements.length
+                        }})
+                    </h2>
+                    <span class="text-xs text-muted-foreground">
+                        Déposez les pièces conformément aux spécifications
+                    </span>
+                </div>
 
-            <SubmitArea
-                :submission="submission"
-                :status="oeuvre.status"
-                :editable="editable"
-                :reason-text="reasonText"
-                @submit="openSubmitDialog"
-            />
+                <ol class="space-y-4">
+                    <li
+                        v-for="(requirement, position) in requirements"
+                        :key="requirement.id"
+                    >
+                        <RequirementSlotCard
+                            :requirement="requirement"
+                            :position="position + 1"
+                            :oeuvre-id="oeuvre.id"
+                            :entries="grouped.bySlot.get(requirement.id) ?? []"
+                            :quota="quota"
+                            :editable="editable"
+                            @pause="queue.pauseFile"
+                            @resume="queue.resumeFile"
+                            @cancel="queue.cancelFile"
+                            @remove="removeFile"
+                        />
+                    </li>
+                </ol>
+            </div>
 
-            <div v-if="grouped.unassigned.length > 0">
-                <h2 class="text-sm font-medium">
-                    {{ t('oeuvres.step2.otherFiles') }}
-                </h2>
-                <p class="mb-3 text-xs text-muted-foreground">
-                    {{ t('oeuvres.step2.otherFilesHint') }}
-                </p>
+            <!-- Unassigned / Extra Files Section (if any) -->
+            <div
+                v-if="grouped.unassigned.length > 0"
+                class="space-y-3 border-t border-border/80 pt-4"
+            >
+                <div>
+                    <h2
+                        class="text-sm font-semibold tracking-tight text-foreground"
+                    >
+                        {{ t('oeuvres.step2.otherFiles') }}
+                    </h2>
+                    <p class="text-xs text-muted-foreground">
+                        {{ t('oeuvres.step2.otherFilesHint') }}
+                    </p>
+                </div>
                 <ul class="space-y-3">
                     <li
                         v-for="entry in grouped.unassigned"
@@ -430,13 +590,23 @@ const reasonText = (reason: SubmissionReason) =>
                     </li>
                 </ul>
             </div>
+
+            <!-- Global Submit Gate Area -->
+            <SubmitArea
+                :submission="submission"
+                :status="oeuvre.status"
+                :editable="editable"
+                :reason-text="reasonText"
+                @submit="openSubmitDialog"
+            />
         </template>
 
+        <!-- FALLBACK UNCLASSIFIED OEUVRE (Single Flat Dropzone) -->
         <template v-else>
-            <Card>
-                <CardContent class="space-y-3 py-6">
+            <Card class="border-border/80 shadow-onda-card">
+                <CardContent class="space-y-4 p-6">
                     <div class="flex items-center justify-between gap-3">
-                        <h2 class="text-sm font-medium">
+                        <h2 class="text-sm font-semibold text-foreground">
                             {{ t('oeuvres.show.addFiles') }}
                         </h2>
                         <i18n-t
@@ -444,29 +614,33 @@ const reasonText = (reason: SubmissionReason) =>
                             tag="span"
                             class="text-xs text-muted-foreground"
                         >
-                            <template #used
-                                ><bdi dir="ltr">{{
+                            <template #used>
+                                <bdi dir="ltr" class="font-mono">{{
                                     formatBytes(quota.used_bytes, locale)
-                                }}</bdi></template
-                            >
-                            <template #limit
-                                ><bdi dir="ltr">{{
+                                }}</bdi>
+                            </template>
+                            <template #limit>
+                                <bdi dir="ltr" class="font-mono">{{
                                     formatBytes(quota.limit_bytes, locale)
-                                }}</bdi></template
-                            >
-                            <template #remaining
-                                ><bdi dir="ltr">{{
-                                    formatBytes(quotaRemaining, locale)
-                                }}</bdi></template
-                            >
+                                }}</bdi>
+                            </template>
+                            <template #remaining>
+                                <bdi
+                                    dir="ltr"
+                                    class="font-mono font-medium text-foreground"
+                                    >{{
+                                        formatBytes(quotaRemaining, locale)
+                                    }}</bdi
+                                >
+                            </template>
                         </i18n-t>
                     </div>
                     <Dropzone v-if="editable" :oeuvre-id="oeuvre.id" />
                 </CardContent>
             </Card>
 
-            <div>
-                <h2 class="mb-3 text-sm font-medium">
+            <div class="space-y-4">
+                <h2 class="text-sm font-semibold text-foreground">
                     {{ t('oeuvres.show.filesTitle') }}
                 </h2>
 
@@ -475,23 +649,28 @@ const reasonText = (reason: SubmissionReason) =>
                     @reselect="onReselect"
                 />
 
-                <Card v-if="entries.length === 0">
-                    <CardContent class="py-10 text-center text-sm">
-                        <i18n-t
-                            keypath="oeuvres.show.noFiles"
-                            tag="p"
-                            class="text-muted-foreground"
-                        >
-                            <template #size
-                                ><bdi dir="ltr">{{
-                                    formatBytes(MAX_FILE_SIZE_BYTES, locale)
-                                }}</bdi></template
-                            >
-                            <template #extensions
-                                ><bdi dir="ltr">{{
+                <Card
+                    v-if="entries.length === 0"
+                    class="border-2 border-dashed"
+                >
+                    <CardContent
+                        class="py-12 text-center text-xs text-muted-foreground"
+                    >
+                        <i18n-t keypath="oeuvres.show.noFiles" tag="p">
+                            <template #size>
+                                <bdi
+                                    dir="ltr"
+                                    class="font-mono font-semibold"
+                                    >{{
+                                        formatBytes(MAX_FILE_SIZE_BYTES, locale)
+                                    }}</bdi
+                                >
+                            </template>
+                            <template #extensions>
+                                <bdi dir="ltr" class="font-mono">{{
                                     allowedExtensionList().join(', ')
-                                }}</bdi></template
-                            >
+                                }}</bdi>
+                            </template>
                         </i18n-t>
                     </CardContent>
                 </Card>
@@ -521,6 +700,7 @@ const reasonText = (reason: SubmissionReason) =>
             </div>
         </template>
 
+        <!-- Official Submission Confirmation Dialog -->
         <OeuvreSubmitDialog
             :oeuvre="submitDialogFor"
             @close="submitDialogFor = null"

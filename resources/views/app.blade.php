@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 @php
-    $htmlLang = ($locale ?? 'ar') === 'ar' ? 'ar-DZ' : ($locale ?? 'ar');
+    $htmlLang = $locale ?? app()->getLocale();
 @endphp
-<html lang="{{ $htmlLang }}" dir="{{ $direction ?? 'rtl' }}" @class(['dark' => ($appearance ?? 'system') == 'dark'])>
+<html lang="{{ $htmlLang }}" dir="{{ $direction ?? 'ltr' }}" @class(['dark' => ($appearance ?? 'system') == 'dark'])>
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">

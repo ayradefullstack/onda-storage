@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin\Referentiel;
 
+use App\Actions\Referentiel\CreateDocument;
 use App\Domain\Deposit\OeuvreStatus;
+use App\Http\Requests\Admin\Referentiel\StoreDocumentRequest;
 use App\Http\Requests\Admin\Referentiel\UpdateDocumentRequest;
 use App\Models\CollegeOeuvreFile;
 use App\Models\Oeuvre;
 use App\Models\RegisterTypeCollege;
+use App\Models\User;
 use App\Support\FileFormats;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -37,7 +40,8 @@ final class DocumentController extends ReferentielController
     public function index(Request $request): Response
     {
         $search = trim((string) $request->string('search'));
-        $college = (int) $request->integer('college');
+        // The college filter travels as a uuid — no sequential id in a URL.
+        $college = $this->idForUuid(RegisterTypeCollege::class, $request->query('college')) ?? 0;
         $needsReview = $request->boolean('needs_review');
 
         $documents = CollegeOeuvreFile::query()
@@ -51,7 +55,7 @@ final class DocumentController extends ReferentielController
             ->when($needsReview, fn ($query) => $query->needsReview())
             ->orderBy('register_type_college_id')
             ->orderBy('display_order')
-            ->paginate(self::PER_PAGE)
+            ->paginate($this->perPage($request, self::PER_PAGE))
             ->withQueryString();
 
         return $this->page('admin/referentiel/Documents', [
@@ -80,14 +84,16 @@ final class DocumentController extends ReferentielController
             ]),
             'filters' => [
                 'search' => $search,
-                'college' => $college ?: null,
+                'college' => $college > 0 ? $request->query('college') : null,
                 'needs_review' => $needsReview,
             ],
+            // Every college, not only those that already have documents: a
+            // new college has none, and this is where it gets its first —
+            // without which it could never be enabled.
             'colleges' => RegisterTypeCollege::query()
-                ->whereHas('collegeOeuvreFiles')
                 ->orderBy('name')
-                ->get(['id', 'name', 'name_ar', 'name_en'])
-                ->map(fn (RegisterTypeCollege $c): array => ['id' => $c->id, 'name' => trim($c->name_global)]),
+                ->get(['id', 'uuid', 'name', 'name_ar', 'name_en'])
+                ->map(fn (RegisterTypeCollege $c): array => ['uuid' => $c->uuid, 'name' => trim($c->name_global)]),
             // The format registry, grouped by category, for the
             // multi-select. Sent from the server so there is exactly ONE
             // list — a second copy in TypeScript would drift the first time
@@ -119,6 +125,19 @@ final class DocumentController extends ReferentielController
             ->count();
 
         return response()->json(['affected_drafts' => $affected]);
+    }
+
+    public function store(StoreDocumentRequest $request, CreateDocument $create): RedirectResponse
+    {
+        /** @var User $actor */
+        $actor = $request->user();
+
+        /** @var RegisterTypeCollege $college */
+        $college = $request->college();
+
+        $create->handle($actor, $college, $request->validated());
+
+        return $this->created();
     }
 
     public function update(UpdateDocumentRequest $request, CollegeOeuvreFile $document): RedirectResponse

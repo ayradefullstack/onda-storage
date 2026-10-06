@@ -25,6 +25,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $name_en
  * @property int $status
  * @property bool $is_disabled
+ * @property bool $is_system
  * @property-read string $name_global
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -51,6 +52,7 @@ class RegisterType extends Model
         return [
             'status' => 'integer',
             'is_disabled' => 'boolean',
+            'is_system' => 'boolean',
         ];
     }
 
@@ -68,6 +70,35 @@ class RegisterType extends Model
     public function registerTypeColleges(): HasMany
     {
         return $this->hasMany(RegisterTypeCollege::class);
+    }
+
+    /**
+     * Whether this type has a gestion level — THE single predicate for it.
+     *
+     * A type shows the gestion select iff it has at least one active
+     * `type_gestions` row. The page (through the `is_auteur` flag of the
+     * classification tree), StoreOeuvreRequest and the admin forms all
+     * read it from here; nothing compares a slug or an id any more. For the
+     * seeded data this is true for Auteur only, exactly as before.
+     */
+    public function hasActiveGestions(): bool
+    {
+        return $this->typeGestions()->active()->exists();
+    }
+
+    /**
+     * Whether a college under this type may carry a `code_dv`.
+     *
+     * The seeded data gives `code_dv` to the droits-voisins types only: every
+     * college of Auteur and Editeur has it null. So a type whose colleges
+     * all lack one is a droits-d'auteur type and refuses it; a type with no
+     * colleges yet, or with at least one coded, accepts it.
+     */
+    public function acceptsCodeDv(): bool
+    {
+        $colleges = $this->registerTypeColleges();
+
+        return ! ($colleges->exists() && ! $colleges->whereNotNull('code_dv')->exists());
     }
 
     /**

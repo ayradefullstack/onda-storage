@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Domain\Quota\QuotaPolicy;
 use App\Http\Controllers\Author\OeuvreController as AuthorOeuvreController;
+use App\Http\Controllers\Concerns\ResolvesPerPage;
 use App\Http\Controllers\Controller;
 use App\Models\Oeuvre;
 use App\Models\StorageQuota;
@@ -32,6 +33,8 @@ use Inertia\Response;
  */
 final class AuthorController extends Controller
 {
+    use ResolvesPerPage;
+
     private const PER_PAGE = 25;
 
     /**
@@ -83,7 +86,7 @@ final class AuthorController extends Controller
             ))
             ->when($wilayaUuid !== '', fn ($query) => $query->whereHas('wilaya', fn ($q) => $q->where('uuid', $wilayaUuid)))
             ->orderByRaw("({$sortColumn} is null) asc, {$sortColumn} {$direction}")
-            ->paginate(self::PER_PAGE)
+            ->paginate($this->perPage($request, self::PER_PAGE))
             ->withQueryString();
 
         return Inertia::render('admin/authors/Index', [

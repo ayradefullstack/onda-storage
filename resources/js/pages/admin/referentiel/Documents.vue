@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
-import { AlertTriangle, Info, Pencil } from '@lucide/vue';
+import { AlertTriangle, Info, Plus } from '@lucide/vue';
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import CreateDialog from '@/components/admin/CreateDialog.vue';
 import EmptyState from '@/components/admin/EmptyState.vue';
+import FieldError from '@/components/admin/FieldError.vue';
 import FormatMultiSelect from '@/components/admin/FormatMultiSelect.vue';
 import type { FormatGroup } from '@/components/admin/FormatMultiSelect.vue';
 import LockedField from '@/components/admin/LockedField.vue';
@@ -30,7 +32,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { documents as documentsRoute } from '@/routes/admin/referentiel';
-import { impact, update } from '@/routes/admin/referentiel/documents';
+import { impact, store, update } from '@/routes/admin/referentiel/documents';
 
 interface DocumentRow {
     uuid: string;
@@ -56,12 +58,13 @@ const props = defineProps<{
     rows: {
         data: DocumentRow[];
         links: Array<{ url: string | null; label: string; active: boolean }>;
+        per_page: number;
         from: number | null;
         to: number | null;
         total: number;
     };
-    filters: { search: string; college: number | null; needs_review: boolean };
-    colleges: Array<{ id: number; name: string }>;
+    filters: { search: string; college: string | null; needs_review: boolean };
+    colleges: Array<{ uuid: string; name: string }>;
     /** The file-format registry, grouped by category. Server-owned. */
     formats: FormatGroup[];
 }>();
@@ -71,6 +74,7 @@ const { t } = useI18n();
 const editing = ref<DocumentRow | null>(null);
 const saving = ref(false);
 const affectedDrafts = ref<number | null>(null);
+const errors = ref<Record<string, string>>({});
 
 const form = ref({
     title_ar: '',
@@ -85,6 +89,7 @@ const form = ref({
 
 const open = (row: DocumentRow) => {
     editing.value = row;
+    errors.value = {};
     affectedDrafts.value = null;
     form.value = {
         title_ar: row.title_ar ?? '',
@@ -150,10 +155,71 @@ const save = () => {
         },
         {
             preserveScroll: true,
-            onFinish: () => {
-                saving.value = false;
-                editing.value = null;
-            },
+            onError: (e) => (errors.value = e),
+            onSuccess: () => (editing.value = null),
+            onFinish: () => (saving.value = false),
+        },
+    );
+};
+
+// --- create -------------------------------------------------------------
+
+const creating = ref(false);
+const createForm = ref({
+    college: '',
+    document_key: '',
+    title: '',
+    title_ar: '',
+    title_en: '',
+    extensions: [] as string[],
+    is_required: true,
+    display_order: 1,
+    max_size_kb: '' as string,
+    allows_multiple: true,
+});
+
+const openCreate = () => {
+    createForm.value = {
+        college: props.filters.college ?? '',
+        document_key: '',
+        title: '',
+        title_ar: '',
+        title_en: '',
+        extensions: [],
+        is_required: true,
+        display_order: 1,
+        max_size_kb: '',
+        allows_multiple: true,
+    };
+    errors.value = {};
+    creating.value = true;
+};
+
+const create = () => {
+    saving.value = true;
+
+    router.post(
+        store().url,
+        {
+            college: createForm.value.college,
+            document_key: createForm.value.document_key.trim(),
+            title: createForm.value.title,
+            title_ar: createForm.value.title_ar.trim() || null,
+            title_en: createForm.value.title_en.trim() || null,
+            extensions: createForm.value.extensions,
+            is_required: createForm.value.is_required,
+            display_order: createForm.value.display_order,
+            max_size_kb:
+                createForm.value.max_size_kb.trim() === ''
+                    ? null
+                    : Number(createForm.value.max_size_kb),
+            allows_multiple: createForm.value.allows_multiple,
+        },
+        {
+            preserveScroll: true,
+            onError: (e) => (errors.value = e),
+            onSuccess: () => (creating.value = false),
+            onFinish: () => (saving.value = false),
         },
     );
 };
@@ -183,6 +249,13 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
         :index-url="documentsRoute().url"
         :search="filters.search"
     >
+        <template #actions>
+            <Button class="cursor-pointer" @click="openCreate">
+                <Plus class="size-4" />
+                {{ t('admin.referentiel.createDocument') }}
+            </Button>
+        </template>
+
         <template #filters>
             <Select
                 :model-value="String(filters.college ?? 'all')"
@@ -199,8 +272,8 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                     }}</SelectItem>
                     <SelectItem
                         v-for="college in colleges"
-                        :key="college.id"
-                        :value="String(college.id)"
+                        :key="college.uuid"
+                        :value="college.uuid"
                         >{{ college.name }}</SelectItem
                     >
                 </SelectContent>
@@ -211,7 +284,10 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                 :variant="filters.needs_review ? 'default' : 'outline'"
                 class="h-9 cursor-pointer gap-1.5 text-xs"
                 @click="
-                    applyFilter('needs_review', filters.needs_review ? '0' : '1')
+                    applyFilter(
+                        'needs_review',
+                        filters.needs_review ? '0' : '1',
+                    )
                 "
             >
                 <AlertTriangle class="size-3.5" />
@@ -235,7 +311,11 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                         <tr
                             class="border-b border-border bg-muted/40 text-muted-foreground"
                         >
-                            <th class="w-12 px-3 py-2.5 text-center font-medium">#</th>
+                            <th
+                                class="w-12 px-3 py-2.5 text-center font-medium"
+                            >
+                                #
+                            </th>
                             <th class="px-3 py-2.5 text-start font-medium">
                                 {{ t('admin.referentiel.col.key') }}
                             </th>
@@ -272,7 +352,9 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                                     : '',
                             ]"
                         >
-                            <td class="w-12 px-3 py-2 text-center text-xs font-medium text-muted-foreground">
+                            <td
+                                class="w-12 px-3 py-2 text-center text-xs font-medium text-muted-foreground"
+                            >
                                 {{ (rows.from ?? 1) + index }}
                             </td>
                             <td
@@ -336,7 +418,9 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                                         v-if="row.has_conditions"
                                         class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
                                         :title="
-                                            t('admin.referentiel.col.conditionalHelp')
+                                            t(
+                                                'admin.referentiel.col.conditionalHelp',
+                                            )
                                         "
                                         >{{
                                             t(
@@ -348,7 +432,9 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                                         v-if="row.needs_review"
                                         class="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400"
                                         >{{
-                                            t('admin.referentiel.col.needsReview')
+                                            t(
+                                                'admin.referentiel.col.needsReview',
+                                            )
                                         }}</span
                                     >
                                 </div>
@@ -372,6 +458,7 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                     :from="rows.from"
                     :to="rows.to"
                     :total="rows.total"
+                    :per-page="rows.per_page"
                 />
             </div>
         </div>
@@ -544,5 +631,147 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        <!-- Create — without this a new college could never be enabled. -->
+        <CreateDialog
+            v-model:open="creating"
+            :title="t('admin.referentiel.createDocument')"
+            :description="t('admin.referentiel.form.documentHint')"
+            :saving="saving"
+            @submit="create"
+        >
+            <div class="space-y-1.5">
+                <Label for="new_doc_college" class="text-xs">{{
+                    t('admin.referentiel.form.parentCollege')
+                }}</Label>
+                <select
+                    id="new_doc_college"
+                    v-model="createForm.college"
+                    class="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                >
+                    <option value="" disabled>
+                        {{ t('admin.referentiel.form.choose') }}
+                    </option>
+                    <option
+                        v-for="college in colleges"
+                        :key="college.uuid"
+                        :value="college.uuid"
+                    >
+                        {{ college.name }}
+                    </option>
+                </select>
+                <FieldError :error="errors.college" />
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div class="space-y-1.5">
+                    <Label for="new_doc_key" class="text-xs">{{
+                        t('admin.referentiel.form.documentKey')
+                    }}</Label>
+                    <Input
+                        id="new_doc_key"
+                        v-model="createForm.document_key"
+                        dir="ltr"
+                        class="h-9 font-mono text-sm"
+                        placeholder="justificatif_identite"
+                    />
+                    <FieldError :error="errors.document_key" />
+                    <p class="text-[11px] text-muted-foreground">
+                        {{ t('admin.referentiel.form.documentKeyHelp') }}
+                    </p>
+                </div>
+                <div class="space-y-1.5">
+                    <Label for="new_doc_title" class="text-xs">{{
+                        t('admin.referentiel.col.title')
+                    }}</Label>
+                    <Input
+                        id="new_doc_title"
+                        v-model="createForm.title"
+                        dir="auto"
+                        class="h-9 text-sm"
+                    />
+                    <FieldError :error="errors.title" />
+                </div>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div class="space-y-1.5">
+                    <Label for="new_doc_title_ar" class="text-xs">{{
+                        t('admin.referentiel.col.titleAr')
+                    }}</Label>
+                    <Input
+                        id="new_doc_title_ar"
+                        v-model="createForm.title_ar"
+                        dir="rtl"
+                        class="h-9 text-sm"
+                    />
+                </div>
+                <div class="space-y-1.5">
+                    <Label for="new_doc_title_en" class="text-xs">{{
+                        t('admin.referentiel.col.titleEn')
+                    }}</Label>
+                    <Input
+                        id="new_doc_title_en"
+                        v-model="createForm.title_en"
+                        dir="ltr"
+                        class="h-9 text-sm"
+                    />
+                </div>
+            </div>
+
+            <div class="space-y-1.5">
+                <Label class="text-xs">{{
+                    t('admin.referentiel.col.extensions')
+                }}</Label>
+                <FormatMultiSelect
+                    v-model="createForm.extensions"
+                    :groups="formats"
+                />
+                <FieldError :error="errors.extensions" />
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div class="space-y-1.5">
+                    <Label for="new_doc_order" class="text-xs">{{
+                        t('admin.referentiel.col.order')
+                    }}</Label>
+                    <Input
+                        id="new_doc_order"
+                        v-model.number="createForm.display_order"
+                        type="number"
+                        min="1"
+                        class="h-9 text-sm"
+                    />
+                </div>
+                <div class="space-y-1.5">
+                    <Label for="new_doc_max" class="text-xs">{{
+                        t('admin.referentiel.col.maxSize')
+                    }}</Label>
+                    <Input
+                        id="new_doc_max"
+                        v-model="createForm.max_size_kb"
+                        type="number"
+                        min="1"
+                        class="h-9 text-sm"
+                        :placeholder="t('admin.referentiel.noLimit')"
+                    />
+                </div>
+            </div>
+
+            <div class="space-y-3 rounded-lg border border-border/80 p-3">
+                <label class="flex items-start gap-2.5 text-xs">
+                    <Checkbox v-model="createForm.is_required" />
+                    <span class="font-medium">{{
+                        t('admin.referentiel.col.required')
+                    }}</span>
+                </label>
+                <label class="flex items-start gap-2.5 text-xs">
+                    <Checkbox v-model="createForm.allows_multiple" />
+                    <span class="font-medium">{{
+                        t('admin.referentiel.col.multiple')
+                    }}</span>
+                </label>
+            </div>
+        </CreateDialog>
     </ReferentielShell>
 </template>

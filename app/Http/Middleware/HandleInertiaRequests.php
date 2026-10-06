@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Domain\Localization\LanguageService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -51,7 +52,11 @@ class HandleInertiaRequests extends Middleware
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'locale' => app()->getLocale(),
-            'direction' => app()->getLocale() === 'ar' ? 'rtl' : 'ltr',
+            'direction' => app(LanguageService::class)->direction(app()->getLocale()),
+            'defaultLocale' => app(LanguageService::class)->defaultCode(),
+            // Selectable languages — the switcher and every client-side
+            // locale check read this, never a hardcoded list.
+            'languages' => app(LanguageService::class)->active()->values()->all(),
         ];
     }
 }

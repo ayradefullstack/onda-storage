@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AuthorController;
+use App\Http\Controllers\Admin\LanguageController;
 use App\Http\Controllers\Admin\MediaVariantController;
 use App\Http\Controllers\Admin\OeuvreController;
 use App\Http\Controllers\Admin\OeuvreReviewController;
@@ -18,6 +19,14 @@ use Illuminate\Support\Facades\Route;
  */
 Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::inertia('dashboard', 'admin/Dashboard')->name('dashboard');
+
+    // Languages: no destroy route — retire with `is_active`. Keyed by code.
+    Route::prefix('languages')->name('languages.')->group(function () {
+        Route::get('/', [LanguageController::class, 'index'])->name('index');
+        Route::post('/', [LanguageController::class, 'store'])->name('store');
+        Route::patch('/{language}', [LanguageController::class, 'update'])->name('update');
+        Route::post('/{language}/default', [LanguageController::class, 'makeDefault'])->name('make-default');
+    });
 
     Route::prefix('authors')->name('authors.')->group(function () {
         Route::get('/', [AuthorController::class, 'index'])->name('index');
@@ -50,18 +59,23 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
      */
     Route::prefix('referentiel')->name('referentiel.')->group(function () {
         Route::get('types', [TypeController::class, 'index'])->name('types');
+        Route::post('types', [TypeController::class, 'store'])->name('types.store');
         Route::patch('types/{registerType:uuid}', [TypeController::class, 'update'])->name('types.update');
 
         Route::get('gestions', [GestionController::class, 'index'])->name('gestions');
+        Route::post('gestions', [GestionController::class, 'store'])->name('gestions.store');
         Route::patch('gestions/{typeGestion:uuid}', [GestionController::class, 'update'])->name('gestions.update');
 
         Route::get('colleges', [CollegeController::class, 'index'])->name('colleges');
+        Route::post('colleges', [CollegeController::class, 'store'])->name('colleges.store');
         Route::patch('colleges/{college:uuid}', [CollegeController::class, 'update'])->name('colleges.update');
 
         Route::get('membres', [MemberController::class, 'index'])->name('membres');
+        Route::post('membres', [MemberController::class, 'store'])->name('membres.store');
         Route::patch('membres/{registerTypeMember:uuid}', [MemberController::class, 'update'])->name('membres.update');
 
         Route::get('documents', [DocumentController::class, 'index'])->name('documents');
+        Route::post('documents', [DocumentController::class, 'store'])->name('documents.store');
         Route::patch('documents/{document:uuid}', [DocumentController::class, 'update'])->name('documents.update');
         // Asked from the edit dialog before `is_required` is turned on, so
         // the officer sees how many drafts it would block.

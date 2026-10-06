@@ -58,9 +58,7 @@ watch(open, async (isOpen) => {
     // Focus the search on open: with this many options, typing is the
     // primary way in.
     await nextTick();
-    (
-        searchInput.value?.$el as HTMLInputElement | undefined
-    )?.focus?.();
+    (searchInput.value?.$el as HTMLInputElement | undefined)?.focus?.();
 });
 
 const selected = computed(() => new Set(props.modelValue));
@@ -275,8 +273,12 @@ const orderedByRegistry = (chosen: Set<string>) =>
                             >
                                 {{
                                     groupState(group).all
-                                        ? t('admin.referentiel.formats.clearAll')
-                                        : t('admin.referentiel.formats.selectAll')
+                                        ? t(
+                                              'admin.referentiel.formats.clearAll',
+                                          )
+                                        : t(
+                                              'admin.referentiel.formats.selectAll',
+                                          )
                                 }}
                             </button>
                         </div>

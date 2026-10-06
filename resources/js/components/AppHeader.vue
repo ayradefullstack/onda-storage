@@ -5,6 +5,8 @@ import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
+import LanguageSwitcher from '@/components/public/LanguageSwitcher.vue';
+import ThemeToggle from '@/components/public/ThemeToggle.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,8 +33,6 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import LanguageSwitcher from '@/components/public/LanguageSwitcher.vue';
-import ThemeToggle from '@/components/public/ThemeToggle.vue';
 import UserMenuContent from '@/components/UserMenuContent.vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
 import { getInitials } from '@/composables/useInitials';
@@ -51,8 +51,7 @@ const page = usePage();
 const auth = computed(() => page.props.auth);
 const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
 
-const activeItemStyles =
-    'text-primary font-semibold border-b-2 border-primary';
+const activeItemStyles = 'text-primary font-semibold border-b-2 border-primary';
 
 const mainNavItems: NavItem[] = [
     {
@@ -112,7 +111,9 @@ const mainNavItems: NavItem[] = [
                                         {{ item.title }}
                                     </Link>
                                 </nav>
-                                <div class="flex items-center gap-2 pt-4 border-t border-border">
+                                <div
+                                    class="flex items-center gap-2 border-t border-border pt-4"
+                                >
                                     <LanguageSwitcher />
                                     <ThemeToggle />
                                 </div>

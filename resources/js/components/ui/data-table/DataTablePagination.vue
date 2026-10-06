@@ -43,7 +43,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    pageSizeOptions: () => [10, 15, 25, 50],
+    pageSizeOptions: () => [10, 15, 25, 50, 100],
     showPageSize: false,
 });
 
@@ -127,10 +127,10 @@ const handlePageSizeChange = (val: unknown) => {
             <!-- Optional Page Size Selector (Flowbite PM Table style) -->
             <div
                 v-if="showPageSize && resolvedPerPage"
-                class="hidden items-center gap-1.5 md:flex"
+                class="flex items-center gap-1.5"
             >
                 <span class="text-muted-foreground/60">·</span>
-                <span class="text-[11px] text-muted-foreground">Lignes par page:</span>
+                <span class="text-[11px] text-muted-foreground">{{ t('admin.pagination.perPage') }}</span>
                 <Select
                     :model-value="String(resolvedPerPage)"
                     @update:model-value="handlePageSizeChange"

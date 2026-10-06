@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { BadgeCheck, Check, Landmark, Scale, UserRound } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import InputError from '@/components/InputError.vue';
-import { Label } from '@/components/ui/label';
+import SearchableSelect from '@/components/ui/SearchableSelect.vue';
+import type { SelectOption } from '@/components/ui/SearchableSelect.vue';
 import type { ClassificationSelection, ClassificationTree } from './cascade';
 import {
     collegesFor,
@@ -17,14 +19,9 @@ import {
 } from './cascade';
 
 /**
- * The classification selects on one card. A level appears once the type is
- * chosen; a select whose parent is still unanswered stays disabled with a
- * placeholder saying what to pick first. The gestion select is only ever
- * rendered for Auteur (v-if), never merely hidden for the other types.
- *
- * Native <select>s: they render a disabled option natively and follow the
- * page's dir; each option keeps its own bidi context, so French names read
- * correctly inside an Arabic layout.
+ * Redesigned classification cascade with progressive disclosure ("select by select").
+ * Each level only appears once the preceding selection is made.
+ * When an earlier level changes, subsequent levels are reset cleanly via cascade.ts.
  */
 const props = defineProps<{
     tree: ClassificationTree;
@@ -54,25 +51,96 @@ const college = computed(() =>
 );
 const members = computed(() => membersFor(college.value));
 
-const collegeLocked = computed(
-    () => isAuteur.value && selection.value.type_gestion_id === null,
+// Progressive disclosure visibility gates
+const showGestionStep = computed(() => {
+    return selection.value.register_type_id !== null && isAuteur.value;
+});
+
+const showCollegeStep = computed(() => {
+    if (!type.value) {
+        return false;
+    }
+
+    if (isAuteur.value) {
+        return selection.value.type_gestion_id !== null;
+    }
+
+    return selection.value.register_type_id !== null;
+});
+
+const showMemberStep = computed(() => {
+    return (
+        showCollegeStep.value &&
+        selection.value.register_type_college_id !== null
+    );
+});
+
+// Dynamic step numbers
+const gestionStepNumber = 2;
+const collegeStepNumber = computed(() => (isAuteur.value ? 3 : 2));
+const memberStepNumber = computed(() => (isAuteur.value ? 4 : 3));
+const totalSteps = computed(() => (isAuteur.value ? 4 : 3));
+
+// Formatted select options with search terms, icons and badges
+const typeOptions = computed<SelectOption[]>(() =>
+    props.tree.types.map((item) => ({
+        value: item.id,
+        label: item.name,
+        disabled: item.is_disabled,
+        icon: UserRound,
+        badge: item.is_auteur ? '4 étapes' : '3 étapes',
+        searchTerms: item.name,
+    })),
 );
-const memberLocked = computed(() => college.value === undefined);
 
-const selectClass =
-    'flex h-11 w-full rounded-xl border border-input bg-background/50 px-3.5 text-base shadow-xs transition-colors outline-none focus-visible:border-onda-blue-600 focus-visible:ring-4 focus-visible:ring-onda-blue-600/20 disabled:cursor-not-allowed disabled:opacity-60 md:text-sm dark:bg-input/20';
-const optionClass = 'bg-background text-foreground';
+const gestionOptions = computed<SelectOption[]>(() =>
+    (type.value?.gestions ?? []).map((item) => ({
+        value: item.id,
+        label: item.name,
+        icon: Scale,
+        searchTerms: item.name,
+    })),
+);
 
-function toId(event: Event): number | null {
-    const value = (event.target as HTMLSelectElement).value;
+const collegeOptions = computed<SelectOption[]>(() =>
+    colleges.value.map((item) => ({
+        value: item.id,
+        label: item.name,
+        code: item.code_college,
+        badge: item.code_college,
+        disabled: item.is_disabled,
+        icon: Landmark,
+        searchTerms: `${item.name} ${item.code_college}`,
+    })),
+);
 
-    return value === '' ? null : Number(value);
+const memberOptions = computed<SelectOption[]>(() =>
+    members.value.map((item) => ({
+        value: item.id,
+        label: item.name,
+        icon: BadgeCheck,
+        searchTerms: item.name,
+    })),
+);
+
+function onSelectType(val: string | number | null): void {
+    const id = val === null || val === '' ? null : Number(val);
+    selection.value = selectType(selection.value, id);
 }
 
-function optionLabel(name: string, isDisabled: boolean): string {
-    return isDisabled
-        ? `${name} (${t('oeuvres.classification.unavailable')})`
-        : name;
+function onSelectGestion(val: string | number | null): void {
+    const id = val === null || val === '' ? null : Number(val);
+    selection.value = selectGestion(selection.value, id);
+}
+
+function onSelectCollege(val: string | number | null): void {
+    const id = val === null || val === '' ? null : Number(val);
+    selection.value = selectCollege(selection.value, id);
+}
+
+function onSelectMember(val: string | number | null): void {
+    const id = val === null || val === '' ? null : Number(val);
+    selection.value = selectMember(selection.value, id);
 }
 
 /** Server messages are translation keys; anything else is shown as sent. */
@@ -84,137 +152,351 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
 </script>
 
 <template>
-    <div class="grid gap-5">
-        <!-- 1 · Type de déclarant -->
-        <div class="grid gap-2">
-            <Label for="register_type_id">
-                <span class="text-muted-foreground">1</span>
-                {{ t('oeuvres.classification.type') }}
-            </Label>
-            <select
-                id="register_type_id"
-                :class="selectClass"
-                :value="selection.register_type_id ?? ''"
-                @change="selection = selectType(selection, toId($event))"
-            >
-                <option value="" disabled :class="optionClass">
-                    {{ t('oeuvres.classification.typePlaceholder') }}
-                </option>
-                <option
-                    v-for="option in tree.types"
-                    :key="option.id"
-                    :value="option.id"
-                    :disabled="option.is_disabled"
-                    :class="optionClass"
-                    dir="auto"
-                >
-                    {{ optionLabel(option.name, option.is_disabled) }}
-                </option>
-            </select>
-            <InputError :message="errorFor('register_type_id')" />
-        </div>
-
-        <!-- 2 · Type de gestion — Auteur only; absent for every other type -->
-        <div v-if="isAuteur" class="grid gap-2">
-            <Label for="type_gestion_id">
-                <span class="text-muted-foreground">2</span>
-                {{ t('oeuvres.classification.gestion') }}
-            </Label>
-            <select
-                id="type_gestion_id"
-                :class="selectClass"
-                :value="selection.type_gestion_id ?? ''"
-                @change="selection = selectGestion(selection, toId($event))"
-            >
-                <option value="" disabled :class="optionClass">
-                    {{ t('oeuvres.classification.gestionPlaceholder') }}
-                </option>
-                <option
-                    v-for="gestion in type?.gestions ?? []"
-                    :key="gestion.id"
-                    :value="gestion.id"
-                    :class="optionClass"
-                    dir="auto"
-                >
-                    {{ gestion.name }}
-                </option>
-            </select>
-            <InputError :message="errorFor('type_gestion_id')" />
-        </div>
-
-        <template v-if="type">
-            <!-- Collège -->
-            <div class="grid gap-2">
-                <Label for="register_type_college_id">
-                    <span class="text-muted-foreground">{{
-                        isAuteur ? 3 : 2
-                    }}</span>
-                    {{ t('oeuvres.classification.college') }}
-                </Label>
-                <select
-                    id="register_type_college_id"
-                    :class="selectClass"
-                    :disabled="collegeLocked"
-                    :value="selection.register_type_college_id ?? ''"
-                    @change="selection = selectCollege(selection, toId($event))"
-                >
-                    <option value="" disabled :class="optionClass">
-                        {{
-                            collegeLocked
-                                ? t(
-                                      'oeuvres.classification.collegeNeedsGestion',
-                                  )
-                                : t('oeuvres.classification.collegePlaceholder')
-                        }}
-                    </option>
-                    <option
-                        v-for="option in colleges"
-                        :key="option.id"
-                        :value="option.id"
-                        :disabled="option.is_disabled"
-                        :class="optionClass"
-                        dir="auto"
+    <div class="relative space-y-5">
+        <!-- STEP 1: Type de déclarant -->
+        <div
+            class="group relative rounded-2xl border p-4 transition-all duration-300 sm:p-5"
+            :class="[
+                selection.register_type_id !== null
+                    ? 'border-border/80 bg-card/70 shadow-xs'
+                    : 'border-onda-blue-500/50 bg-card shadow-sm ring-2 ring-onda-blue-500/15',
+            ]"
+        >
+            <div class="mb-3.5 flex items-start justify-between gap-3">
+                <div class="flex items-center gap-2.5">
+                    <div
+                        class="flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors duration-200"
+                        :class="[
+                            selection.register_type_id !== null
+                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                : 'bg-onda-blue-600 text-white shadow-xs',
+                        ]"
                     >
-                        {{ optionLabel(option.name, option.is_disabled) }}
-                    </option>
-                </select>
-                <InputError :message="errorFor('register_type_college_id')" />
+                        <Check
+                            v-if="selection.register_type_id !== null"
+                            class="size-4 stroke-[2.5]"
+                        />
+                        <span v-else>1</span>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3
+                                class="text-sm font-semibold tracking-tight text-foreground"
+                            >
+                                {{ t('oeuvres.classification.type') }}
+                            </h3>
+                            <span
+                                class="font-mono text-[11px] text-muted-foreground/80"
+                            >
+                                (1/{{ totalSteps }})
+                            </span>
+                        </div>
+                        <p class="text-xs text-muted-foreground">
+                            Sélectionnez la catégorie légale sous laquelle vous
+                            déposez votre œuvre.
+                        </p>
+                    </div>
+                </div>
+
+                <span
+                    v-if="type"
+                    class="hidden items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 sm:inline-flex dark:text-emerald-300"
+                >
+                    <bdi dir="auto">{{ type.name }}</bdi>
+                </span>
             </div>
 
-            <!-- Qualité -->
-            <div class="grid gap-2">
-                <Label for="register_type_member_id">
-                    <span class="text-muted-foreground">{{
-                        isAuteur ? 4 : 3
-                    }}</span>
-                    {{ t('oeuvres.classification.member') }}
-                </Label>
-                <select
-                    id="register_type_member_id"
-                    :class="selectClass"
-                    :disabled="memberLocked"
-                    :value="selection.register_type_member_id ?? ''"
-                    @change="selection = selectMember(selection, toId($event))"
-                >
-                    <option value="" disabled :class="optionClass">
-                        {{
-                            memberLocked
-                                ? t('oeuvres.classification.memberNeedsCollege')
-                                : t('oeuvres.classification.memberPlaceholder')
-                        }}
-                    </option>
-                    <option
-                        v-for="option in members"
-                        :key="option.id"
-                        :value="option.id"
-                        :class="optionClass"
-                        dir="auto"
-                    >
-                        {{ option.name }}
-                    </option>
-                </select>
-                <InputError :message="errorFor('register_type_member_id')" />
+            <div class="space-y-1.5">
+                <SearchableSelect
+                    id="register_type_id"
+                    name="register_type_id"
+                    :model-value="selection.register_type_id"
+                    :options="typeOptions"
+                    :placeholder="t('oeuvres.classification.typePlaceholder')"
+                    search-placeholder="Rechercher un type de déclarant..."
+                    :clearable="true"
+                    @update:model-value="onSelectType"
+                />
+                <InputError :message="errorFor('register_type_id')" />
             </div>
-        </template>
+        </div>
+
+        <!-- STEP 2: Type de gestion (Auteur only — progressive reveal) -->
+        <transition
+            enter-active-class="transition duration-300 ease-out"
+            enter-from-class="transform -translate-y-2 opacity-0"
+            enter-to-class="transform translate-y-0 opacity-100"
+            leave-active-class="transition duration-200 ease-in"
+            leave-from-class="transform translate-y-0 opacity-100"
+            leave-to-class="transform -translate-y-2 opacity-0"
+        >
+            <div
+                v-if="showGestionStep"
+                class="group relative rounded-2xl border p-4 transition-all duration-300 sm:p-5"
+                :class="[
+                    selection.type_gestion_id !== null
+                        ? 'border-border/80 bg-card/70 shadow-xs'
+                        : 'border-onda-blue-500/50 bg-card shadow-sm ring-2 ring-onda-blue-500/15',
+                ]"
+            >
+                <div class="mb-3.5 flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                        <div
+                            class="flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors duration-200"
+                            :class="[
+                                selection.type_gestion_id !== null
+                                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                    : 'bg-onda-blue-600 text-white shadow-xs',
+                            ]"
+                        >
+                            <Check
+                                v-if="selection.type_gestion_id !== null"
+                                class="size-4 stroke-[2.5]"
+                            />
+                            <span v-else>{{ gestionStepNumber }}</span>
+                        </div>
+
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3
+                                    class="text-sm font-semibold tracking-tight text-foreground"
+                                >
+                                    {{ t('oeuvres.classification.gestion') }}
+                                </h3>
+                                <span
+                                    class="font-mono text-[11px] text-muted-foreground/80"
+                                >
+                                    (2/{{ totalSteps }})
+                                </span>
+                            </div>
+                            <p class="text-xs text-muted-foreground">
+                                Déterminez le mode d'administration et de
+                                gestion des droits patrimoniaux.
+                            </p>
+                        </div>
+                    </div>
+
+                    <span
+                        v-if="
+                            selection.type_gestion_id &&
+                            type?.gestions.find(
+                                (g) => g.id === selection.type_gestion_id,
+                            )
+                        "
+                        class="hidden items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 sm:inline-flex dark:text-emerald-300"
+                    >
+                        <bdi dir="auto">{{
+                            type.gestions.find(
+                                (g) => g.id === selection.type_gestion_id,
+                            )?.name
+                        }}</bdi>
+                    </span>
+                </div>
+
+                <div class="space-y-1.5">
+                    <SearchableSelect
+                        id="type_gestion_id"
+                        name="type_gestion_id"
+                        :model-value="selection.type_gestion_id"
+                        :options="gestionOptions"
+                        :placeholder="
+                            t('oeuvres.classification.gestionPlaceholder')
+                        "
+                        search-placeholder="Rechercher un mode de gestion..."
+                        :clearable="true"
+                        @update:model-value="onSelectGestion"
+                    />
+                    <InputError :message="errorFor('type_gestion_id')" />
+                </div>
+            </div>
+        </transition>
+
+        <!-- STEP 3 (or 2): Collège / Discipline artistique (progressive reveal) -->
+        <transition
+            enter-active-class="transition duration-300 ease-out"
+            enter-from-class="transform -translate-y-2 opacity-0"
+            enter-to-class="transform translate-y-0 opacity-100"
+            leave-active-class="transition duration-200 ease-in"
+            leave-from-class="transform translate-y-0 opacity-100"
+            leave-to-class="transform -translate-y-2 opacity-0"
+        >
+            <div
+                v-if="showCollegeStep"
+                class="group relative rounded-2xl border p-4 transition-all duration-300 sm:p-5"
+                :class="[
+                    selection.register_type_college_id !== null
+                        ? 'border-border/80 bg-card/70 shadow-xs'
+                        : 'border-onda-blue-500/50 bg-card shadow-sm ring-2 ring-onda-blue-500/15',
+                ]"
+            >
+                <div class="mb-3.5 flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                        <div
+                            class="flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors duration-200"
+                            :class="[
+                                selection.register_type_college_id !== null
+                                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                    : 'bg-onda-blue-600 text-white shadow-xs',
+                            ]"
+                        >
+                            <Check
+                                v-if="
+                                    selection.register_type_college_id !== null
+                                "
+                                class="size-4 stroke-[2.5]"
+                            />
+                            <span v-else>{{ collegeStepNumber }}</span>
+                        </div>
+
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3
+                                    class="text-sm font-semibold tracking-tight text-foreground"
+                                >
+                                    {{ t('oeuvres.classification.college') }}
+                                </h3>
+                                <span
+                                    class="font-mono text-[11px] text-muted-foreground/80"
+                                >
+                                    ({{ collegeStepNumber }}/{{ totalSteps }})
+                                </span>
+                            </div>
+                            <p class="text-xs text-muted-foreground">
+                                Choisissez la discipline artistique ou le
+                                domaine spécifique de l'œuvre.
+                            </p>
+                        </div>
+                    </div>
+
+                    <span
+                        v-if="college"
+                        class="hidden items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 sm:inline-flex dark:text-emerald-300"
+                    >
+                        <bdi dir="auto">{{ college.name }}</bdi>
+                        <span
+                            class="font-mono text-[10px] text-muted-foreground"
+                            ><bdi dir="ltr"
+                                >[{{ college.code_college }}]</bdi
+                            ></span
+                        >
+                    </span>
+                </div>
+
+                <div class="space-y-1.5">
+                    <SearchableSelect
+                        id="register_type_college_id"
+                        name="register_type_college_id"
+                        :model-value="selection.register_type_college_id"
+                        :options="collegeOptions"
+                        :placeholder="
+                            t('oeuvres.classification.collegePlaceholder')
+                        "
+                        search-placeholder="Rechercher un collège ou code (ex. Musique, Dramatique...)..."
+                        :clearable="true"
+                        @update:model-value="onSelectCollege"
+                    />
+                    <InputError
+                        :message="errorFor('register_type_college_id')"
+                    />
+                </div>
+            </div>
+        </transition>
+
+        <!-- STEP 4 (or 3): Qualité du membre (progressive reveal) -->
+        <transition
+            enter-active-class="transition duration-300 ease-out"
+            enter-from-class="transform -translate-y-2 opacity-0"
+            enter-to-class="transform translate-y-0 opacity-100"
+            leave-active-class="transition duration-200 ease-in"
+            leave-from-class="transform translate-y-0 opacity-100"
+            leave-to-class="transform -translate-y-2 opacity-0"
+        >
+            <div
+                v-if="showMemberStep"
+                class="group relative rounded-2xl border p-4 transition-all duration-300 sm:p-5"
+                :class="[
+                    selection.register_type_member_id !== null
+                        ? 'border-border/80 bg-card/70 shadow-xs'
+                        : 'border-onda-blue-500/50 bg-card shadow-sm ring-2 ring-onda-blue-500/15',
+                ]"
+            >
+                <div class="mb-3.5 flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                        <div
+                            class="flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors duration-200"
+                            :class="[
+                                selection.register_type_member_id !== null
+                                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                    : 'bg-onda-blue-600 text-white shadow-xs',
+                            ]"
+                        >
+                            <Check
+                                v-if="
+                                    selection.register_type_member_id !== null
+                                "
+                                class="size-4 stroke-[2.5]"
+                            />
+                            <span v-else>{{ memberStepNumber }}</span>
+                        </div>
+
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3
+                                    class="text-sm font-semibold tracking-tight text-foreground"
+                                >
+                                    {{ t('oeuvres.classification.member') }}
+                                </h3>
+                                <span
+                                    class="font-mono text-[11px] text-muted-foreground/80"
+                                >
+                                    ({{ memberStepNumber }}/{{ totalSteps }})
+                                </span>
+                            </div>
+                            <p class="text-xs text-muted-foreground">
+                                Précisez votre qualité d'intervention sur
+                                l'œuvre (Auteur, Compositeur, etc.).
+                            </p>
+                        </div>
+                    </div>
+
+                    <span
+                        v-if="
+                            selection.register_type_member_id &&
+                            members.find(
+                                (m) =>
+                                    m.id === selection.register_type_member_id,
+                            )
+                        "
+                        class="hidden items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 sm:inline-flex dark:text-emerald-300"
+                    >
+                        <bdi dir="auto">{{
+                            members.find(
+                                (m) =>
+                                    m.id === selection.register_type_member_id,
+                            )?.name
+                        }}</bdi>
+                    </span>
+                </div>
+
+                <div class="space-y-1.5">
+                    <SearchableSelect
+                        id="register_type_member_id"
+                        name="register_type_member_id"
+                        :model-value="selection.register_type_member_id"
+                        :options="memberOptions"
+                        :placeholder="
+                            t('oeuvres.classification.memberPlaceholder')
+                        "
+                        search-placeholder="Rechercher une qualité (Auteur, Compositeur, Adaptateur...)..."
+                        :clearable="true"
+                        @update:model-value="onSelectMember"
+                    />
+                    <InputError
+                        :message="errorFor('register_type_member_id')"
+                    />
+                </div>
+            </div>
+        </transition>
     </div>
 </template>

@@ -13,8 +13,8 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 /**
- * Classifying a new oeuvre: declarant type → type de gestion (Auteur only) →
- * collège → qualité.
+ * Classifying a new oeuvre: declarant type → type de gestion (only for a type
+ * that has an active gestion) → collège → qualité.
  *
  * Required fields are not enough: every id can exist and still form a branch
  * no correct form produces — a college of another type, a member of another
@@ -29,12 +29,6 @@ use Illuminate\Validation\Validator;
  */
 final class StoreOeuvreRequest extends FormRequest
 {
-    /**
-     * The declarant type that chooses a gestion. Identified by slug, not by
-     * id — ids depend on seeding order.
-     */
-    public const AUTEUR_SLUG = 'auteur';
-
     private const STATUS_ACTIVE = 1;
 
     private const ERRORS = 'oeuvres.classification.errors.';
@@ -56,14 +50,15 @@ final class StoreOeuvreRequest extends FormRequest
                 'bail', 'required', 'integer',
                 Rule::exists('register_types', 'id')->where('status', self::STATUS_ACTIVE)->whereNull('deleted_at'),
             ],
-            // Derived, not accepted, for every type but Auteur: posting one
-            // for another type is rejected outright.
+            // Required for a type that has a gestion level, rejected outright
+            // for one that does not — the predicate is RegisterType::
+            // hasActiveGestions(), the same one the page is given.
             'type_gestion_id' => [
                 'bail',
-                Rule::prohibitedIf(fn (): bool => ! $this->typeIsAuteur()),
-                Rule::requiredIf(fn (): bool => $this->typeIsAuteur()),
+                Rule::prohibitedIf(fn (): bool => ! $this->typeHasGestions()),
+                Rule::requiredIf(fn (): bool => $this->typeHasGestions()),
                 'nullable', 'integer',
-                Rule::exists('type_gestions', 'id')->whereNull('deleted_at'),
+                Rule::exists('type_gestions', 'id')->where('status', self::STATUS_ACTIVE)->whereNull('deleted_at'),
             ],
             'register_type_college_id' => [
                 'bail', 'required', 'integer',
@@ -117,7 +112,7 @@ final class StoreOeuvreRequest extends FormRequest
 
         return [
             'register_type_id' => $this->integer('register_type_id'),
-            'type_gestion_id' => $this->typeIsAuteur() ? $this->integer('type_gestion_id') : null,
+            'type_gestion_id' => $this->typeHasGestions() ? $this->integer('type_gestion_id') : null,
             'register_type_college_id' => $college->id,
             'register_type_member_id' => $this->integer('register_type_member_id'),
             'code_college_snapshot' => $college->code_college,
@@ -152,7 +147,7 @@ final class StoreOeuvreRequest extends FormRequest
             $validator->errors()->add('register_type_college_id', self::ERRORS.'collegeUnavailable');
         }
 
-        if ($this->typeIsAuteur()) {
+        if ($this->typeHasGestions()) {
             $gestionId = $this->integer('type_gestion_id');
             $gestion = TypeGestion::query()->find($gestionId);
 
@@ -163,6 +158,11 @@ final class StoreOeuvreRequest extends FormRequest
             if ($college->type_gestion_id !== $gestionId) {
                 $validator->errors()->add('register_type_college_id', self::ERRORS.'collegeWrongGestion');
             }
+        } elseif ($college->type_gestion_id !== null) {
+            // A type with no gestion level offers only its gestion-less
+            // colleges; one still tied to a (now retired) gestion is
+            // unreachable, exactly as the tree hides it.
+            $validator->errors()->add('register_type_college_id', self::ERRORS.'collegeWrongGestion');
         }
 
         if ($member->register_type_college_id !== $college->id) {
@@ -174,11 +174,16 @@ final class StoreOeuvreRequest extends FormRequest
         }
     }
 
-    private function typeIsAuteur(): bool
+    private function typeHasGestions(): bool
     {
         $typeId = $this->input('register_type_id');
 
-        return is_numeric($typeId)
-            && RegisterType::query()->whereKey((int) $typeId)->where('slug', self::AUTEUR_SLUG)->exists();
+        if (! is_numeric($typeId)) {
+            return false;
+        }
+
+        $type = RegisterType::query()->find((int) $typeId);
+
+        return $type !== null && $type->hasActiveGestions();
     }
 }

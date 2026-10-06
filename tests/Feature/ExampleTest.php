@@ -1,9 +1,9 @@
 <?php
 
-use App\Http\Middleware\SetLocale;
+use App\Domain\Localization\LanguageService;
 
 test('returns a successful response', function () {
-    $response = $this->get(route('home', ['locale' => SetLocale::FALLBACK_LOCALE]));
+    $response = $this->get(route('home', ['locale' => app(LanguageService::class)->defaultCode()]));
 
     $response->assertOk();
 });

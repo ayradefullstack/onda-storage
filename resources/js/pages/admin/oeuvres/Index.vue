@@ -95,19 +95,19 @@ function applyFilters(overrides: Record<string, string> = {}): void {
 
 const hasResults = computed(() => props.oeuvres.data.length > 0);
 
-const hasActiveFilters = computed(
-    () =>
-        Boolean(
-            search.value?.trim() ||
-            author.value?.trim() ||
-            props.filters.status ||
-            from.value ||
-            to.value,
-        ),
+const hasActiveFilters = computed(() =>
+    Boolean(
+        search.value?.trim() ||
+        author.value?.trim() ||
+        props.filters.status ||
+        from.value ||
+        to.value,
+    ),
 );
 
 const activeFilters = computed(() => {
     const pills: { key: string; label: string; value: string }[] = [];
+
     if (search.value?.trim()) {
         pills.push({
             key: 'search',
@@ -115,6 +115,7 @@ const activeFilters = computed(() => {
             value: `"${search.value.trim()}"`,
         });
     }
+
     if (author.value?.trim()) {
         pills.push({
             key: 'author',
@@ -122,6 +123,7 @@ const activeFilters = computed(() => {
             value: author.value.trim(),
         });
     }
+
     if (props.filters.status) {
         pills.push({
             key: 'status',
@@ -129,6 +131,7 @@ const activeFilters = computed(() => {
             value: t(`oeuvres.status.${props.filters.status}`),
         });
     }
+
     if (from.value || to.value) {
         pills.push({
             key: 'date',
@@ -136,6 +139,7 @@ const activeFilters = computed(() => {
             value: `${from.value || '...'} → ${to.value || '...'}`,
         });
     }
+
     return pills;
 });
 
@@ -210,7 +214,9 @@ function clearFilters(): void {
                         >
                             <SelectTrigger class="h-9 w-40 text-xs">
                                 <SelectValue
-                                    :placeholder="t('admin.oeuvres.allStatuses')"
+                                    :placeholder="
+                                        t('admin.oeuvres.allStatuses')
+                                    "
                                 />
                             </SelectTrigger>
                             <SelectContent>
@@ -271,7 +277,9 @@ function clearFilters(): void {
                     <tr
                         class="border-b border-border/70 bg-muted/40 font-semibold text-muted-foreground"
                     >
-                        <th class="w-12 px-3 py-3 text-center font-medium">#</th>
+                        <th class="w-12 px-3 py-3 text-center font-medium">
+                            #
+                        </th>
                         <th class="px-4 py-3 text-start font-medium">
                             {{ t('admin.oeuvres.colTitle') }}
                         </th>
@@ -299,7 +307,7 @@ function clearFilters(): void {
                     <tr
                         v-for="(oeuvre, index) in oeuvres.data"
                         :key="oeuvre.uuid"
-                        class="hover:bg-muted/40 transition-colors duration-150"
+                        class="transition-colors duration-150 hover:bg-muted/40"
                     >
                         <td
                             class="w-12 px-3 py-3.5 text-center text-xs font-medium text-muted-foreground"
@@ -324,7 +332,7 @@ function clearFilters(): void {
                             <Link
                                 v-if="oeuvre.author"
                                 :href="authorShow(oeuvre.author.uuid)"
-                                class="hover:underline hover:text-foreground"
+                                class="hover:text-foreground hover:underline"
                             >
                                 {{ oeuvre.author.name }}
                             </Link>
@@ -334,7 +342,9 @@ function clearFilters(): void {
                             <div class="flex items-center gap-1.5">
                                 <DataTableStatusBadge
                                     :status="oeuvre.status"
-                                    :label="t(`oeuvres.status.${oeuvre.status}`)"
+                                    :label="
+                                        t(`oeuvres.status.${oeuvre.status}`)
+                                    "
                                 />
                                 <span
                                     v-if="oeuvre.has_blocking_file"
@@ -371,7 +381,7 @@ function clearFilters(): void {
             </table>
 
             <template #pagination>
-                <DataTablePagination :paginated="oeuvres" />
+                <DataTablePagination :paginated="oeuvres" show-page-size />
             </template>
         </DataTable>
     </div>

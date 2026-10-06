@@ -87,7 +87,9 @@ const onOpenChange = (open: boolean) => {
             <div
                 class="space-y-2.5 rounded-xl border border-border/80 bg-muted/40 p-4 text-xs leading-relaxed"
             >
-                <p class="flex items-center gap-2 font-semibold text-foreground">
+                <p
+                    class="flex items-center gap-2 font-semibold text-foreground"
+                >
                     <Lock class="size-3.5" />
                     {{ t('oeuvres.submit.freezeTitle') }}
                 </p>

@@ -123,12 +123,13 @@ function sortIcon(column: SortColumn) {
 
 const hasResults = computed(() => props.authors.data.length > 0);
 
-const hasActiveFilters = computed(
-    () => Boolean(search.value?.trim() || wilayaFilter.value),
+const hasActiveFilters = computed(() =>
+    Boolean(search.value?.trim() || wilayaFilter.value),
 );
 
 const activeFilters = computed(() => {
     const pills: { key: string; label: string; value: string }[] = [];
+
     if (search.value?.trim()) {
         pills.push({
             key: 'search',
@@ -136,6 +137,7 @@ const activeFilters = computed(() => {
             value: `"${search.value.trim()}"`,
         });
     }
+
     if (wilayaFilter.value) {
         const found = props.wilayas.find((w) => w.uuid === wilayaFilter.value);
         pills.push({
@@ -144,6 +146,7 @@ const activeFilters = computed(() => {
             value: found ? wilayaLabel(found) : wilayaFilter.value,
         });
     }
+
     return pills;
 });
 
@@ -204,7 +207,9 @@ function clearFilters(): void {
                             "
                         >
                             <SelectTrigger size="sm" class="h-9 w-44">
-                                <SelectValue :placeholder="t('admin.authors.allWilayas')" />
+                                <SelectValue
+                                    :placeholder="t('admin.authors.allWilayas')"
+                                />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="">{{
@@ -246,7 +251,9 @@ function clearFilters(): void {
                     <tr
                         class="border-b border-border/70 bg-muted/40 font-semibold text-muted-foreground"
                     >
-                        <th class="w-12 px-3 py-3 text-center font-medium">#</th>
+                        <th class="w-12 px-3 py-3 text-center font-medium">
+                            #
+                        </th>
                         <th class="px-4 py-3 text-start font-medium">
                             <Link
                                 :href="sortHref('name')"
@@ -321,7 +328,7 @@ function clearFilters(): void {
                     <tr
                         v-for="(author, index) in authors.data"
                         :key="author.uuid"
-                        class="hover:bg-muted/40 transition-colors duration-150"
+                        class="transition-colors duration-150 hover:bg-muted/40"
                     >
                         <td
                             class="w-12 px-3 py-3.5 text-center text-xs font-medium text-muted-foreground"
@@ -371,7 +378,7 @@ function clearFilters(): void {
             </table>
 
             <template #pagination>
-                <DataTablePagination :paginated="authors" />
+                <DataTablePagination :paginated="authors" show-page-size />
             </template>
         </DataTable>
     </div>

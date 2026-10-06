@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -21,10 +22,13 @@ use Illuminate\Support\Carbon;
  * @property string $uuid
  * @property int $register_type_college_id
  * @property string $name
+ * @property string|null $name_ar
+ * @property string|null $name_en
  * @property string|null $code_qlt
  * @property int $status
  * @property bool $is_disabled
  * @property bool $available_in_registration
+ * @property bool $is_system
  * @property-read string $name_global
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -38,6 +42,8 @@ class RegisterTypeMember extends Model
     protected $fillable = [
         'register_type_college_id',
         'name',
+        'name_ar',
+        'name_en',
         'code_qlt',
         'status',
         'is_disabled',
@@ -50,6 +56,7 @@ class RegisterTypeMember extends Model
             'status' => 'integer',
             'is_disabled' => 'boolean',
             'available_in_registration' => 'boolean',
+            'is_system' => 'boolean',
         ];
     }
 
@@ -59,6 +66,17 @@ class RegisterTypeMember extends Model
     public function registerTypeCollege(): BelongsTo
     {
         return $this->belongsTo(RegisterTypeCollege::class);
+    }
+
+    /**
+     * Oeuvres classified under this qualité — what disabling it would leave
+     * pointing at a hidden row (never changing them).
+     *
+     * @return HasMany<Oeuvre, $this>
+     */
+    public function oeuvres(): HasMany
+    {
+        return $this->hasMany(Oeuvre::class);
     }
 
     /**
@@ -74,14 +92,23 @@ class RegisterTypeMember extends Model
     }
 
     /**
-     * Members have no translated names (ONDA dropped the columns), so this
-     * is always `name` — kept so every classification level exposes the
-     * same `name_global` API.
+     * Localised name with the same fallback as every other classification
+     * level: the viewer's locale, then `name`. ONDA's own members have no
+     * translations (the columns were added for admin-created rows), so for
+     * seeded rows this is still `name`.
      *
      * @return Attribute<string, never>
      */
     protected function nameGlobal(): Attribute
     {
-        return Attribute::get(fn (): string => $this->name);
+        return Attribute::get(function (): string {
+            $translated = match (app()->getLocale()) {
+                'ar' => $this->name_ar,
+                'en' => $this->name_en,
+                default => null,
+            };
+
+            return $translated !== null && trim($translated) !== '' ? $translated : $this->name;
+        });
     }
 }

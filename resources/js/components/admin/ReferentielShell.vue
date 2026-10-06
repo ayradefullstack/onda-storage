@@ -63,7 +63,10 @@ watch(query, () => {
 const tabHref = (tab: Tab) => `/admin/referentiel/${tab.key}`;
 
 const activeFilters = computed<ActiveFilter[]>(() => {
-    if (!query.value || query.value.trim() === '') return [];
+    if (!query.value || query.value.trim() === '') {
+        return [];
+    }
+
     return [
         {
             key: 'search',
@@ -82,13 +85,17 @@ const clearSearch = () => {
     <Head :title="t(`admin.referentiel.tabs.${active}`)" />
 
     <div class="mx-auto w-full max-w-[110rem] space-y-5 p-4 sm:p-6">
-        <div class="space-y-1">
-            <h1 class="text-xl font-semibold tracking-tight">
-                {{ t('admin.referentiel.title') }}
-            </h1>
-            <p class="text-sm text-muted-foreground">
-                {{ t('admin.referentiel.subtitle') }}
-            </p>
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="space-y-1">
+                <h1 class="text-xl font-semibold tracking-tight">
+                    {{ t('admin.referentiel.title') }}
+                </h1>
+                <p class="text-sm text-muted-foreground">
+                    {{ t('admin.referentiel.subtitle') }}
+                </p>
+            </div>
+            <!-- Each tab's "create" button. -->
+            <slot name="actions" />
         </div>
 
         <!-- One route per tab: a deep link works and a refresh stays put. -->
@@ -144,9 +151,7 @@ const clearSearch = () => {
             v-if="legend && legend.length > 0"
             class="flex flex-col gap-1.5 rounded-lg border border-border/80 bg-muted/30 p-3 text-xs"
         >
-            <p
-                class="flex items-center gap-1.5 font-medium text-foreground"
-            >
+            <p class="flex items-center gap-1.5 font-medium text-foreground">
                 <Info class="size-3.5" />
                 {{ t('admin.referentiel.legend.title') }}
             </p>

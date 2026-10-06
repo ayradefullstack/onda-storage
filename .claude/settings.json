@@ -1,35 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ls \"C:\\\\Users\\\\MOHAMEDADDABENKOSSEI\\\\.claude\\\\projects\\\\c--Herd-test-project\\\\memory\\\\\" 2>/dev/null; echo ---; cat \"C:\\\\Users\\\\MOHAMEDADDABENKOSSEI\\\\.claude\\\\projects\\\\c--Herd-test-project\\\\memory\\\\MEMORY.md\" 2>/dev/null)",
-      "Read(//c/Users/MOHAMEDADDABENKOSSEI/.claude/projects/c--Herd-test-project/memory\" 2>/dev/null; echo ---; cat C:UsersMOHAMEDADDABENKOSSEI.claudeprojectsc--Herd-test-projectmemoryMEMORY.md 2>/dev/**)",
-      "Bash(npm view *)",
-      "Bash(npm run *)",
-      "Bash(vendor/bin/pint --test)",
-      "Bash(vendor/bin/phpstan analyse *)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://test-project.test/)",
-      "Bash(curl -s -I http://test-project.test/ar)",
-      "Bash(curl -s http://test-project.test/ar)",
-      "Bash(curl -s http://test-project.test/fr)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code} -> %{redirect_url}\\\\n\" http://test-project.test/)",
-      "Bash(rm -f /tmp/cj.txt)",
-      "Bash(curl -s -c /tmp/cj.txt -o /dev/null http://test-project.test/fr)",
-      "Bash(curl -s -b /tmp/cj.txt http://test-project.test/login)",
-      "Bash(curl -s http://test-project.test/en)",
-      "Bash(npx --yes playwright install chromium --with-deps)",
-      "Bash(mkdir -p /c/Users/MOHAMEDADDABENKOSSEI/AppData/Local/Temp/claude/c--Herd-test-project/a1963e1a-4fbb-486c-b063-d9b2de513643/scratchpad/pw)",
-      "Read(//c/Users/MOHAMEDADDABENKOSSEI/AppData/Local/Temp/claude/c--Herd-test-project/a1963e1a-4fbb-486c-b063-d9b2de513643/scratchpad/**)",
-      "Bash(npm init *)",
-      "Read(//c/Users/MOHAMEDADDABENKOSSEI/AppData/Local/Temp/claude/c--Herd-test-project/a1963e1a-4fbb-486c-b063-d9b2de513643/scratchpad/pw/**)",
-      "Bash(node check3.js)",
-      "Bash(node check4.js)",
-      "Bash(git mv *)",
-      "Bash(node check5.js)",
-      "Bash(node check6.js)",
-      "Bash(curl -s -H \"Cookie: appearance=dark\" http://test-project.test/ar)",
-      "Bash(node check7.js)"
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "mcp__claude-in-chrome__tabs_context_mcp",
+      "ClaudeInChromeDomain(onda-storage.test)"
     ],
-     "deny": [
+    "deny": [
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(git merge:*)",
@@ -43,12 +22,6 @@
       "Bash(git revert:*)",
       "Bash(gh pr create:*)",
       "Bash(gh pr merge:*)"
-    ],
-    "allow": [
-      "Bash(git status:*)",
-      "Bash(git diff:*)",
-      "Bash(git log:*)",
-      "Bash(git show:*)"
     ]
   }
 }
