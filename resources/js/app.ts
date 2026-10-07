@@ -1,7 +1,7 @@
 import { createInertiaApp, router } from '@inertiajs/vue3';
 import { initializeTheme } from '@/composables/useAppearance';
 import { initializeGlobalLoader } from '@/composables/useGlobalLoader';
-import { applyLocale, createAppI18n, FALLBACK_LOCALE, SUPPORTED_LOCALES } from '@/i18n';
+import { applyLocale, createAppI18n, findLanguage } from '@/i18n';
 import AppLayout from '@/layouts/AppLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import PublicLayout from '@/layouts/PublicLayout.vue';
@@ -28,11 +28,9 @@ createInertiaApp({
         color: '#1C9976',
     },
     withApp(app, { page }) {
-        const locale = SUPPORTED_LOCALES.includes(page.props.locale)
-            ? page.props.locale
-            : FALLBACK_LOCALE;
-
-        const i18n = createAppI18n(locale);
+        // `locale` and `languages` are shared by the backend and already
+        // validated against the `languages` table by SetLocale.
+        const i18n = createAppI18n(page.props.locale, page.props.languages);
         app.use(i18n);
 
         // Inertia visits (e.g. the language switcher) never re-run
@@ -40,10 +38,11 @@ createInertiaApp({
         // locale or <html dir/lang> after the first load — this keeps both
         // in sync with every navigation, with no page reload.
         router.on('navigate', (event) => {
-            const nextLocale = event.detail.page.props.locale;
+            const { locale, languages } = event.detail.page.props;
+            const language = findLanguage(languages, locale);
 
-            if (SUPPORTED_LOCALES.includes(nextLocale)) {
-                applyLocale(i18n, nextLocale);
+            if (language) {
+                applyLocale(i18n, language);
             }
         });
     },
@@ -57,4 +56,3 @@ initializeGlobalLoader();
 
 // This will listen for flash toast data from the server...
 initializeFlashToast();
-

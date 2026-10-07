@@ -12,8 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('countries', function (Blueprint $table) {
-            $table->id();
-            $table->ulid('ulid')->nullable()->unique();
+            $table->ondaKeys();
             $table->string('name');
             $table->string('native_name')->nullable();
             $table->string('arabic_name')->nullable();

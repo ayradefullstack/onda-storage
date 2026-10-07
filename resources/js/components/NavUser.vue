@@ -15,10 +15,24 @@ import {
 } from '@/components/ui/sidebar';
 import UserInfo from '@/components/UserInfo.vue';
 import UserMenuContent from '@/components/UserMenuContent.vue';
+import { useDirection } from '@/composables/useDirection';
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
 const { isMobile, state } = useSidebar();
+const { isRtl } = useDirection();
+
+const dropdownSide = computed(() => {
+    if (isMobile.value) {
+        return 'bottom';
+    }
+
+    if (state.value === 'collapsed') {
+        return isRtl.value ? 'left' : 'right';
+    }
+
+    return 'bottom';
+});
 </script>
 
 <template>
@@ -37,13 +51,7 @@ const { isMobile, state } = useSidebar();
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                     class="w-(--reka-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-                    :side="
-                        isMobile
-                            ? 'bottom'
-                            : state === 'collapsed'
-                              ? 'left'
-                              : 'bottom'
-                    "
+                    :side="dropdownSide"
                     align="end"
                     :side-offset="4"
                 >

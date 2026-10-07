@@ -14,9 +14,12 @@ test('sends verification notification', function () {
 
     $user = User::factory()->unverified()->create();
 
+    // Fortify's EmailVerificationNotificationSentResponse does back()->with(...)
+    // — with no Referer header in the test, that falls back to the app root,
+    // not the locale-prefixed `home` route.
     $this->actingAs($user)
         ->post(route('verification.send'))
-        ->assertRedirect(route('home'));
+        ->assertRedirect('/');
 
     Notification::assertSentTo($user, VerifyEmail::class);
 });
@@ -26,9 +29,12 @@ test('does not send verification notification if email is verified', function ()
 
     $user = User::factory()->create();
 
+    // Fortify's RedirectAsIntended falls back to config('fortify.home')
+    // here too — not the role-aware LoginResponse — so this is '/' for
+    // every role (see EmailVerificationTest.php for the same mechanism).
     $this->actingAs($user)
         ->post(route('verification.send'))
-        ->assertRedirect(route('dashboard', absolute: false));
+        ->assertRedirect('/');
 
     Notification::assertNothingSent();
 });

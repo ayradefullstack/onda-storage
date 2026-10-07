@@ -16,8 +16,7 @@ defineProps<Props>();
     <img
         src="/assets/logos/favicon.png"
         alt="ONDA"
-        :class="['object-contain shrink-0', className]"
+        :class="['shrink-0 object-contain', className]"
         v-bind="$attrs"
     />
 </template>
-

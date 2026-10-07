@@ -1,5 +1,5 @@
-import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 
 const isLoading = ref(false);
 const loadingMessage = ref('');
@@ -12,11 +12,15 @@ export function useGlobalLoader() {
         isLoading.value = true;
         loadingMessage.value = msg;
         progress.value = 15;
+
         if (typeof document !== 'undefined' && document.body) {
             document.body.style.overflow = 'hidden';
         }
 
-        if (progressTimer) clearInterval(progressTimer);
+        if (progressTimer) {
+            clearInterval(progressTimer);
+        }
+
         progressTimer = setInterval(() => {
             if (progress.value < 88) {
                 progress.value += Math.floor(Math.random() * 8) + 4;
@@ -24,7 +28,10 @@ export function useGlobalLoader() {
         }, 100);
 
         // Safety fallback: auto-hide after 15 seconds in case of unhandled network drop
-        if (safetyTimeout) clearTimeout(safetyTimeout);
+        if (safetyTimeout) {
+            clearTimeout(safetyTimeout);
+        }
+
         safetyTimeout = setTimeout(() => {
             if (isLoading.value) {
                 stopLoading();
@@ -34,10 +41,12 @@ export function useGlobalLoader() {
 
     const stopLoading = () => {
         progress.value = 100;
+
         if (progressTimer) {
             clearInterval(progressTimer);
             progressTimer = null;
         }
+
         if (safetyTimeout) {
             clearTimeout(safetyTimeout);
             safetyTimeout = null;
@@ -47,6 +56,7 @@ export function useGlobalLoader() {
             isLoading.value = false;
             loadingMessage.value = '';
             progress.value = 0;
+
             if (typeof document !== 'undefined' && document.body) {
                 document.body.style.overflow = '';
             }
@@ -65,13 +75,16 @@ export function useGlobalLoader() {
 let isInitialized = false;
 
 export function initializeGlobalLoader() {
-    if (isInitialized) return;
+    if (isInitialized) {
+        return;
+    }
+
     isInitialized = true;
 
     const { startLoading, stopLoading } = useGlobalLoader();
 
     // Trigger on any Inertia request start (form submit, visit, pagination, etc.)
-    router.on('start', (event) => {
+    router.on('start', () => {
         // Optional: Can detect specific form actions or general navigation
         startLoading();
     });
@@ -84,7 +97,10 @@ export function initializeGlobalLoader() {
     // Sync upload / download progress if available
     router.on('progress', (event) => {
         if (event.detail.progress?.percentage) {
-            progress.value = Math.max(progress.value, event.detail.progress.percentage);
+            progress.value = Math.max(
+                progress.value,
+                event.detail.progress.percentage,
+            );
         }
     });
 

@@ -8,7 +8,7 @@ use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
+    // use WithoutModelEvents;
 
     /**
      * Seed the application's database.
@@ -19,9 +19,13 @@ class DatabaseSeeder extends Seeder
             CountrySeeder::class,
             WilayaSeeder::class,
             CommuneSeeder::class,
+            MembershipTypeSeeder::class,
+            CollegeOeuvreFileSeeder::class,
+            RoleAndUserSeeder::class,
+            VaultDemoSeeder::class,
         ]);
 
-        User::firstOrCreate(
+        $testUser = User::firstOrCreate(
             ['email' => 'test@example.com'],
             [
                 'name' => 'Test User',
@@ -30,5 +34,6 @@ class DatabaseSeeder extends Seeder
                 'password' => bcrypt('password'),
             ]
         );
+        $testUser->assignRole('author');
     }
 }

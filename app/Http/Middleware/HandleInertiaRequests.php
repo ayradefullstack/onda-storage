@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Domain\Localization\LanguageService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -35,15 +36,33 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
+                // Admin and author are both `web`-guard Users distinguished
+                // only by Spatie role (see config/auth.php) — the sidebar
+                // and user menu need the role list to decide which nav
+                // sections to show and, for a user holding both, that they
+                // see both rather than an arbitrary single choice.
+                'roles' => $user?->getRoleNames()->all() ?? [],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'locale' => app()->getLocale(),
-            'direction' => app()->getLocale() === 'ar' ? 'rtl' : 'ltr',
+            'direction' => app(LanguageService::class)->direction(app()->getLocale()),
+            'defaultLocale' => app(LanguageService::class)->defaultCode(),
+            // Selectable languages — the switcher and every client-side
+            // locale check read this, never a hardcoded list.
+            'languages' => app(LanguageService::class)->active()->values()->all(),
+            // Client upload scheduler limits (config/vault.php), tunable
+            // per host without a rebuild.
+            'upload' => [
+                'maxInFlight' => max(1, (int) config('vault.upload.client_max_in_flight')),
+                'perFileInFlight' => max(1, (int) config('vault.upload.client_per_file_in_flight')),
+            ],
         ];
     }
 }

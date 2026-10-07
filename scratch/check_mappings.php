@@ -1,6 +1,6 @@
 <?php
 
-$jsonPath = __DIR__ . '/../public/assets/seeders/countries.json';
+$jsonPath = __DIR__.'/../public/assets/seeders/countries.json';
 $raw = json_decode(file_get_contents($jsonPath), true);
 $data = $raw[3]['data'] ?? [];
 
@@ -206,7 +206,7 @@ $frenchMap = [
     'MD' => 'Moldavie',
 ];
 
-echo "Total items: " . count($data) . "\n";
+echo 'Total items: '.count($data)."\n";
 foreach (array_slice($data, 0, 10) as $row) {
-    echo $row['alpha2'] . " | Name: " . $row['name'] . " | Native: " . $row['native_name'] . " | Arabic: " . ($arabicMap[$row['alpha2']] ?? $row['arabic_name']) . " | Phone: " . $row['phone_code'] . "\n";
+    echo $row['alpha2'].' | Name: '.$row['name'].' | Native: '.$row['native_name'].' | Arabic: '.($arabicMap[$row['alpha2']] ?? $row['arabic_name']).' | Phone: '.$row['phone_code']."\n";
 }

@@ -73,7 +73,15 @@ return [
     |
     */
 
-    'home' => '/dashboard',
+    // Static — cannot check the user's role. `LoginResponse::redirectPath()`
+    // (and `redirectUsersTo` in bootstrap/app.php, which reuses it) handle
+    // every role-aware redirect this app actually needs; this value is only
+    // Fortify's own internal fallback for a handful of controllers (e.g.
+    // confirm-password with no intended URL) that don't go through either
+    // of those. It must stay reachable by every authenticated user
+    // regardless of role — '/' always is — never a role-gated dashboard
+    // path, which would 403 whichever role doesn't match.
+    'home' => '/',
 
     /*
     |--------------------------------------------------------------------------

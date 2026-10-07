@@ -1,30 +1,81 @@
 <?php
 
+use App\Domain\Localization\LanguageService;
 use App\Http\Controllers\LocaleController;
-use App\Http\Middleware\SetLocale;
+use App\Http\Controllers\Media\StreamController;
+use App\Http\Controllers\Media\StreamLinkController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\VaultDoctorController;
+use App\Models\Language;
+use App\Models\Wilaya;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/'.SetLocale::FALLBACK_LOCALE);
+// Which locales exist lives in the `languages` table, which can't be read at
+// route-registration time (it would freeze under `route:cache`). The route
+// constraint therefore only checks the *shape* of a code; SetLocale and
+// LocaleController 404 any shape that isn't an active language.
+Route::get('/', fn () => redirect('/'.app(LanguageService::class)->defaultCode()));
 
 Route::get('locale/{locale}', LocaleController::class)
-    ->where(['locale' => implode('|', SetLocale::SUPPORTED_LOCALES)])
+    ->where(['locale' => Language::CODE_PATTERN])
     ->name('locale.switch');
 
+// Public technical presentation (architecture & choices). No auth, no
+// layout — the page opts out itself via defineOptions({ layout }).
+Route::inertia('/presentation', 'Presentation')->name('presentation');
+
 Route::prefix('{locale}')
-    ->where(['locale' => implode('|', SetLocale::SUPPORTED_LOCALES)])
+    ->where(['locale' => Language::CODE_PATTERN])
     ->group(function () {
         Route::inertia('/', 'Home')->name('home');
     });
 
-Route::get('/api/wilayas/{wilaya}/communes', function (\App\Models\Wilaya $wilaya) {
+Route::get('/api/wilayas/{wilaya}/communes', function (Wilaya $wilaya) {
     return response()->json(
         $wilaya->communes()->active()->visible()->orderBy('name_fr')->get(['id', 'wilaya_id', 'post_code', 'name_fr', 'name_ar'])
     );
 })->name('api.wilayas.communes');
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+// Reached by an authenticated user holding neither the `author` nor the
+// `admin` role — see LoginResponse::redirectPath()'s doc comment for why
+// this exists and when it's expected to be hit. Not locale-prefixed, like
+// every other authenticated-area route (see CLAUDE.md).
+Route::middleware(['auth'])->group(function () {
+    Route::inertia('account-pending', 'auth/AccountPending')->name('account.pending');
 });
+
+// P6 (scoped): the preview/stream read path only — see CLAUDE.md's phase
+// log for what's deliberately deferred (full downloads, production
+// delivery). Neither role-owned — an admin and an author both read files
+// here, so this lives in neither routes/admin.php nor routes/author.php.
+// `role:author|admin` admits both; `MediaFilePolicy::view` does the real
+// ownership check underneath (an author only their own file, an admin any
+// file — see its doc comment). `media.link` issues a fresh 15-minute signed
+// URL on demand; `media.stream` is what that URL points at, and carries its
+// own `signed` check on top of the normal auth/role gate (see
+// StreamController's doc comment for why all four layers are needed).
+Route::middleware(['auth', 'verified', 'role:author|admin'])->group(function () {
+    Route::get('/media/{mediaFile:uuid}/link', StreamLinkController::class)
+        ->name('media.link');
+
+    Route::get('/media/{mediaFile:uuid}/stream', StreamController::class)
+        ->middleware('signed')
+        ->name('media.stream');
+});
+
+// The header bell, for both roles — an author and an admin each read
+// their own `notifications` rows, so this belongs in neither
+// routes/admin.php nor routes/author.php. No role gate beyond `auth`:
+// every notification query is scoped to `$request->user()`.
+Route::middleware(['auth'])->prefix('notifications')->name('notifications.')->group(function () {
+    Route::get('/', [NotificationController::class, 'index'])->name('index');
+    Route::post('/read-all', [NotificationController::class, 'readAll'])->name('read-all');
+    Route::post('/{notification}/read', [NotificationController::class, 'read'])->name('read');
+});
+
+Route::get('/_vault-doctor', VaultDoctorController::class)
+    ->middleware('throttle:vault-doctor')
+    ->name('vault-doctor');
 
 if (app()->environment('local')) {
     Route::get('/mail/preview', function () {
@@ -58,3 +109,5 @@ if (app()->environment('local')) {
 }
 
 require __DIR__.'/settings.php';
+require __DIR__.'/admin.php';
+require __DIR__.'/author.php';

@@ -10,7 +10,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class CreateUserRequest extends FormRequest
 {
-     use PasswordValidationRules, ProfileValidationRules;
+    use PasswordValidationRules, ProfileValidationRules;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -29,17 +30,17 @@ class CreateUserRequest extends FormRequest
         $algeriaId = Country::dz()->first()?->id;
 
         return [
-            'first_name'    => ['required', 'string', 'max:120'],
-            'last_name'     => ['required', 'string', 'max:120'],
+            'first_name' => ['required', 'string', 'max:120'],
+            'last_name' => ['required', 'string', 'max:120'],
             'first_name_ar' => ['required', 'string', 'max:120', 'regex:/^[\x{0600}-\x{06FF}\s]+$/u'],
-            'last_name_ar'  => ['required', 'string', 'max:120', 'regex:/^[\x{0600}-\x{06FF}\s]+$/u'],
-            'country_id'    => ['required', 'exists:countries,id'],
-            'wilaya_id'     => ['nullable', $algeriaId ? 'required_if:country_id,'.$algeriaId : 'nullable', 'exists:wilayas,id'],
-            'commune_id'    => ['nullable', $algeriaId ? 'required_if:country_id,'.$algeriaId : 'nullable', 'exists:communes,id'],
-            'city'          => ['nullable', 'string', 'max:120'],
-            'phone'         => ['required', 'string', 'max:30'],
-            'email'         => $this->emailRules(),
-            'password'      => $this->passwordRules(),
+            'last_name_ar' => ['required', 'string', 'max:120', 'regex:/^[\x{0600}-\x{06FF}\s]+$/u'],
+            'country_id' => ['required', 'exists:countries,id'],
+            'wilaya_id' => ['nullable', $algeriaId ? 'required_if:country_id,'.$algeriaId : 'nullable', 'exists:wilayas,id'],
+            'commune_id' => ['nullable', $algeriaId ? 'required_if:country_id,'.$algeriaId : 'nullable', 'exists:communes,id'],
+            'city' => ['nullable', 'string', 'max:120'],
+            'phone' => ['required', 'string', 'max:30'],
+            'email' => $this->emailRules(),
+            'password' => $this->passwordRules(),
         ];
     }
 

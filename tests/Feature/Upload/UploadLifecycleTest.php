@@ -1,0 +1,262 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Domain\Vault\Contracts\VaultContract;
+use App\Domain\Vault\Value\StoredObject;
+use App\Jobs\CleanupTemp;
+use App\Jobs\ComputeContentHash;
+use App\Jobs\DecryptToTemp;
+use App\Jobs\DeduplicateFile;
+use App\Jobs\ExtractMetadata;
+use App\Jobs\GenerateVariants;
+use App\Jobs\ProcessMediaFile;
+use App\Jobs\RecordDeposit;
+use App\Jobs\ScanForMalware;
+use App\Jobs\VerifyContentType;
+use App\Models\MediaFile;
+use App\Models\Oeuvre;
+use App\Models\UploadSession;
+use App\Models\User;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Storage;
+use Spatie\Permission\Models\Role;
+
+/**
+ * Small, test-friendly chunk/segment sizes (multiples of the AES block size)
+ * instead of the 8 MiB / 1 MiB production defaults — mirrors
+ * tests/Unit/Vault/EncryptedLocalVaultTest.php's makeSmallVault(). Must be
+ * set before the first HTTP request in a test, since VaultContract is a
+ * container singleton that reads config('vault.chunk_size') once, in its
+ * constructor.
+ */
+function useSmallChunks(int $chunkSize = 32, int $segmentSize = 16): void
+{
+    config(['vault.chunk_size' => $chunkSize, 'vault.mac_segment_size' => $segmentSize]);
+}
+
+function authorUser(): User
+{
+    Role::findOrCreate('author');
+    $user = User::factory()->create();
+    $user->assignRole('author');
+
+    return $user;
+}
+
+function chunkServer(string $bytes, array $extra = []): array
+{
+    return array_merge([
+        'CONTENT_TYPE' => 'application/octet-stream',
+        'HTTP_ACCEPT' => 'application/json',
+        'HTTP_X_CHUNK_CRC32' => hash('crc32b', $bytes),
+    ], $extra);
+}
+
+function decryptMediaFile(MediaFile $mediaFile): string
+{
+    $object = new StoredObject(
+        uuid: $mediaFile->uuid,
+        disk: $mediaFile->disk,
+        path: $mediaFile->path,
+        macPath: $mediaFile->mac_path,
+        dekWrapped: $mediaFile->dek_wrapped,
+        nonce: $mediaFile->nonce,
+        sizeBytes: $mediaFile->size_bytes,
+    );
+
+    $tempFile = app(VaultContract::class)->decryptToTemp($object);
+
+    return file_get_contents($tempFile->path);
+}
+
+test('a full 3-chunk lifecycle round-trips the exact source bytes', function () {
+    // Guards P3-FIX's central decision: complete() does no heavy work — it
+    // hands off to the P5 chain and returns immediately, leaving the file
+    // at 'scanning' with sha256_plain still null. QUEUE_CONNECTION=sync in
+    // tests would otherwise run the whole chain inline inside complete(),
+    // which made an earlier version of this test assert 'ready' and a real
+    // hash — i.e. it asserted complete() had done the hashing itself. That
+    // passed even when the hashing genuinely happened inside complete(),
+    // so it could not have caught a regression that reintroduced a
+    // synchronous hash_file() into CompleteUpload. Bus::fake() intercepts
+    // ProcessMediaFile::dispatch() before its handle() ever runs, so the
+    // chain is captured, not executed — restoring the ability to catch
+    // that regression. Do not "fix" this back to asserting 'ready'.
+    Bus::fake();
+
+    useSmallChunks();
+    $user = authorUser();
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
+
+    $plaintext = random_bytes(74); // 32 + 32 + 10 (short final chunk)
+
+    $init = $this->actingAs($user)->postJson('/uploads', [
+        'oeuvre_id' => $oeuvre->id,
+        'filename' => 'movie.mp4',
+        'size_bytes' => strlen($plaintext),
+        'mime' => 'video/mp4',
+    ]);
+
+    $init->assertCreated();
+    $uuid = $init->json('uuid');
+    expect($init->json('total_chunks'))->toBe(3);
+
+    foreach ([0, 1, 2] as $index) {
+        $chunk = substr($plaintext, $index * 32, 32);
+        $response = $this->call('POST', "/uploads/{$uuid}/chunk/{$index}", [], [], [], chunkServer($chunk), $chunk);
+        $response->assertOk();
+        expect($response->json('index'))->toBe($index);
+    }
+
+    $session = UploadSession::where('uuid', $uuid)->first();
+    expect($session->received_chunks)->toBe(3)
+        ->and($session->received_bytes)->toBe(74);
+
+    $complete = $this->postJson("/uploads/{$uuid}/complete");
+    $complete->assertCreated();
+
+    $mediaFile = MediaFile::where('uuid', $complete->json('uuid'))->firstOrFail();
+    expect($mediaFile->status)->toBe('scanning')
+        ->and($mediaFile->size_bytes)->toBe(74)
+        ->and($mediaFile->sha256_plain)->toBeNull();
+
+    Bus::assertDispatched(ProcessMediaFile::class, fn (ProcessMediaFile $job): bool => $job->mediaFileUuid === $mediaFile->uuid);
+
+    // Pins the chain's composition and order — chainJobs() is the same
+    // public static method VaultReprocessCommand uses, so this is the one
+    // source of truth for "what P5 actually runs", not a hand-copied list.
+    $chainClasses = array_map(fn (object $job): string => $job::class, ProcessMediaFile::chainJobs($mediaFile->uuid));
+    expect($chainClasses)->toBe([
+        DecryptToTemp::class,
+        // Content verification runs immediately after the decrypt, before
+        // anything expensive: finfo reads only the first bytes, so a file
+        // whose content is not what its slot accepts fails before it is
+        // hashed, deduplicated or scanned.
+        VerifyContentType::class,
+        ComputeContentHash::class,
+        DeduplicateFile::class,
+        ScanForMalware::class,
+        ExtractMetadata::class,
+        GenerateVariants::class,
+        RecordDeposit::class,
+        CleanupTemp::class,
+    ]);
+
+    expect(decryptMediaFile($mediaFile))->toBe($plaintext);
+
+    expect(UploadSession::where('uuid', $uuid)->exists())->toBeFalse();
+
+    @unlink(Storage::disk($mediaFile->disk)->path($mediaFile->path));
+    @unlink(Storage::disk($mediaFile->disk)->path($mediaFile->mac_path));
+});
+
+test('chunks arriving out of order still assemble the correct file', function () {
+    // This test is about chunk assembly and offset correctness, so its
+    // payload is random_bytes — deliberately not a real MP4, because the
+    // assertion is that the decrypted bytes come back IDENTICAL.
+    //
+    // Bus::fake() keeps the pipeline out of it. Without the fake the sync
+    // queue runs the chain inline inside complete(), VerifyContentType
+    // correctly refuses to identify 96 random bytes named movie.mp4, and
+    // the exception surfaces as a 500 on the HTTP response. Production
+    // never does that: the queue driver is `database`, so the chain runs
+    // in a worker and a content mismatch marks the file failed instead.
+    Bus::fake();
+
+    useSmallChunks();
+    $user = authorUser();
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
+    $plaintext = random_bytes(96); // 3 full 32-byte chunks
+
+    $init = $this->actingAs($user)->postJson('/uploads', [
+        'oeuvre_id' => $oeuvre->id,
+        'filename' => 'movie.mp4',
+        'size_bytes' => strlen($plaintext),
+        'mime' => 'video/mp4',
+    ]);
+    $uuid = $init->json('uuid');
+
+    foreach ([2, 0, 1] as $index) {
+        $chunk = substr($plaintext, $index * 32, 32);
+        $this->call('POST', "/uploads/{$uuid}/chunk/{$index}", [], [], [], chunkServer($chunk), $chunk)
+            ->assertOk();
+    }
+
+    $complete = $this->postJson("/uploads/{$uuid}/complete")->assertCreated();
+    $mediaFile = MediaFile::where('uuid', $complete->json('uuid'))->firstOrFail();
+
+    expect(decryptMediaFile($mediaFile))->toBe($plaintext);
+
+    @unlink(Storage::disk($mediaFile->disk)->path($mediaFile->path));
+    @unlink(Storage::disk($mediaFile->disk)->path($mediaFile->mac_path));
+});
+
+test('resending an already-received chunk is a no-op and does not double-count bytes', function () {
+    useSmallChunks();
+    $user = authorUser();
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
+    $plaintext = random_bytes(64);
+
+    $init = $this->actingAs($user)->postJson('/uploads', [
+        'oeuvre_id' => $oeuvre->id,
+        'filename' => 'movie.mp4',
+        'size_bytes' => strlen($plaintext),
+        'mime' => 'video/mp4',
+    ]);
+    $uuid = $init->json('uuid');
+    $chunk0 = substr($plaintext, 0, 32);
+
+    $this->call('POST', "/uploads/{$uuid}/chunk/0", [], [], [], chunkServer($chunk0), $chunk0)->assertOk();
+
+    $session = UploadSession::where('uuid', $uuid)->first();
+    expect($session->received_bytes)->toBe(32)
+        ->and($session->received_chunks)->toBe(1);
+
+    // Resend the identical chunk (simulating a client retry after a lost ack).
+    $again = $this->call('POST', "/uploads/{$uuid}/chunk/0", [], [], [], chunkServer($chunk0), $chunk0);
+    $again->assertOk();
+
+    $session->refresh();
+    expect($session->received_bytes)->toBe(32)
+        ->and($session->received_chunks)->toBe(1);
+});
+
+test('a final chunk shorter than chunk_size is accepted', function () {
+    useSmallChunks();
+    $user = authorUser();
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
+    $plaintext = random_bytes(40); // 1 full chunk (32) + 1 short final chunk (8)
+
+    $init = $this->actingAs($user)->postJson('/uploads', [
+        'oeuvre_id' => $oeuvre->id,
+        'filename' => 'movie.mp4',
+        'size_bytes' => strlen($plaintext),
+        'mime' => 'video/mp4',
+    ]);
+    $uuid = $init->json('uuid');
+
+    $final = substr($plaintext, 32, 8);
+    $response = $this->call('POST', "/uploads/{$uuid}/chunk/1", [], [], [], chunkServer($final), $final);
+
+    $response->assertOk();
+});
+
+test('a non-final chunk shorter than chunk_size is rejected', function () {
+    useSmallChunks();
+    $user = authorUser();
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
+
+    $init = $this->actingAs($user)->postJson('/uploads', [
+        'oeuvre_id' => $oeuvre->id,
+        'filename' => 'movie.mp4',
+        'size_bytes' => 64,
+        'mime' => 'video/mp4',
+    ]);
+    $uuid = $init->json('uuid');
+
+    $short = random_bytes(20); // chunk 0 of 2 must be exactly 32 bytes
+    $response = $this->call('POST', "/uploads/{$uuid}/chunk/0", [], [], [], chunkServer($short), $short);
+
+    $response->assertStatus(422);
+});

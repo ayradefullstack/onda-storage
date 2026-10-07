@@ -1,6 +1,6 @@
 <?php
 
-$jsonPath = __DIR__ . '/../public/assets/seeders/countries.json';
+$jsonPath = __DIR__.'/../public/assets/seeders/countries.json';
 $raw = json_decode(file_get_contents($jsonPath), true);
 
 $phoneCodes = [
@@ -114,7 +114,7 @@ foreach ($raw as $idx => $entry) {
 }
 
 if ($tableIndex === null) {
-    die("Table data not found\n");
+    exit("Table data not found\n");
 }
 
 $updatedCount = 0;
@@ -132,7 +132,7 @@ echo "Successfully mapped phone codes for {$updatedCount} countries.\n";
 $missing = [];
 foreach ($raw[$tableIndex]['data'] as $c) {
     if (empty($c['phone_code'])) {
-        $missing[] = $c['name'] . ' (' . $c['alpha2'] . ')';
+        $missing[] = $c['name'].' ('.$c['alpha2'].')';
     }
 }
 
@@ -141,5 +141,5 @@ if (empty($missing)) {
     file_put_contents($jsonPath, json_encode($raw, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
     echo "Updated public/assets/seeders/countries.json successfully.\n";
 } else {
-    echo "Still missing: " . implode(', ', $missing) . "\n";
+    echo 'Still missing: '.implode(', ', $missing)."\n";
 }

@@ -1,6 +1,6 @@
 <?php
 
-$jsonPath = __DIR__ . '/../public/assets/seeders/countries.json';
+$jsonPath = __DIR__.'/../public/assets/seeders/countries.json';
 $raw = json_decode(file_get_contents($jsonPath), true);
 
 $data = [];
@@ -11,10 +11,10 @@ foreach ($raw as $entry) {
     }
 }
 
-echo "Total countries in JSON: " . count($data) . "\n";
-if (!empty($data)) {
+echo 'Total countries in JSON: '.count($data)."\n";
+if (! empty($data)) {
     echo "Columns in sample record:\n";
     foreach (array_keys($data[0]) as $k) {
-        echo " - " . $k . " (sample: " . var_export($data[0][$k], true) . ")\n";
+        echo ' - '.$k.' (sample: '.var_export($data[0][$k], true).")\n";
     }
 }

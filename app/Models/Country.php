@@ -2,15 +2,18 @@
 
 namespace App\Models;
 
+use App\Concerns\HasUuidColumn;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
- * @property string|null $ulid
+ * @property string $uuid
  * @property string $name
  * @property string|null $native_name
  * @property string|null $arabic_name
@@ -25,17 +28,18 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string|null $flag_url
  * @property bool $is_active
  * @property bool $is_visible
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property \Illuminate\Support\Carbon|null $deleted_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
  */
 class Country extends Model
 {
-    use HasFactory, SoftDeletes;
+    /** @use HasFactory<Factory<Country>> */
+    use HasFactory, HasUuidColumn, SoftDeletes;
 
     protected $fillable = [
         'id',
-        'ulid',
+        'uuid',
         'name',
         'native_name',
         'arabic_name',
@@ -87,21 +91,36 @@ class Country extends Model
         return $this->name;
     }
 
+    /**
+     * @return HasMany<Wilaya, $this>
+     */
     public function wilayas(): HasMany
     {
         return $this->hasMany(Wilaya::class);
     }
 
+    /**
+     * @param  Builder<Country>  $query
+     * @return Builder<Country>
+     */
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
     }
 
+    /**
+     * @param  Builder<Country>  $query
+     * @return Builder<Country>
+     */
     public function scopeVisible(Builder $query): Builder
     {
         return $query->where('is_visible', true);
     }
 
+    /**
+     * @param  Builder<Country>  $query
+     * @return Builder<Country>
+     */
     public function scopeDz(Builder $query)
     {
         return $query->where('alpha2', 'DZ');
