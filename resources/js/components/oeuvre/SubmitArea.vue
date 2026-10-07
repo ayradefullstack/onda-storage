@@ -1,12 +1,5 @@
 <script setup lang="ts">
-import {
-    AlertTriangle,
-    CheckCircle2,
-    Info,
-    Lock,
-    Send,
-    ShieldCheck,
-} from '@lucide/vue';
+import { AlertTriangle, CheckCircle2, Info, Lock, Send } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -107,7 +100,7 @@ const { t } = useI18n();
                                     v-if="submission.can_submit"
                                     class="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300"
                                 >
-                                    Prêt pour dépôt
+                                    {{ t('oeuvres.gate.readyBadge') }}
                                 </span>
                             </div>
                             <p

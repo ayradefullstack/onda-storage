@@ -23,6 +23,8 @@ export class UploadHttpError extends Error {
     constructor(
         public readonly status: number,
         public readonly body: unknown,
+        /** Seconds from a `Retry-After` header, when the server sent one. */
+        public readonly retryAfterSeconds: number | null = null,
     ) {
         super(`Upload request failed with HTTP ${status}`);
         this.name = 'UploadHttpError';
@@ -53,11 +55,29 @@ async function parseJsonSafely(response: Response): Promise<unknown> {
     }
 }
 
+/** `Retry-After` is delta-seconds or an HTTP date; anything else is ignored. */
+function parseRetryAfter(value: string | null): number | null {
+    if (value === null || value.trim() === '') {
+        return null;
+    }
+
+    const seconds = Number(value);
+
+    if (Number.isFinite(seconds)) {
+        return Math.max(0, seconds);
+    }
+
+    const at = Date.parse(value);
+
+    return Number.isNaN(at) ? null : Math.max(0, (at - Date.now()) / 1000);
+}
+
 async function assertOk(response: Response): Promise<void> {
     if (!response.ok) {
         throw new UploadHttpError(
             response.status,
             await parseJsonSafely(response),
+            parseRetryAfter(response.headers.get('Retry-After')),
         );
     }
 }

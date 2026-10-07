@@ -48,12 +48,49 @@ describe('uploadChunk request construction', () => {
             vi.fn().mockResolvedValue({
                 ok: false,
                 status: 419,
+                headers: new Headers(),
                 json: async () => ({ message: 'CSRF token mismatch.' }),
             }),
         );
 
         await expect(
             uploadChunk('session-uuid', 0, new ArrayBuffer(1), 'deadbeef'),
-        ).rejects.toMatchObject({ status: 419 });
+        ).rejects.toMatchObject({ status: 419, retryAfterSeconds: null });
+    });
+
+    it('carries Retry-After (delta-seconds or HTTP date) onto the error', async () => {
+        const reject = (retryAfter: string | null) =>
+            vi.stubGlobal(
+                'fetch',
+                vi.fn().mockResolvedValue({
+                    ok: false,
+                    status: 429,
+                    headers: new Headers(
+                        retryAfter === null
+                            ? {}
+                            : { 'Retry-After': retryAfter },
+                    ),
+                    json: async () => ({ message: 'Too Many Attempts.' }),
+                }),
+            );
+        const call = () =>
+            uploadChunk('session-uuid', 0, new ArrayBuffer(1), 'deadbeef');
+
+        reject('8');
+        await expect(call()).rejects.toMatchObject({
+            status: 429,
+            retryAfterSeconds: 8,
+        });
+
+        reject(new Date(Date.now() + 30_000).toUTCString());
+        await expect(call()).rejects.toMatchObject({
+            retryAfterSeconds: expect.closeTo(30, -1),
+        });
+
+        reject('soon');
+        await expect(call()).rejects.toMatchObject({ retryAfterSeconds: null });
+
+        reject(null);
+        await expect(call()).rejects.toMatchObject({ retryAfterSeconds: null });
     });
 });

@@ -25,6 +25,12 @@ import type {
  * that let the original incident go unnoticed for two manual test cycles.
  */
 
+// The store only reads the shared `upload` limits from the page; the real
+// module is slow to import cold, so a stub keeps first-test timing stable.
+vi.mock('@inertiajs/vue3', () => ({
+    usePage: () => ({ props: {} }),
+}));
+
 const initUpload = vi.fn();
 const uploadChunk = vi.fn();
 const completeUpload = vi.fn();

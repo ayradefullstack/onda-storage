@@ -8,7 +8,6 @@ import {
 } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import {
     Tooltip,
@@ -110,7 +109,7 @@ const mayNotApply = computed(
                                 v-else
                                 class="py-0.2 rounded bg-muted px-1.5 text-[10px] font-medium text-muted-foreground"
                             >
-                                Optionnel
+                                {{ t('oeuvres.step2.optionalBadge') }}
                             </span>
                         </div>
 
@@ -143,8 +142,8 @@ const mayNotApply = computed(
                                 •
                                 {{
                                     requirement.allows_multiple
-                                        ? 'Plusieurs fichiers autorisés'
-                                        : 'Fichier unique'
+                                        ? t('oeuvres.step2.multipleFiles')
+                                        : t('oeuvres.step2.singleFile')
                                 }}
                             </span>
                         </div>
@@ -225,11 +224,15 @@ const mayNotApply = computed(
                     class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"
                 >
                     <FileCheck class="size-3.5" />
-                    <span
-                        >Fichiers associés à cette exigence ({{
-                            entries.length
-                        }}) :</span
-                    >
+                    <!-- Label and count are separate isolates: in RTL a trailing
+                         colon or parenthesis next to a number is reordered by
+                         the bidi algorithm and lands on the wrong side. -->
+                    <span class="inline-flex items-baseline gap-1">
+                        <bdi>{{ t('oeuvres.step2.filesForSlot') }}</bdi>
+                        <bdi dir="ltr" class="font-mono tabular-nums"
+                            >({{ entries.length }})</bdi
+                        >
+                    </span>
                 </div>
 
                 <ul class="space-y-3">

@@ -27,6 +27,9 @@ export type UploadErrorCode =
     | 'missingChunks'
     | 'workerError'
     | 'authExpired'
+    | 'serverBusy'
+    | 'temporaryServer'
+    | 'validation'
     | 'unknown';
 
 export type ChunkStatus =
@@ -66,6 +69,18 @@ export interface UploadFileState {
     errorCode: UploadErrorCode | null;
     errorChunkIndex: number | null;
     remainingQuotaBytes: number | null;
+    /** What a quota-rejected file needs (its own size, as the server saw it). */
+    neededQuotaBytes: number | null;
+    /** The server's own validation text (slot full, format not allowed). */
+    errorMessage: string | null;
+    /** The HTTP status behind an unrecognised failure, shown to the user. */
+    errorStatus: number | null;
+    /**
+     * Set WHILE the client retries by itself (429 / 502 / 503 / 504): the
+     * file keeps its status, this only explains the pause. Cleared on the
+     * next success.
+     */
+    notice: 'serverBusy' | 'temporaryServer' | null;
     bytesUploaded: number;
     speedBps: number;
     etaSeconds: number | null;
@@ -114,7 +129,9 @@ export interface CompleteUploadResponse {
 
 export interface QuotaExceededResponse {
     message: string;
+    error?: string;
     remaining_bytes: number;
+    needed_bytes?: number;
 }
 
 export interface MissingChunksResponse {

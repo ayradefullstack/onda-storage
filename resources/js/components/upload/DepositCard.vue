@@ -11,13 +11,11 @@ import {
     FileText,
     Film,
     Image,
-    Lock,
     Music,
     Pause,
     Play,
     RotateCcw,
     ShieldAlert,
-    ShieldCheck,
     Trash2,
     TriangleAlert,
 } from '@lucide/vue';
@@ -213,41 +211,58 @@ const canResumeOrRetry = computed(() => {
 
     return (
         !!f &&
-        (f.status === 'paused' || f.status === 'failed') &&
+        (f.status === 'paused' ||
+            f.status === 'failed' ||
+            f.status === 'expired') &&
         f.file !== null
     );
 });
 
-const errorMessage = computed<{ key: string; chunk: number | null } | null>(
-    () => {
-        const f = uploadFile.value;
+interface ErrorText {
+    key: string;
+    params: { message?: string; status?: string | number };
+}
 
-        if (!f || f.status !== 'failed' || !f.errorCode) {
-            return null;
-        }
+const errorMessage = computed<ErrorText | null>(() => {
+    const f = uploadFile.value;
 
-        return { key: `upload.error.${f.errorCode}`, chunk: f.errorChunkIndex };
-    },
-);
-
-const showQuotaForFile = computed(
-    () =>
-        !!uploadFile.value &&
-        !!props.quota &&
-        (uploadFile.value.status === 'queued' ||
-            uploadFile.value.status === 'initializing'),
-);
-const quotaForFileRemaining = computed(() => {
-    if (!props.quota || !uploadFile.value) {
+    if (!f || f.status !== 'failed' || !f.errorCode) {
         return null;
     }
 
-    return Math.max(
-        0,
-        props.quota.limit_bytes -
-            props.quota.used_bytes -
-            uploadFile.value.size,
-    );
+    // The server's own validation text (slot full, format not allowed).
+    if (f.errorCode === 'validation') {
+        return f.errorMessage
+            ? {
+                  key: 'upload.error.validation',
+                  params: { message: f.errorMessage },
+              }
+            : { key: 'upload.error.validationFallback', params: {} };
+    }
+
+    return {
+        key: `upload.error.${f.errorCode}`,
+        params: { status: f.errorStatus ?? '' },
+    };
+});
+
+// 413: how much room is left, and how much THIS file needs.
+const quotaMessage = computed(() => {
+    const f = uploadFile.value;
+
+    if (!f || f.status !== 'quota_exceeded') {
+        return null;
+    }
+
+    const hotline = t('sidebar.hotline.number');
+
+    return f.remainingQuotaBytes === null
+        ? t('upload.error.quotaExceeded', { hotline })
+        : t('upload.error.quotaExceededDetail', {
+              needed: formatBytes(f.neededQuotaBytes ?? f.size, locale.value),
+              remaining: formatBytes(f.remainingQuotaBytes, locale.value),
+              hotline,
+          });
 });
 
 const removeConfirmOpen = ref(false);
@@ -409,6 +424,14 @@ async function copyFingerprint(): Promise<void> {
                         </span>
                         <span v-else class="text-muted-foreground">
                             {{ t(`upload.status.${uploadFile.status}`) }}
+                        </span>
+                        <!-- The client is retrying by itself (429 / 502 / 503 / 504). -->
+                        <span
+                            v-if="uploadFile.notice"
+                            role="status"
+                            class="font-medium text-amber-600 dark:text-amber-400"
+                        >
+                            • {{ t(`upload.notice.${uploadFile.notice}`) }}
                         </span>
                     </div>
                 </div>
@@ -581,7 +604,7 @@ async function copyFingerprint(): Promise<void> {
                 </div>
 
                 <span class="font-mono text-[11px] text-muted-foreground">
-                    Sécurisation ONDA
+                    {{ t('oeuvres.show.securing') }}
                 </span>
             </div>
 
@@ -628,7 +651,7 @@ async function copyFingerprint(): Promise<void> {
                             <span
                                 class="py-0.2 rounded bg-emerald-500/15 px-1.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300"
                             >
-                                Certifié
+                                {{ t('oeuvres.show.certified') }}
                             </span>
                         </div>
 
@@ -655,7 +678,7 @@ async function copyFingerprint(): Promise<void> {
                                 />
                                 <span>{{
                                     fingerprintCopied
-                                        ? 'Copié !'
+                                        ? t('oeuvres.show.fingerprintCopied')
                                         : t('oeuvres.show.copyFingerprint')
                                 }}</span>
                             </button>
@@ -723,14 +746,10 @@ async function copyFingerprint(): Promise<void> {
                         v-else-if="uploadFile?.status === 'quota_exceeded'"
                         class="font-semibold text-foreground"
                     >
-                        {{
-                            t('upload.error.quotaExceeded', {
-                                hotline: t('sidebar.hotline.number'),
-                            })
-                        }}
+                        {{ quotaMessage }}
                     </p>
                     <p v-else-if="errorMessage" class="text-foreground">
-                        {{ t(errorMessage.key) }}
+                        {{ t(errorMessage.key, errorMessage.params) }}
                     </p>
 
                     <Button

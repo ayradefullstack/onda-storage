@@ -11,8 +11,13 @@ vi.mock('@inertiajs/vue3', () => ({
     Head: { render: () => null },
     Link: {
         props: ['href'],
-        setup: (_props: unknown, { slots }: { slots: { default?: () => unknown } }) => () =>
-            h('a', slots.default?.() as never),
+        setup:
+            (
+                _props: unknown,
+                { slots }: { slots: { default?: () => unknown } },
+            ) =>
+            () =>
+                h('a', slots.default?.() as never),
     },
     router: { get: vi.fn() },
 }));
@@ -25,12 +30,21 @@ vi.mock('@/routes/admin/oeuvres', () => {
     const index = () => ({ url: '/admin/oeuvres' });
     index.url = () => '/admin/oeuvres';
 
-    return { index, show: (uuid: string) => ({ url: `/admin/oeuvres/${uuid}` }) };
+    return {
+        index,
+        show: (uuid: string) => ({ url: `/admin/oeuvres/${uuid}` }),
+    };
 });
 
 const { default: Index } = await import('./Index.vue');
 
-const STATUSES = ['submitted', 'under_review', 'registered', 'rejected', 'draft'];
+const STATUSES = [
+    'submitted',
+    'under_review',
+    'registered',
+    'rejected',
+    'draft',
+];
 
 const emptyPaginator = {
     data: [],
