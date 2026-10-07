@@ -14,8 +14,9 @@ import DepositCard from '@/components/upload/DepositCard.vue';
 import type { UploadEntry } from '@/components/upload/depositJourney';
 import ResumeBanner from '@/components/upload/ResumeBanner.vue';
 import { useUploadQueue } from '@/composables/useUploadQueue';
+import { formatBytes, formatSpeed } from '@/lib/format';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const {
     files,
     pendingResumes,
@@ -44,6 +45,20 @@ const aggregatePercent = computed(() => {
     const totalUploaded = relevant.reduce((sum, f) => sum + f.bytesUploaded, 0);
 
     return totalSize > 0 ? Math.round((totalUploaded / totalSize) * 100) : 0;
+});
+
+// Total across every file still in progress. Speed is the sum of each
+// file's own throughput, which shifts as other files finish — shown as is.
+const aggregateBytes = computed(() => {
+    const relevant = files.value.filter((f) => f.status !== 'completed');
+
+    return {
+        uploaded: relevant.reduce((sum, f) => sum + f.bytesUploaded, 0),
+        total: relevant.reduce((sum, f) => sum + f.size, 0),
+        speed: relevant
+            .filter((f) => f.status === 'uploading')
+            .reduce((sum, f) => sum + f.speedBps, 0),
+    };
 });
 
 function toEntry(file: (typeof files.value)[number]): UploadEntry {
@@ -87,6 +102,15 @@ function onReselect(id: string, file: File): void {
                 <span class="text-xs text-muted-foreground tabular-nums"
                     >{{ aggregatePercent }}%</span
                 >
+                <bdi
+                    class="hidden text-xs text-muted-foreground tabular-nums sm:inline"
+                >
+                    {{ formatBytes(aggregateBytes.uploaded, locale) }} /
+                    {{ formatBytes(aggregateBytes.total, locale) }}
+                    <template v-if="aggregateBytes.speed > 0">
+                        · {{ formatSpeed(aggregateBytes.speed, locale) }}
+                    </template>
+                </bdi>
                 <ChevronUpIcon class="size-4 text-muted-foreground" />
             </span>
         </button>
@@ -99,6 +123,9 @@ function onReselect(id: string, file: File): void {
             </SheetHeader>
 
             <div class="space-y-3 px-4 pb-6">
+                <p class="text-xs text-muted-foreground">
+                    {{ t('upload.aggregate.sharedConnection') }}
+                </p>
                 <ResumeBanner :files="pendingResumes" @reselect="onReselect" />
 
                 <DepositCard

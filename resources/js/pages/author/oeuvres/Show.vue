@@ -2,14 +2,9 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import {
     ArrowLeft,
-    CheckCircle2,
-    Database,
-    FileCheck2,
     HardDrive,
     Lock,
     Send,
-    Shield,
-    ShieldAlert,
     ShieldCheck,
     Sparkles,
 } from '@lucide/vue';

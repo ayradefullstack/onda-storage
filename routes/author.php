@@ -49,17 +49,18 @@ Route::middleware(['auth', 'verified', 'role:author'])->prefix('author/oeuvres')
 // intent (this is author-only) without that cost.
 Route::middleware(['auth', 'verified', 'role:author'])->prefix('uploads')->name('uploads.')->group(function () {
     Route::post('/', [UploadController::class, 'init'])
-        ->middleware('throttle:10,1')
+        ->middleware('throttle:upload-init')
         ->name('init');
 
     Route::get('/{session:uuid}', [UploadController::class, 'status'])
         ->name('status');
 
-    // 1200 requests/min comfortably covers a 5 GB file at 8 MiB chunks
-    // (~640 chunks) plus retries and up to 3 concurrent chunks per file.
+    // Per-session + per-user buckets (see AppServiceProvider::configureRateLimiting):
+    // sized for `maxInFlight` chunks at full local speed, and never shared
+    // with the init limiter.
     Route::post('/{session:uuid}/chunk/{index}', [UploadController::class, 'chunk'])
         ->whereNumber('index')
-        ->middleware('throttle:1200,1')
+        ->middleware('throttle:upload-chunk')
         ->name('chunk');
 
     Route::post('/{session:uuid}/complete', [UploadController::class, 'complete'])

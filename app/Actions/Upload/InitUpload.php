@@ -17,7 +17,10 @@ use App\Models\UploadSession;
 use App\Models\User;
 use App\Support\FileFormats;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -87,6 +90,39 @@ final class InitUpload
             throw new AuthorizationException('This work does not belong to you.');
         }
 
+        // Several files of one deposit are initialised at the same moment
+        // (the client fires every init as soon as a file is chosen). The
+        // slot-occupancy and quota checks below are check-then-act, so they
+        // run under one short lock scoped to the USER and held only for
+        // the init itself: never during chunk writes, which are scoped to
+        // the upload session uuid and take no user-level lock at all.
+        //
+        // `block()` releases the lock in a `finally`, so an exception inside
+        // the critical section (a validation error, a full disk) can never
+        // leave it held for its 10 s TTL.
+        try {
+            return Cache::lock('upload-init:'.$user->id, 10)->block(5, function () use ($user, $oeuvre, $filename, $sizeBytes, $collegeOeuvreFileId, $mime): UploadSession {
+                return $this->reserve($user, $oeuvre, $filename, $sizeBytes, $mime, $collegeOeuvreFileId);
+            });
+        } catch (LockTimeoutException) {
+            // A server-side hiccup, not a client error: 503 + Retry-After
+            // tells the client to wait and retry by itself.
+            throw new HttpResponseException(response()->json([
+                'error' => 'init_busy',
+                'message' => 'Another upload is being prepared for your account. Please retry in a moment.',
+            ], 503, ['Retry-After' => '3']));
+        }
+    }
+
+    /**
+     * Slot check, quota check and session creation as one unit. The quota
+     * check counts bytes already RESERVED by this user's live upload sessions
+     * as well as `used_bytes` (which only moves when a file completes), so
+     * two inits fired together cannot both fit into the same remaining
+     * space. Expired and aborted sessions release their reservation.
+     */
+    private function reserve(User $user, Oeuvre $oeuvre, string $filename, int $sizeBytes, string $mime, ?int $collegeOeuvreFileId): UploadSession
+    {
         $requirement = null;
 
         if ($oeuvre->register_type_college_id === null) {
@@ -105,10 +141,16 @@ final class InitUpload
 
         $quota = StorageQuota::where('user_id', $user->id)->first();
 
-        if (! $this->quotaPolicy->canAccept($quota, $sizeBytes)) {
+        $reserved = $this->reservedBytes($user);
+
+        if (! $this->quotaPolicy->canAccept($quota, $sizeBytes + $reserved)) {
             throw new HttpResponseException(response()->json([
+                'error' => 'quota_exceeded',
                 'message' => 'This upload would exceed your storage quota.',
-                'remaining_bytes' => $this->quotaPolicy->remainingBytes($quota) ?? 0,
+                // Room left AFTER what the user's live uploads have reserved,
+                // and what this file needs, so the client can say both.
+                'remaining_bytes' => max(0, ($this->quotaPolicy->remainingBytes($quota) ?? 0) - $reserved),
+                'needed_bytes' => $sizeBytes,
             ], 413));
         }
 
@@ -139,6 +181,28 @@ final class InitUpload
         }
 
         return $session;
+    }
+
+    private function reservedBytes(User $user): int
+    {
+        return (int) self::liveSessions($user->id)->sum('size_bytes');
+    }
+
+    /**
+     * The sessions that hold a reservation: a session is LIVE only while it
+     * is neither finished (`CompleteUpload` hard-deletes it, so a completed
+     * one never matches), aborted, nor expired. This is the one definition —
+     * the quota check and the stale-session command go through it
+     * (`$userId` null = every user).
+     *
+     * @return Builder<UploadSession>
+     */
+    public static function liveSessions(?int $userId = null): Builder
+    {
+        return UploadSession::query()
+            ->when($userId !== null, fn (Builder $query) => $query->where('user_id', $userId))
+            ->whereNotIn('status', ['aborted', 'completed'])
+            ->where('expires_at', '>', now());
     }
 
     /**

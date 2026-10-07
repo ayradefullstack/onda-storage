@@ -57,6 +57,12 @@ class HandleInertiaRequests extends Middleware
             // Selectable languages — the switcher and every client-side
             // locale check read this, never a hardcoded list.
             'languages' => app(LanguageService::class)->active()->values()->all(),
+            // Client upload scheduler limits (config/vault.php), tunable
+            // per host without a rebuild.
+            'upload' => [
+                'maxInFlight' => max(1, (int) config('vault.upload.client_max_in_flight')),
+                'perFileInFlight' => max(1, (int) config('vault.upload.client_per_file_in_flight')),
+            ],
         ];
     }
 }

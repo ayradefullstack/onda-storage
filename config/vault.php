@@ -67,6 +67,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Client upload concurrency
+    |--------------------------------------------------------------------------
+    |
+    | Shared with the browser as an Inertia prop, so production can be tuned to
+    | the host's PHP process limit without a rebuild. `client_max_in_flight` is
+    | the chunk requests in flight across ALL files; `client_per_file_in_flight`
+    | the most any one file may hold. 3 stays under both the HTTP/1.1 limit
+    | of ~6 connections per origin and Herd's 4 PHP workers, leaving room for
+    | navigation and polling. Keep it below the host's PHP worker count.
+    |
+    */
+
+    'upload' => [
+        'client_max_in_flight' => (int) env('VAULT_CLIENT_MAX_IN_FLIGHT', 3),
+        'client_per_file_in_flight' => (int) env('VAULT_CLIENT_PER_FILE_IN_FLIGHT', 2),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Master key path
     |--------------------------------------------------------------------------
     |

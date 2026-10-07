@@ -138,6 +138,42 @@ uses one.
 
 ---
 
+## End-to-end tests (Playwright)
+
+`tests/e2e/concurrent-uploads.spec.ts` drives a real Chromium against the
+**local Herd site** and checks that a second upload is not rejected while a
+large one is running: a 300 MB file is started in the multi-file video slot,
+and once it is well under way a small PDF in another slot and a small PDF in
+the same slot must both reach *Deposited* while the large file is still
+uploading. It then waits for the large file to complete and asserts that no
+upload request failed with anything other than a 429/503 that recovered.
+
+These tests are **not** part of `composer ci:check` (nor of `php artisan test`
+or Vitest). They need:
+
+- a **local seeded database** — the demo author (`author1@onda.dz`, from
+  `RoleAndUserSeeder`; the password is read from that seeder) and a draft
+  oeuvre with its required-document slots;
+- the site served by Herd, a running **queue worker** (`php artisan queue:work
+  --queue=media,default`) and a **current `npm run build`**;
+- Chromium for Playwright, once: `npx playwright install chromium`.
+
+```powershell
+npx playwright test                                  # or: tests/e2e/concurrent-uploads.spec.ts
+```
+
+Everything is configurable by environment variable: `E2E_BASE_URL` (default
+`http://onda-storage.test`), `E2E_EMAIL`, `E2E_PASSWORD`, `E2E_OEUVRE_UUID`,
+`E2E_LARGE_MB` (300), `E2E_UPLOAD_MBPS` (emulated upload bandwidth, default 3)
+and `E2E_START_PCT` (how far the large file gets before the small ones start,
+default 30).
+
+Each run really uploads the files, so it leaves `e2e-*` deposits (about
+300 MB) in the demo oeuvre and charges the demo author's quota. Use a throwaway
+database (`php artisan migrate:fresh --seed`) if that matters.
+
+---
+
 ## Three things that cost real time if you get them wrong
 
 > **The vault master key.** Lose the file at `VAULT_MASTER_KEY_PATH` and every

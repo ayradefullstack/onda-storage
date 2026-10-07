@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-    Award,
     BookOpen,
     Check,
     Clapperboard,

@@ -1,6 +1,8 @@
 /**
- * App-level upload queue — a plain module-scope reactive singleton, NOT a
- * page-level composable's local state. This is the one design decision the
+ * App-level upload store and scheduler host — a plain module-scope reactive
+ * singleton, NOT a page-level composable's local state. Every file is
+ * independent state keyed by its own id (no "current upload"); the shared
+ * fair scheduler in `lib/upload/scheduler.ts` decides whose chunk goes next. This is the one design decision the
  * whole phase hinges on: because it lives in module scope rather than in a
  * component's setup(), an Inertia navigation (which only swaps the current
  * page component) never touches it — the fetch calls, retry timers, and
@@ -16,8 +18,19 @@
  * real Pinia store later, if the project ever adds it, is a mechanical
  * change, not a redesign.
  */
+import { usePage } from '@inertiajs/vue3';
 import { computed, reactive } from 'vue';
 import { generateClientId } from '@/lib/id';
+import {
+    classifyFailure,
+    isTransient,
+    MAX_TRANSIENT_ATTEMPTS,
+    transientDelayMs,
+} from '@/lib/upload/failure';
+import type { UploadFailure } from '@/lib/upload/failure';
+import { createScheduler, DEFAULT_LIMITS } from '@/lib/upload/scheduler';
+import type { SchedulerLimits } from '@/lib/upload/scheduler';
+import { createWorkerPool } from '@/lib/upload/workerPool';
 import {
     abortUploadSession,
     completeUpload,
@@ -31,48 +44,55 @@ import {
     validateFile,
     validateFileForRequirement,
 } from '@/lib/uploadValidation';
-// `?worker&inline` (not `new Worker(new URL(...), { type: 'module' })`):
-// this app's outer HTML is served by Laravel, not by Vite itself, so in dev
-// the page's own origin and the Vite dev server's asset origin differ —
-// browsers refuse to construct a Worker from a cross-origin script URL
-// (unlike a plain `<script type=module>` import, which Vite's permissive
-// dev-server CORS headers do allow). `&inline` bundles the worker's source
-// into this module and constructs it from a `blob:` URL at runtime — always
-// same-origin, in both dev and the production build, so this isn't a
-// dev-only workaround. If a CSP is ever added, `worker-src` must permit
-// `blob:` (not `data:`) or this breaks again.
 import type {
     ChunkUploadResponse,
     InitUploadResponse,
     PersistedUpload,
-    QuotaExceededResponse,
     UploadChunk,
     UploadErrorCode,
     UploadFileState,
     UploadRequirement,
-    WorkerResponse,
-    WorkerSliceRequest,
 } from '@/types/upload';
-import ChunkerWorker from '../workers/chunker.worker.ts?worker&inline';
 
 const SESSION_STORAGE_KEY = 'onda.uploads.v1';
-const CHUNK_CONCURRENCY_PER_FILE = 3;
 const MAX_CHUNK_ATTEMPTS = 4;
 const BACKOFF_MS = [1000, 2000, 4000, 8000];
 
 interface StoreState {
     files: Map<string, UploadFileState>;
     order: string[];
-    maxConcurrentFiles: number;
 }
 
 const state = reactive<StoreState>({
     files: new Map(),
     order: [],
-    maxConcurrentFiles: 1,
 });
 
 const abortControllers = new Map<string, AbortController>();
+
+/**
+ * Limits come from the server (shared Inertia prop `upload`, backed by
+ * config/vault.php) so production can be tuned to the host's PHP process
+ * limit without a rebuild. Read at every scheduling turn, so a changed
+ * prop applies without re-registering anything.
+ */
+function readLimits(): SchedulerLimits {
+    try {
+        const shared = usePage().props.upload as
+            Partial<SchedulerLimits> | undefined;
+
+        return {
+            maxInFlight: shared?.maxInFlight ?? DEFAULT_LIMITS.maxInFlight,
+            perFileInFlight:
+                shared?.perFileInFlight ?? DEFAULT_LIMITS.perFileInFlight,
+        };
+    } catch {
+        return DEFAULT_LIMITS;
+    }
+}
+
+const scheduler = createScheduler(readLimits);
+const workerPool = createWorkerPool();
 
 interface ProgressSample {
     lastBytes: number;
@@ -81,126 +101,6 @@ interface ProgressSample {
 }
 
 const progressSamples = new Map<string, ProgressSample>();
-
-// --- chunk slicing (one Worker per chunk, terminated after use) --------
-
-/**
- * `?worker&inline` genuinely inlines the worker as a base64 blob at build
- * time — production uses it unchanged, and it works. In dev, though, Vite
- * still constructs the Worker directly against the dev-server URL despite
- * the `&inline` flag; since the app's origin and the dev server's origin
- * differ (e.g. `onda-storage.test` vs `http://[::1]:5173`), the browser
- * refuses to construct a Worker from that cross-origin URL at all — this
- * is a hard restriction on Worker construction specifically, not a CORS
- * problem a permissive header can fix (confirmed via the actual browser
- * exception: `SecurityError: Failed to construct 'Worker': Script at
- * '...' cannot be accessed from origin '...'`). Every chunk failed
- * silently with `errorCode: 'unknown'` because of this — chunk 0 never
- * even reached the network.
- *
- * The workaround: fetch the worker's dev-transformed source ourselves
- * (a plain cross-origin `fetch` is fine — only Worker *construction* is
- * restricted) and construct the Worker from a `Blob` we create, which is
- * always same-origin to the current page regardless of where its content
- * came from. This only works because the worker file has zero imports to
- * resolve (see its own top comment) — the fetched text is already
- * self-contained. The blob URL is cached and reused for every chunk of
- * every file; only the first chunk pays the extra fetch.
- */
-let devWorkerBlobUrl: Promise<string> | null = null;
-
-async function resolveDevWorkerBlobUrl(): Promise<string> {
-    devWorkerBlobUrl ??= (async () => {
-        const workerModuleUrl = new URL(
-            '../workers/chunker.worker.ts',
-            import.meta.url,
-        );
-        const response = await fetch(workerModuleUrl);
-
-        if (!response.ok) {
-            throw new Error(
-                `Could not load the upload worker (HTTP ${response.status}).`,
-            );
-        }
-
-        const source = await response.text();
-
-        return URL.createObjectURL(
-            new Blob([source], { type: 'text/javascript' }),
-        );
-    })();
-
-    return devWorkerBlobUrl;
-}
-
-async function createChunkerWorker(): Promise<Worker> {
-    if (import.meta.env.PROD) {
-        return new ChunkerWorker();
-    }
-
-    return new Worker(await resolveDevWorkerBlobUrl(), { type: 'module' });
-}
-
-async function sliceAndHash(
-    fileId: string,
-    index: number,
-    blob: Blob,
-): Promise<WorkerResponse> {
-    const worker = await createChunkerWorker();
-
-    return new Promise((resolve, reject) => {
-        worker.addEventListener(
-            'message',
-            (event: MessageEvent<WorkerResponse>) => {
-                worker.terminate();
-                resolve(event.data);
-            },
-        );
-
-        worker.addEventListener('error', (event: ErrorEvent) => {
-            worker.terminate();
-            reject(
-                new Error(
-                    event.message || 'Worker error while slicing a chunk.',
-                ),
-            );
-        });
-
-        const message: WorkerSliceRequest = {
-            type: 'slice',
-            fileId,
-            index,
-            blob,
-        };
-        worker.postMessage(message);
-    });
-}
-
-function sleep(ms: number, signal: AbortSignal): Promise<void> {
-    return new Promise((resolve, reject) => {
-        if (signal.aborted) {
-            reject(new DOMException('Aborted', 'AbortError'));
-
-            return;
-        }
-
-        const timer = setTimeout(resolve, ms);
-        signal.addEventListener(
-            'abort',
-            () => {
-                clearTimeout(timer);
-                reject(new DOMException('Aborted', 'AbortError'));
-            },
-            { once: true },
-        );
-    });
-}
-
-function isQuotaExceededBody(body: unknown): body is QuotaExceededResponse {
-    return (
-        typeof body === 'object' && body !== null && 'remaining_bytes' in body
-    );
-}
 
 function recordProgress(
     fileState: UploadFileState,
@@ -226,10 +126,11 @@ function recordProgress(
     sample.lastTime = now;
     progressSamples.set(fileState.id, sample);
 
-    fileState.bytesUploaded = response.bytes;
+    // Concurrent chunks can answer out of order; never move backwards.
+    fileState.bytesUploaded = Math.max(fileState.bytesUploaded, response.bytes);
     fileState.speedBps = sample.emaSpeed;
 
-    const remaining = fileState.size - response.bytes;
+    const remaining = fileState.size - fileState.bytesUploaded;
     fileState.etaSeconds =
         sample.emaSpeed > 0 ? remaining / sample.emaSpeed : null;
 }
@@ -281,12 +182,72 @@ function logUploadFailure(
     );
 }
 
-function markQuotaExceeded(fileState: UploadFileState, body: unknown): void {
+function markQuotaExceeded(
+    fileState: UploadFileState,
+    failure: Extract<UploadFailure, { kind: 'quota' }>,
+): void {
     fileState.status = 'quota_exceeded';
-    fileState.remainingQuotaBytes = isQuotaExceededBody(body)
-        ? body.remaining_bytes
-        : null;
+    fileState.remainingQuotaBytes = failure.remainingBytes;
+    fileState.neededQuotaBytes = failure.neededBytes ?? fileState.size;
     clearPersisted(fileState.id);
+}
+
+/**
+ * The terminal outcome of a classified failure: each kind has its own state
+ * and message, and none of them touches another file. Transient kinds only
+ * get here once their automatic retries are exhausted.
+ */
+function failWith(
+    fileState: UploadFileState,
+    failure: UploadFailure,
+    chunkIndex: number | null = null,
+): void {
+    fileState.notice = null;
+
+    switch (failure.kind) {
+        case 'quota':
+            markQuotaExceeded(fileState, failure);
+
+            return;
+        case 'authExpired':
+            markExpired(fileState, 'authExpired');
+
+            return;
+        case 'sessionGone':
+            markExpired(fileState);
+
+            return;
+        case 'validation':
+            fileState.status = 'failed';
+            fileState.errorMessage = failure.message;
+            setError(fileState, 'validation', chunkIndex);
+
+            return;
+        case 'busy':
+            fileState.status = 'failed';
+            setError(fileState, 'serverBusy', chunkIndex);
+
+            return;
+        case 'temporary':
+            fileState.status = 'failed';
+            setError(fileState, 'temporaryServer', chunkIndex);
+
+            return;
+        case 'unknown':
+            fileState.status = 'failed';
+            fileState.errorStatus = failure.status;
+            setError(fileState, 'serverError', chunkIndex);
+    }
+}
+
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function noticeFor(
+    failure: Extract<UploadFailure, { kind: 'busy' | 'temporary' }>,
+): 'serverBusy' | 'temporaryServer' {
+    return failure.kind === 'busy' ? 'serverBusy' : 'temporaryServer';
 }
 
 // --- sessionStorage persistence (resume-after-refresh) ------------------
@@ -405,6 +366,10 @@ function restorePersistedUploads(): void {
             errorCode: null,
             errorChunkIndex: null,
             remainingQuotaBytes: null,
+            neededQuotaBytes: null,
+            errorMessage: null,
+            errorStatus: null,
+            notice: null,
             bytesUploaded: 0,
             speedBps: 0,
             etaSeconds: null,
@@ -418,9 +383,33 @@ function restorePersistedUploads(): void {
     }
 }
 
-// --- per-chunk upload with retry -----------------------------------------
+// --- per-chunk upload (one attempt per scheduler turn) ---------------------
 
-async function uploadChunkWithRetry(
+/** When a chunk that failed may be tried again. Keyed `fileId:index`. */
+const retryAt = new Map<string, number>();
+
+function retryKey(fileState: UploadFileState, chunk: UploadChunk): string {
+    return `${fileState.id}:${chunk.index}`;
+}
+
+function clearRetries(fileState: UploadFileState): void {
+    for (const chunk of fileState.chunks) {
+        retryAt.delete(retryKey(fileState, chunk));
+    }
+}
+
+/**
+ * Stops a file for good (permanent failure) or for now (pause): it leaves
+ * the rotation and its sibling in-flight chunks are cancelled. Nothing here
+ * touches any other file.
+ */
+function deactivate(fileState: UploadFileState): void {
+    scheduler.unregister(fileState.id);
+    abortControllers.get(fileState.id)?.abort();
+    abortControllers.delete(fileState.id);
+}
+
+async function uploadOneChunk(
     fileState: UploadFileState,
     chunk: UploadChunk,
     signal: AbortSignal,
@@ -431,7 +420,12 @@ async function uploadChunkWithRetry(
     );
     chunk.status = 'slicing';
 
-    const sliceResult = await sliceAndHash(fileState.id, chunk.index, blob);
+    const sliceResult = await workerPool.slice(
+        fileState.sessionUuid!,
+        chunk.index,
+        blob,
+        signal,
+    );
 
     if (signal.aborted) {
         chunk.status = 'pending';
@@ -441,10 +435,8 @@ async function uploadChunkWithRetry(
 
     if (sliceResult.type === 'error') {
         chunk.status = 'failed';
-        // Must be set before throwing: `slot()`'s catch-all only fills in
-        // the generic 'unknown' code when `fileState.status` is still
-        // 'uploading', so leaving it there would let that catch-all
-        // clobber this specific 'workerError' code with 'unknown'.
+        // Set before throwing so the caller's catch-all does not overwrite
+        // this specific code with 'unknown'.
         fileState.status = 'failed';
         setError(fileState, 'workerError', chunk.index);
         logUploadFailure(
@@ -459,12 +451,10 @@ async function uploadChunkWithRetry(
 
     chunk.status = 'uploading';
 
-    let attempt = 0;
     let usedImmediateCrcRetry = false;
 
     for (;;) {
-        attempt++;
-        chunk.attempts = attempt;
+        chunk.attempts++;
 
         try {
             const response = await uploadChunk(
@@ -475,6 +465,8 @@ async function uploadChunkWithRetry(
                 signal,
             );
             chunk.status = 'done';
+            fileState.notice = null;
+            retryAt.delete(retryKey(fileState, chunk));
             recordProgress(fileState, response);
 
             return;
@@ -485,175 +477,232 @@ async function uploadChunkWithRetry(
                 throw error;
             }
 
+            let failure: UploadFailure | null = null;
+
             if (error instanceof UploadHttpError) {
-                if (error.status === 410) {
+                failure = classifyFailure(error);
+
+                // Stops for this file alone: its session is gone (410), the
+                // login expired (419, not the upload session), or its quota
+                // is exhausted (413). No other file is consulted.
+                if (
+                    failure.kind === 'sessionGone' ||
+                    failure.kind === 'authExpired' ||
+                    failure.kind === 'quota'
+                ) {
                     chunk.status = 'failed';
-                    markExpired(fileState);
+                    failWith(fileState, failure, chunk.index);
                     logUploadFailure('chunk', fileState, error, chunk.index);
 
                     throw error;
                 }
 
-                if (error.status === 413) {
-                    chunk.status = 'failed';
-                    markQuotaExceeded(fileState, error.body);
-                    logUploadFailure('chunk', fileState, error, chunk.index);
-
-                    throw error;
-                }
-
-                // 419: the browser session (login), not the upload session,
-                // expired — a different problem from 410 with a different
-                // fix (log in again, not just reselect the file), so it
-                // gets its own errorCode even though both land on the same
-                // 'expired' file status.
-                if (error.status === 419) {
-                    chunk.status = 'failed';
-                    markExpired(fileState, 'authExpired');
-                    logUploadFailure('chunk', fileState, error, chunk.index);
-
-                    throw error;
-                }
-
-                if (error.status === 422 && !usedImmediateCrcRetry) {
-                    // One immediate retry, no backoff — a CRC mismatch is
+                if (failure.kind === 'validation' && !usedImmediateCrcRetry) {
+                    // One immediate retry, no backoff: a CRC mismatch is
                     // transit corruption, not a reason to wait.
                     usedImmediateCrcRetry = true;
                     continue;
                 }
             }
 
-            if (attempt >= MAX_CHUNK_ATTEMPTS) {
+            // 429 / 502 / 503 / 504: the server is busy or briefly down, not
+            // the file's fault. Retry by itself, honouring Retry-After, for a
+            // much longer run than an unexplained failure gets.
+            if (failure !== null && isTransient(failure)) {
+                if (chunk.attempts >= MAX_TRANSIENT_ATTEMPTS) {
+                    chunk.status = 'failed';
+                    failWith(fileState, failure, chunk.index);
+                    logUploadFailure('chunk', fileState, error, chunk.index);
+
+                    throw error;
+                }
+
+                fileState.notice = noticeFor(failure);
+                chunk.status = 'pending';
+                const wait = transientDelayMs(failure, chunk.attempts);
+                retryAt.set(retryKey(fileState, chunk), Date.now() + wait);
+                setTimeout(() => scheduler.pump(), wait + 5);
+
+                return;
+            }
+
+            if (chunk.attempts >= MAX_CHUNK_ATTEMPTS) {
                 chunk.status = 'failed';
-                fileState.status = 'failed';
-                const code: UploadErrorCode =
-                    error instanceof UploadHttpError && error.status === 422
-                        ? 'crcMismatch'
-                        : 'network';
-                setError(fileState, code, chunk.index);
+
+                if (failure !== null && failure.kind === 'validation') {
+                    fileState.status = 'failed';
+                    setError(fileState, 'crcMismatch', chunk.index);
+                } else if (failure !== null) {
+                    failWith(fileState, failure, chunk.index);
+                } else {
+                    fileState.status = 'failed';
+                    setError(fileState, 'network', chunk.index);
+                }
+
                 logUploadFailure('chunk', fileState, error, chunk.index);
 
                 throw error;
             }
 
-            await sleep(
-                BACKOFF_MS[
-                    Math.min(attempt - 1, BACKOFF_MS.length - 1)
-                ] as number,
-                signal,
-            );
+            // Back off WITHOUT holding a pool slot: the chunk goes back to
+            // pending with a not-before time, and the scheduler hands the
+            // slot to another file in the meantime.
+            const delay = BACKOFF_MS[
+                Math.min(chunk.attempts - 1, BACKOFF_MS.length - 1)
+            ] as number;
+            chunk.status = 'pending';
+            retryAt.set(retryKey(fileState, chunk), Date.now() + delay);
+            setTimeout(() => scheduler.pump(), delay + 5);
+
+            return;
         }
     }
 }
 
-async function finalizeFile(
-    fileState: UploadFileState,
-    signal: AbortSignal,
-): Promise<void> {
+async function finalizeFile(fileState: UploadFileState): Promise<void> {
     fileState.status = 'completing';
+    scheduler.unregister(fileState.id);
+    abortControllers.delete(fileState.id);
 
-    try {
-        const response = await completeUpload(fileState.sessionUuid!, signal);
-        fileState.status = 'completed';
-        fileState.mediaFileUuid = response.uuid;
-        clearPersisted(fileState.id);
-    } catch (error) {
-        if (error instanceof UploadHttpError && error.status === 419) {
-            markExpired(fileState, 'authExpired');
+    for (let attempt = 1; ; attempt++) {
+        try {
+            const response = await completeUpload(fileState.sessionUuid!);
+            fileState.status = 'completed';
+            fileState.notice = null;
+            fileState.mediaFileUuid = response.uuid;
+            clearPersisted(fileState.id);
+
+            return;
+        } catch (error) {
+            const failure =
+                error instanceof UploadHttpError
+                    ? classifyFailure(error)
+                    : null;
+
+            if (
+                failure !== null &&
+                isTransient(failure) &&
+                attempt < MAX_TRANSIENT_ATTEMPTS &&
+                state.files.has(fileState.id)
+            ) {
+                fileState.notice = noticeFor(failure);
+                await sleep(transientDelayMs(failure, attempt));
+
+                continue;
+            }
+
+            if (error instanceof UploadHttpError && error.status === 409) {
+                fileState.status = 'failed';
+                setError(fileState, 'missingChunks');
+            } else if (failure !== null) {
+                failWith(fileState, failure);
+            } else {
+                fileState.status = 'failed';
+                setError(fileState, 'network');
+            }
+
             logUploadFailure('complete', fileState, error);
 
             return;
         }
-
-        fileState.status = 'failed';
-
-        if (error instanceof UploadHttpError && error.status === 409) {
-            setError(fileState, 'missingChunks');
-            logUploadFailure('complete', fileState, error);
-
-            return;
-        }
-
-        setError(
-            fileState,
-            error instanceof UploadHttpError ? 'serverError' : 'network',
-        );
-        logUploadFailure('complete', fileState, error);
     }
 }
 
-async function runFileUploadLoop(fileState: UploadFileState): Promise<void> {
+/**
+ * The scheduler's unit of work for one claimed chunk. It owns this file's
+ * failures: whatever happens, it settles without rejecting, so the pool and
+ * every other file carry on.
+ */
+async function runChunkJob(
+    fileState: UploadFileState,
+    chunk: UploadChunk,
+    controller: AbortController,
+): Promise<void> {
+    try {
+        await uploadOneChunk(fileState, chunk, controller.signal);
+    } catch (error) {
+        // A deliberate pause/cancel/sibling-failure abort is not a failure.
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+            // uploadOneChunk set status/errorCode for every failure it
+            // anticipates; this catch-all covers the rest (e.g. the Worker
+            // constructor throwing before any request is made).
+            if (fileState.status === 'uploading') {
+                fileState.status = 'failed';
+                setError(fileState, 'unknown', chunk.index);
+                logUploadFailure('chunk', fileState, error, chunk.index);
+            }
+        }
+    }
+
+    if (fileState.status !== 'uploading') {
+        // failed / expired / quota_exceeded / paused: leave the rotation.
+        if (abortControllers.get(fileState.id) === controller) {
+            deactivate(fileState);
+        }
+
+        return;
+    }
+
+    await finishIfComplete(fileState);
+}
+
+async function finishIfComplete(fileState: UploadFileState): Promise<void> {
+    // Synchronous check-and-flip: only one caller can win.
+    if (
+        fileState.status === 'uploading' &&
+        fileState.chunks.every((c) => c.status === 'done')
+    ) {
+        await finalizeFile(fileState);
+    }
+}
+
+/** Puts a file whose session exists into the shared rotation. */
+function activateFile(fileState: UploadFileState): void {
+    abortControllers.get(fileState.id)?.abort();
+
     const controller = new AbortController();
     abortControllers.set(fileState.id, controller);
     fileState.status = 'uploading';
     fileState.errorCode = null;
     fileState.errorChunkIndex = null;
 
-    async function slot(): Promise<void> {
-        for (;;) {
-            if (controller.signal.aborted) {
-                return;
+    // Speed is measured from NOW. Without a baseline the first response
+    // would be divided by the (tiny) gap since its own sample was created,
+    // and the readout would spike to GB/s for the first seconds.
+    progressSamples.set(fileState.id, {
+        lastBytes: fileState.bytesUploaded,
+        lastTime: performance.now(),
+        emaSpeed: 0,
+    });
+
+    scheduler.register(fileState.id, {
+        claim: () => {
+            if (controller.signal.aborted || fileState.status !== 'uploading') {
+                return null;
             }
 
-            const next = fileState.chunks.find((c) => c.status === 'pending');
+            const now = Date.now();
+            const next = fileState.chunks.find(
+                (c) =>
+                    c.status === 'pending' &&
+                    (retryAt.get(retryKey(fileState, c)) ?? 0) <= now,
+            );
 
             if (!next) {
-                return;
+                return null;
             }
 
-            next.status = 'slicing'; // claimed synchronously — no other slot can race this
+            next.status = 'slicing'; // claimed synchronously
 
-            try {
-                await uploadChunkWithRetry(fileState, next, controller.signal);
-            } catch (error) {
-                // uploadChunkWithRetry already sets status/errorCode for
-                // every failure it anticipates (max retry attempts, 410,
-                // 413, a worker-reported slice error). This is the
-                // catch-all for everything else — e.g. sliceAndHash's
-                // `new Worker(...)` throwing before any of that logic runs
-                // (the actual cause of a real bug this masked: a
-                // cross-origin dev-server Worker construction failure left
-                // the file frozen at 'uploading' forever with no error
-                // shown). A deliberate pause/cancel also lands here as an
-                // AbortError — that's not a failure, so it's excluded.
-                if (
-                    error instanceof DOMException &&
-                    error.name === 'AbortError'
-                ) {
-                    return;
-                }
+            return () => runChunkJob(fileState, next, controller);
+        },
+    });
 
-                if (fileState.status === 'uploading') {
-                    fileState.status = 'failed';
-                    setError(fileState, 'unknown', next.index);
-                    logUploadFailure('chunk', fileState, error, next.index);
-                }
-
-                return;
-            }
-        }
-    }
-
-    await Promise.all(
-        Array.from({ length: CHUNK_CONCURRENCY_PER_FILE }, () => slot()),
-    );
-    abortControllers.delete(fileState.id);
-
-    if (fileState.status !== 'uploading') {
-        return; // failed / expired / quota_exceeded / paused already handled by a slot
-    }
-
-    if (!fileState.chunks.every((c) => c.status === 'done')) {
-        fileState.status = 'paused';
-
-        return;
-    }
-
-    await finalizeFile(fileState, controller.signal);
-    pumpQueue();
+    // Everything may already be on the server (a resume).
+    void finishIfComplete(fileState);
 }
 
-// --- init + queue scheduling ---------------------------------------------
+// --- init (parallel, capped) -------------------------------------------------
 
 function applyInitResponse(
     fileState: UploadFileState,
@@ -671,69 +720,93 @@ function applyInitResponse(
     );
 }
 
-async function startFile(fileState: UploadFileState): Promise<void> {
-    fileState.status = 'initializing';
+/**
+ * One init, with the server's own pushback handled here: 429 and 502/503/504
+ * are retried by themselves (Retry-After honoured), each attempt re-entering
+ * the priority lane so the wait never holds a slot. Anything else, and a
+ * transient failure that outlasts its retries, surfaces to `startFile`.
+ */
+async function initWithRetry(
+    fileState: UploadFileState,
+): Promise<InitUploadResponse | null> {
+    for (let attempt = 1; ; attempt++) {
+        try {
+            const response = await scheduler.runPriority(async () => {
+                fileState.status = 'initializing';
 
+                return initUpload({
+                    oeuvre_id: fileState.oeuvreId,
+                    filename: fileState.filename,
+                    size_bytes: fileState.size,
+                    mime: fileState.mime,
+                    college_oeuvre_file_id: fileState.requirementId,
+                });
+            });
+            fileState.notice = null;
+
+            return response;
+        } catch (error) {
+            const failure =
+                error instanceof UploadHttpError
+                    ? classifyFailure(error)
+                    : null;
+
+            if (
+                failure === null ||
+                !isTransient(failure) ||
+                attempt >= MAX_TRANSIENT_ATTEMPTS
+            ) {
+                throw error;
+            }
+
+            logUploadFailure('init', fileState, error);
+            fileState.notice = noticeFor(failure);
+            await sleep(transientDelayMs(failure, attempt));
+
+            // Cancelled while waiting: nothing was created, nothing to undo.
+            if (!state.files.has(fileState.id)) {
+                return null;
+            }
+        }
+    }
+}
+
+/**
+ * Fires as soon as the file is chosen. Inits have priority over queued
+ * chunks (see the scheduler), so a small file is initialised and joins the
+ * rotation immediately, even while another file is mid-upload.
+ */
+async function startFile(fileState: UploadFileState): Promise<void> {
     try {
-        const response = await initUpload({
-            oeuvre_id: fileState.oeuvreId,
-            filename: fileState.filename,
-            size_bytes: fileState.size,
-            mime: fileState.mime,
-            college_oeuvre_file_id: fileState.requirementId,
-        });
+        const response = await initWithRetry(fileState);
+
+        if (response === null) {
+            return;
+        }
+
+        // Cancelled while the init was in flight: release the session the
+        // server just created rather than orphaning it.
+        if (!state.files.has(fileState.id)) {
+            void abortUploadSession(response.uuid).catch(() => {});
+
+            return;
+        }
+
         applyInitResponse(fileState, response);
         persist(fileState);
-        await runFileUploadLoop(fileState);
+
+        if (fileState.status === 'initializing') {
+            activateFile(fileState);
+        }
     } catch (error) {
-        if (error instanceof UploadHttpError && error.status === 413) {
-            markQuotaExceeded(fileState, error.body);
-        } else if (error instanceof UploadHttpError && error.status === 419) {
-            markExpired(fileState, 'authExpired');
+        if (error instanceof UploadHttpError) {
+            failWith(fileState, classifyFailure(error));
         } else {
             fileState.status = 'failed';
-            setError(
-                fileState,
-                error instanceof UploadHttpError ? 'serverError' : 'network',
-            );
+            setError(fileState, 'network');
         }
 
         logUploadFailure('init', fileState, error);
-        pumpQueue();
-    }
-}
-
-function activeFileCount(): number {
-    return state.order.reduce((count, id) => {
-        const fileState = state.files.get(id);
-
-        return fileState &&
-            (fileState.status === 'initializing' ||
-                fileState.status === 'uploading' ||
-                fileState.status === 'completing')
-            ? count + 1
-            : count;
-    }, 0);
-}
-
-function pumpQueue(): void {
-    let slotsAvailable = state.maxConcurrentFiles - activeFileCount();
-
-    if (slotsAvailable <= 0) {
-        return;
-    }
-
-    for (const id of state.order) {
-        if (slotsAvailable <= 0) {
-            break;
-        }
-
-        const fileState = state.files.get(id);
-
-        if (fileState?.status === 'queued') {
-            slotsAvailable--;
-            void startFile(fileState);
-        }
     }
 }
 
@@ -771,6 +844,10 @@ function enqueueFile(
         errorCode: null,
         errorChunkIndex: null,
         remainingQuotaBytes: null,
+        neededQuotaBytes: null,
+        errorMessage: null,
+        errorStatus: null,
+        notice: null,
         bytesUploaded: 0,
         speedBps: 0,
         etaSeconds: null,
@@ -781,7 +858,8 @@ function enqueueFile(
 
     state.files.set(id, fileState);
     state.order.push(id);
-    pumpQueue();
+    // Through the reactive map, so later status writes are tracked.
+    void startFile(state.files.get(id) as UploadFileState);
 
     return { ok: true, id };
 }
@@ -793,20 +871,43 @@ function pauseFile(fileId: string): void {
         return;
     }
 
-    abortControllers.get(fileId)?.abort();
-
     if (
         fileState.status === 'uploading' ||
         fileState.status === 'initializing'
     ) {
         fileState.status = 'paused';
     }
+
+    clearRetries(fileState);
+    deactivate(fileState);
 }
 
+/**
+ * A paused or failed file RESUMES the session it already has: nothing is
+ * re-initialised, the server's tracker still knows which chunks arrived, and
+ * the quota reserved at init is neither released nor charged twice.
+ *
+ * A new session starts only when the old one cannot continue — it expired —
+ * or never existed (the init itself failed). The old one is aborted first so
+ * its reservation is released before the new init reserves again.
+ */
 function resumeFile(fileId: string): void {
     const fileState = state.files.get(fileId);
 
-    if (!fileState?.file || !fileState.sessionUuid) {
+    if (!fileState?.file) {
+        return;
+    }
+
+    if (
+        fileState.status === 'expired' ||
+        (fileState.status === 'failed' && !fileState.sessionUuid)
+    ) {
+        void restartWithNewSession(fileState);
+
+        return;
+    }
+
+    if (!fileState.sessionUuid) {
         return;
     }
 
@@ -817,11 +918,47 @@ function resumeFile(fileId: string): void {
     fileState.chunks.forEach((c) => {
         if (c.status !== 'done') {
             c.status = 'pending';
+            c.attempts = 0;
         }
     });
+    clearRetries(fileState);
+    activateFile(fileState);
+}
+
+async function restartWithNewSession(
+    fileState: UploadFileState,
+): Promise<void> {
+    const oldSession = fileState.sessionUuid;
+
+    deactivate(fileState);
+    clearRetries(fileState);
+    clearPersisted(fileState.id);
+    progressSamples.delete(fileState.id);
+
+    // Flipped synchronously so a double click cannot start two sessions.
+    fileState.status = 'queued';
+    fileState.sessionUuid = null;
+    fileState.chunks = [];
+    fileState.bytesUploaded = 0;
+    fileState.speedBps = 0;
+    fileState.etaSeconds = null;
     fileState.errorCode = null;
     fileState.errorChunkIndex = null;
-    void runFileUploadLoop(fileState);
+    fileState.errorMessage = null;
+    fileState.errorStatus = null;
+    fileState.notice = null;
+    fileState.mediaFileUuid = null;
+
+    if (oldSession) {
+        try {
+            await abortUploadSession(oldSession);
+        } catch {
+            // Best-effort: an expired session no longer counts as reserved
+            // on the server in any case.
+        }
+    }
+
+    await startFile(fileState);
 }
 
 async function cancelFile(fileId: string): Promise<void> {
@@ -831,7 +968,15 @@ async function cancelFile(fileId: string): Promise<void> {
         return;
     }
 
-    abortControllers.get(fileId)?.abort();
+    deactivate(fileState);
+    clearRetries(fileState);
+
+    // Removed before the (awaited) server call so the file disappears at
+    // once and an in-flight init sees it was cancelled.
+    clearPersisted(fileId);
+    progressSamples.delete(fileId);
+    state.files.delete(fileId);
+    state.order = state.order.filter((id) => id !== fileId);
 
     if (fileState.sessionUuid && fileState.status !== 'completed') {
         try {
@@ -841,11 +986,6 @@ async function cancelFile(fileId: string): Promise<void> {
             // retention job regardless of whether this call succeeds.
         }
     }
-
-    clearPersisted(fileId);
-    progressSamples.delete(fileId);
-    state.files.delete(fileId);
-    state.order = state.order.filter((id) => id !== fileId);
 }
 
 /**
@@ -891,19 +1031,16 @@ async function reconcileAndResume(fileState: UploadFileState): Promise<void> {
         });
         fileState.bytesUploaded = status.received_bytes;
         fileState.expiresAt = status.expires_at;
-        await runFileUploadLoop(fileState);
+        activateFile(fileState);
     } catch (error) {
-        if (error instanceof UploadHttpError && error.status === 410) {
-            markExpired(fileState);
+        if (error instanceof UploadHttpError) {
+            failWith(fileState, classifyFailure(error));
 
             return;
         }
 
         fileState.status = 'failed';
-        setError(
-            fileState,
-            error instanceof UploadHttpError ? 'serverError' : 'network',
-        );
+        setError(fileState, 'network');
     }
 }
 
@@ -918,6 +1055,7 @@ const filesInOrder = computed<UploadFileState[]>(() =>
 const hasActiveUploads = computed(() =>
     filesInOrder.value.some(
         (f) =>
+            f.status === 'queued' ||
             f.status === 'uploading' ||
             f.status === 'initializing' ||
             f.status === 'completing',
@@ -930,13 +1068,7 @@ export function useUploadStore() {
     return {
         files: filesInOrder,
         hasActiveUploads,
-        maxConcurrentFiles: computed({
-            get: () => state.maxConcurrentFiles,
-            set: (value: number) => {
-                state.maxConcurrentFiles = Math.max(1, Math.floor(value));
-                pumpQueue();
-            },
-        }),
+        limits: readLimits,
         enqueueFile,
         pauseFile,
         resumeFile,

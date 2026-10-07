@@ -15,15 +15,10 @@ import {
     Grid3X3,
     List,
     Music,
-    Pencil,
     Plus,
-    RotateCcw,
-    Search,
-    Send,
     Shield,
     ShieldAlert,
     ShieldCheck,
-    Trash2,
     Video,
 } from '@lucide/vue';
 import { useEventListener } from '@vueuse/core';
@@ -46,9 +41,6 @@ import {
     DataTablePagination,
     DataTableEmpty,
 } from '@/components/ui/data-table';
-import { EmptyState } from '@/components/ui/empty-state';
-import { Input } from '@/components/ui/input';
-import { Pagination } from '@/components/ui/pagination';
 import { create, index, show } from '@/routes/oeuvres';
 
 /** What the row may offer. Mirrors OeuvrePolicy; the server re-checks. */
@@ -425,16 +417,6 @@ const resetFilters = () => {
     searchQuery.value = '';
     selectedStatus.value = '';
     selectedSort.value = 'newest';
-};
-
-/** "4 / 6", or a dash for an oeuvre filed before classification existed. */
-const documentsLabel = (documents: DocumentsProgress) =>
-    documents.total === 0 ? '—' : `${documents.satisfied} / ${documents.total}`;
-
-const goToPage = (page: number) => {
-    if (page >= 1 && page <= props.oeuvres.last_page) {
-        applyFilters(page);
-    }
 };
 </script>
 

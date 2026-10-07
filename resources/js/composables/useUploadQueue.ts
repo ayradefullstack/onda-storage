@@ -64,7 +64,6 @@ export function useUploadQueue() {
     return {
         files: store.files,
         hasActiveUploads: store.hasActiveUploads,
-        maxConcurrentFiles: store.maxConcurrentFiles,
         pendingResumes,
         selectFiles,
         pauseFile: store.pauseFile,
