@@ -1,15 +1,18 @@
 <?php
 
 use App\Http\Controllers\Admin\AuthorController;
+use App\Http\Controllers\Admin\ConsultationAssetController;
 use App\Http\Controllers\Admin\LanguageController;
 use App\Http\Controllers\Admin\MediaVariantController;
 use App\Http\Controllers\Admin\OeuvreController;
+use App\Http\Controllers\Admin\OeuvreFileReviewController;
 use App\Http\Controllers\Admin\OeuvreReviewController;
 use App\Http\Controllers\Admin\Referentiel\CollegeController;
 use App\Http\Controllers\Admin\Referentiel\DocumentController;
 use App\Http\Controllers\Admin\Referentiel\GestionController;
 use App\Http\Controllers\Admin\Referentiel\MemberController;
 use App\Http\Controllers\Admin\Referentiel\TypeController;
+use App\Http\Middleware\EnsureConsultationAccess;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -43,6 +46,21 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         Route::post('/{oeuvre:uuid}/review', [OeuvreReviewController::class, 'review'])->name('review');
         Route::post('/{oeuvre:uuid}/approve', [OeuvreReviewController::class, 'approve'])->name('approve');
         Route::post('/{oeuvre:uuid}/reject', [OeuvreReviewController::class, 'reject'])->name('reject');
+
+        // File review: a deposited file shown through server-generated
+        // DERIVATIVES only. The media file is resolved through the oeuvre
+        // (scoped bindings), so a file of another oeuvre is a 404. The asset
+        // route is signed, bound to the issuing admin, and has no path to
+        // the original — see OeuvreFileReviewController's docblock.
+        Route::scopeBindings()->group(function () {
+            Route::get('/{oeuvre:uuid}/files/{mediaFile:uuid}/review', [OeuvreFileReviewController::class, 'show'])
+                ->name('files.review');
+            Route::get('/{oeuvre:uuid}/files/{mediaFile:uuid}/review/assets', [OeuvreFileReviewController::class, 'assets'])
+                ->name('files.review.assets');
+            Route::get('/{oeuvre:uuid}/files/{mediaFile:uuid}/consult/{asset}', ConsultationAssetController::class)
+                ->middleware(['signed', EnsureConsultationAccess::class])
+                ->name('files.consult.asset');
+        });
     });
 
     /**

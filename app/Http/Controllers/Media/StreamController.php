@@ -26,7 +26,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  *    outlived its 15-minute TTL.
  * 2. `auth`/`role:author` route middleware — the requester is a logged-in
  *    author.
- * 3. `MediaFilePolicy::view` — this specific author owns the work.
+ * 3. `MediaFilePolicy::streamOriginal` — this specific author owns the work
+ *    (an admin does NOT: admins consult derivatives only).
  * 4. The `u` query param — this link was issued to *this* session's user,
  *    not merely to *an* authorized one (see `SignedMediaUrl`).
  *
@@ -45,7 +46,9 @@ final class StreamController extends Controller
             'This link was issued to a different session.',
         );
 
-        Gate::forUser($user)->authorize('view', $mediaFile);
+        abort_unless(config('vault.download.owner_enabled'), 403, 'Downloading originals is disabled.');
+
+        Gate::forUser($user)->authorize('streamOriginal', $mediaFile);
 
         if ($mediaFile->status !== MediaFileStatus::READY) {
             abort(404);

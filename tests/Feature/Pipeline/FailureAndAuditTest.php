@@ -98,9 +98,18 @@ test('two real deposit rows chain: the second row\'s prev_hash is the first row\
         ->orderBy('id')
         ->get();
 
+    // The ledger is ONE global chain. Since byte releases are recorded in it
+    // too (a deduplicated second copy writes a `bytes_released` row between
+    // the two deposits), "chains" means: walking every row from the first
+    // deposit to the second, each prev_hash is the previous row's row_hash.
+    $between = FileAccessLog::where('id', '>=', $rows[0]->id)->where('id', '<=', $rows[1]->id)->orderBy('id')->get();
+
     expect($rows)->toHaveCount(2)
-        ->and($rows[1]->prev_hash)->toBe($rows[0]->row_hash)
         ->and($rows[0]->row_hash)->toHaveLength(64);
+
+    foreach ($between->skip(1) as $i => $row) {
+        expect($row->prev_hash)->toBe($between[$i - 1]->row_hash);
+    }
 
     $disk = Storage::disk($mediaFileA->disk);
     @unlink($disk->path($mediaFileA->fresh()->path));

@@ -286,6 +286,10 @@ test('no route exists that changes an existing oeuvre\'s classification', functi
 
     expect($oeuvreRoutes)->toBe([
         'DELETE oeuvres.destroy',
+        // Read-only file review (derivative viewing); none of them writes.
+        'GET admin.oeuvres.files.consult.asset',
+        'GET admin.oeuvres.files.review',
+        'GET admin.oeuvres.files.review.assets',
         'GET admin.oeuvres.show',
         'GET oeuvres.show',
         'POST admin.oeuvres.approve',

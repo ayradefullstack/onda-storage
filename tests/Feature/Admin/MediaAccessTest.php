@@ -94,7 +94,11 @@ function adminMediaTestPosterVariant(MediaFile $mediaFile): MediaVariant
     return $variant;
 }
 
-test('an admin can stream another author\'s deposit', function () {
+// INTENDED BEHAVIOUR CHANGE (admin file review): this used to assert 200.
+// An admin now consults DERIVATIVES only (OeuvreFileReviewController); the
+// original stream is owner-only (MediaFilePolicy::streamOriginal), so even a
+// validly signed URL issued for the admin is refused.
+test('an admin can no longer stream the original of another author', function () {
     $admin = User::factory()->withRole('admin')->create();
     $author = adminMediaTestAuthor();
     $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
@@ -102,7 +106,8 @@ test('an admin can stream another author\'s deposit', function () {
 
     $url = SignedMediaUrl::forStreaming($mediaFile, $admin);
 
-    $this->actingAs($admin)->get($url)->assertOk();
+    $this->actingAs($admin)->get($url)->assertForbidden();
+    $this->actingAs($admin)->getJson(route('media.link', $mediaFile))->assertForbidden();
 
     adminMediaTestCleanup($mediaFile);
 });

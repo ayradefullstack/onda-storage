@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Domain\Deposit\VaultConsistencyChecks;
 use App\Domain\Vault\Doctor\CheckResult;
 use App\Domain\Vault\Doctor\VaultDoctor;
+use App\Infrastructure\Render\ConsultationChecks;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
@@ -21,9 +23,11 @@ final class VaultDoctorCommand extends Command
 
     protected $description = 'Audit the local environment for ONDA vault readiness (CLI and, with --fpm, FPM).';
 
-    public function handle(VaultDoctor $doctor): int
+    public function handle(VaultDoctor $doctor, ConsultationChecks $consultation, VaultConsistencyChecks $consistency): int
     {
-        $cli = $doctor->run();
+        // The consultation renderers' WARNs live next to the command, not in
+        // the frozen Domain/Vault/Doctor.
+        $cli = $doctor->run()->concat($consultation->run())->concat($consistency->run())->values();
 
         if ($this->option('fpm')) {
             return $this->compareWithFpm($cli);
@@ -51,10 +55,11 @@ final class VaultDoctorCommand extends Command
 
         $this->newLine();
         $this->line(sprintf(
-            'PASS: %d  WARN: %d  FAIL: %d',
+            'PASS: %d  WARN: %d  FAIL: %d  INFO: %d',
             $results->where('status', CheckResult::PASS)->count(),
             $results->where('status', CheckResult::WARN)->count(),
             $results->where('status', CheckResult::FAIL)->count(),
+            $results->where('status', 'INFO')->count(),
         ));
     }
 

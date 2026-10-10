@@ -30,6 +30,37 @@ final class PipelineWorkspace
         return Storage::disk('work')->path("{$mediaFileUuid}.tmp");
     }
 
+    /**
+     * A fresh, private directory for ONE job run that needs its own scratch
+     * space (the consultation job). Never shared with the upload chain's
+     * `{uuid}.tmp`, which CleanupTemp may already have deleted.
+     */
+    public static function makeDirectory(string $mediaFileUuid, string $purpose): string
+    {
+        $directory = Storage::disk('work')->path("{$purpose}-{$mediaFileUuid}-".bin2hex(random_bytes(4)));
+        @mkdir($directory, 0700, true);
+
+        return $directory;
+    }
+
+    public static function removeDirectory(string $directory): void
+    {
+        if (! is_dir($directory)) {
+            return;
+        }
+
+        $items = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($directory, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST,
+        );
+
+        foreach ($items as $item) {
+            $item->isDir() && ! $item->isLink() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
+        }
+
+        @rmdir($directory);
+    }
+
     public static function exists(string $mediaFileUuid): bool
     {
         return is_file(self::tempPath($mediaFileUuid));
