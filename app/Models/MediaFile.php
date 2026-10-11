@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -97,6 +98,22 @@ class MediaFile extends Model
     public function variants(): HasMany
     {
         return $this->hasMany(MediaVariant::class);
+    }
+
+    /**
+     * @return HasOne<MediaConsultation, $this>
+     */
+    public function consultation(): HasOne
+    {
+        return $this->hasOne(MediaConsultation::class);
+    }
+
+    /**
+     * @return HasMany<ConsultationAsset, $this>
+     */
+    public function consultationAssets(): HasMany
+    {
+        return $this->hasMany(ConsultationAsset::class);
     }
 
     /**

@@ -36,10 +36,6 @@ const props = defineProps<{
     file: MediaFileDetail;
 }>();
 
-const emit = defineEmits<{
-    'stream-original': [];
-}>();
-
 const { t, locale } = useI18n();
 
 const category = computed<'video' | 'audio' | 'pdf' | 'other'>(() => {
@@ -99,7 +95,7 @@ async function copyHash(): Promise<void> {
         <div class="flex flex-wrap items-start justify-between gap-3">
             <div>
                 <p class="font-medium" :title="file.original_name">
-                    <bdi>{{
+                    <bdi dir="ltr">{{
                         truncateFilenameMiddle(file.original_name, 60)
                     }}</bdi>
                 </p>
@@ -175,14 +171,6 @@ async function copyHash(): Promise<void> {
                 >
                     {{ t('admin.oeuvres.noPreviewAvailable') }}
                 </p>
-
-                <Button
-                    variant="outline"
-                    size="sm"
-                    @click="emit('stream-original')"
-                >
-                    {{ t('admin.stream.trigger') }}
-                </Button>
             </div>
 
             <div class="space-y-3 text-sm">

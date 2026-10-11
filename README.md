@@ -77,7 +77,7 @@ local machine.
 
 ## Running it
 
-Three processes must be up at the same time. Each needs its own terminal.
+Four processes must be up at the same time. Each needs its own terminal.
 
 ```powershell
 # 1. The web server — Herd serves the site automatically once the site is linked.
@@ -88,7 +88,14 @@ npm run dev
 
 # 3. The queue worker. Herd does NOT manage this.
 php artisan queue:work --queue=media,default
+
+# 4. The previews worker (page images, web video for the admin review).
+#    NOTE the connection name `previews` before --queue: see "Queue workers".
+php artisan queue:work previews --queue=previews --timeout=6600
 ```
+
+Without **(4)**, deposits still reach *ready* (they never wait for previews)
+but the admin review shows "preparing" until the previews worker runs.
 
 Without **(2)**, Laravel silently serves the last `public/build` — your source
 changes are invisible in the browser. Without **(3)**, uploads complete but stay
@@ -103,18 +110,84 @@ at `scanning` forever, because nothing runs the post-upload pipeline.
 
 ---
 
+## Queue workers
+
+Two queues, on two queue *connections* backed by the same `jobs` table:
+
+| Work | Connection | Queue | `retry_after` | Worker |
+|---|---|---|---|---|
+| The upload pipeline (decrypt, hash, dedup, scan, variants, record, cleanup) and notifications | `database` | `media`, `default` | 3600 s | `php artisan queue:work --queue=media,default` |
+| Consultation previews (page images, sheet JSON, 480p video) | `previews` | `previews` | 7200 s (`VAULT_CONSULT_RETRY_AFTER`) | `php artisan queue:work previews --queue=previews --timeout=6600` |
+
+A deposit reaches *ready* without waiting for previews: the last step of the
+upload chain (`CleanupTemp`) queues `GenerateConsultationDerivative` on
+`previews`, and the preview job decrypts the original into its own scratch
+directory, renders, encrypts the derivatives and deletes the directory.
+
+**Why a separate connection, and why the connection name is in the command.**
+`retry_after` belongs to the *connection* the worker is started on. A
+full-length ffmpeg encode took about 16 minutes on the long videos here and can
+take far longer on a weak host; with the 3600 s of the pipeline connection a
+slow encode would be handed to a second worker while still running. The preview
+job's timeout (`VAULT_CONSULT_JOB_TIMEOUT`, 6600 s) is always below the previews
+`retry_after` (a test asserts it), and the ffmpeg limit
+(`VAULT_CONSULT_RENDER_TIMEOUT`, 5400 s) is below the job timeout. A worker
+started as `queue:work --queue=previews` WITHOUT the `previews` connection name
+reads the same table but uses the `database` connection's 3600 s, which defeats
+the point — always pass `previews` first.
+
+Encode speed: `VAULT_CONSULT_VIDEO_PRESET` (libx264 `-preset`, default
+`veryfast`) and `VAULT_CONSULT_VIDEO_CRF` (default `28`).
+
+**cPanel (cron instead of a daemon).** There is no long-running worker, so cron
+starts short-lived ones every minute:
+
+```cron
+* * * * * cd /home/USER/app && php artisan queue:work --queue=media,default --stop-when-empty --max-time=55 --timeout=3000 >> /dev/null 2>&1
+* * * * * cd /home/USER/app && flock -n /tmp/onda-previews.lock php artisan queue:work previews --queue=previews --stop-when-empty --max-time=3300 --timeout=6600 >> /dev/null 2>&1
+```
+
+- `--stop-when-empty` makes the process exit as soon as the queue is drained, so
+  idle ticks cost nothing and do not pile up.
+- `--max-time` is a *between jobs* limit: after that many seconds the worker
+  takes no NEW job and exits, but a job already running is allowed to finish
+  (up to `--timeout`). It is therefore safe to set well below the job length;
+  it never kills an encode.
+- The previews line runs under `flock -n`: if the previous tick's worker is
+  still busy with a long encode, the new tick exits at once instead of starting
+  a second CPU-heavy worker beside it. The pipeline line has no `flock`, so
+  several of its workers can drain `media` in parallel.
+- Neither line can shorten a running job: only `--timeout` (and the host's own
+  process limits, which you must check — some shared hosts kill processes after
+  a fixed time) can do that.
+
+---
+
 ## Common commands
 
 **Backend**
 
 ```powershell
-php artisan test --compact          # the full Pest suite
+php artisan test --compact          # the full Pest suite (temporary storage roots, see below)
 composer lint                       # Pint, fix
 composer types:check                # PHPStan (Larastan, level 7)
 composer test                       # config:clear + lint:check + types:check + tests
 php artisan vault:doctor            # environment audit (CLI)
 php artisan vault:doctor --fpm      # ...and the web SAPI, side by side
 ```
+
+
+**Tests never touch the real vault.** `Tests\TestCase` points the `vault`,
+`incoming`, `work` and `variants` disks at a temporary directory created for
+each test and removed afterwards, whatever `VAULT_DISK_ROOT` etc. say in `.env`;
+`tests/Feature/Isolation/StorageIsolationTest.php` fails if that is bypassed.
+Before this, test runs left thousands of orphan files in the dev vault
+(`php artisan vault:doctor` lists them; `vault:quarantine-orphans` moves them
+aside, never deleting).
+
+**Vault housekeeping commands** (all dry-run unless `--apply`; none deletes
+bytes): `vault:mark-missing-bytes`, `vault:recount-refs`,
+`vault:quarantine-orphans --older-than=7`.
 
 **Frontend**
 
@@ -168,9 +241,21 @@ Everything is configurable by environment variable: `E2E_BASE_URL` (default
 and `E2E_START_PCT` (how far the large file gets before the small ones start,
 default 30).
 
-Each run really uploads the files, so it leaves `e2e-*` deposits (about
-300 MB) in the demo oeuvre and charges the demo author's quota. Use a throwaway
-database (`php artisan migrate:fresh --seed`) if that matters.
+**The e2e suite cleans up after itself.** It runs against the Herd site and
+really uploads into the dev vault, so Playwright's `globalTeardown`
+(`tests/e2e/cleanup.ts`) runs `php artisan e2e:cleanup --apply` when the run
+ends. That command purges only the suite's own deposits (`original_name`
+starting `e2e-`, uploaded by the demo author), frees their bytes through
+`VaultBytesReleaser` (bytes still referenced by any other row are kept),
+removes their derivatives, and returns the quota charge. This is the app's
+deletion path, not a dedicated storage root: a file removed in the UI is only
+soft-deleted and keeps its bytes until purge, so the purge marker
+(`purged_at`) is set explicitly. `E2E_SKIP_CLEANUP=1` keeps the files for
+inspection; `php artisan e2e:cleanup` alone is a dry run.
+
+A dedicated vault root for e2e is not used on purpose: it would need a second
+web server with its own `.env`, and `php artisan serve` is single-process on
+Windows, which defeats a test whose point is concurrent chunk requests.
 
 ---
 

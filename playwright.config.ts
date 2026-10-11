@@ -21,5 +21,8 @@ export default defineConfig({
         baseURL: process.env.E2E_BASE_URL ?? 'http://onda-storage.test',
         ...devices['Desktop Chrome'],
     },
+    // Removes the e2e-* deposits (claims and bytes) after the run, so the
+    // suite leaves nothing in the dev vault. See tests/e2e/cleanup.ts.
+    globalTeardown: './tests/e2e/cleanup.ts',
     projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 });

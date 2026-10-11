@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Actions\Media\TransitionMediaFileStatus;
+use App\Domain\Access\AccessLogger;
 use App\Domain\Deposit\MediaFileStatus;
 use App\Domain\Deposit\Value\RowHash;
+use App\Domain\Deposit\VaultConsistency;
 use App\Models\FileAccessLog;
 use App\Models\MediaFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
@@ -36,9 +39,18 @@ final class RecordDeposit extends PipelineJob
 {
     public int $timeout = 300;
 
-    public function handle(TransitionMediaFileStatus $transition): void
+    public function handle(TransitionMediaFileStatus $transition, VaultConsistency $consistency): void
     {
         $mediaFile = MediaFile::where('uuid', $this->mediaFileUuid)->firstOrFail();
+
+        // A deposit record must never be written for bytes that are not
+        // there. Checked before anything is recorded: the file fails with
+        // reason `bytes_missing` and no deposit row exists.
+        if (! $consistency->bytesIntact($mediaFile)) {
+            $this->failBytesMissing($mediaFile);
+
+            return;
+        }
 
         if ($mediaFile->sha256_plain === null) {
             throw new RuntimeException("Cannot record deposit for [{$this->mediaFileUuid}]: sha256_plain is not set.");
@@ -48,6 +60,28 @@ final class RecordDeposit extends PipelineJob
             ->block(10, fn () => $this->appendDepositRow($mediaFile));
 
         $transition->handle($mediaFile, MediaFileStatus::READY);
+    }
+
+    private function failBytesMissing(MediaFile $mediaFile): void
+    {
+        Log::error('RecordDeposit: bytes_missing — refusing to record a deposit for bytes that are not on disk.', [
+            'media_file_uuid' => $mediaFile->uuid,
+            'path' => $mediaFile->path,
+        ]);
+
+        AccessLogger::record($mediaFile, null, 'bytes_missing', 'system', null);
+
+        $exception = new RuntimeException('bytes_missing');
+
+        // Permanent: retrying cannot bring bytes back. `fail()` runs
+        // failed() immediately; outside a queue (direct call) rethrow.
+        if ($this->job !== null) {
+            $this->fail($exception);
+
+            return;
+        }
+
+        throw $exception;
     }
 
     private function appendDepositRow(MediaFile $mediaFile): void

@@ -135,6 +135,13 @@ return [
 
     'clamdscan_binary' => env('CLAMDSCAN_BINARY', 'clamdscan'),
 
+    // Consultation renderers. Absolute paths in .env on Windows, for the same
+    // reason as ffmpeg above. Empty means "not installed": the family
+    // degrades to an unsupported card, it never fails a deposit.
+    'soffice_binary' => env('SOFFICE_BINARY', 'soffice'),
+
+    'pdftoppm_binary' => env('PDFTOPPM_BINARY', 'pdftoppm'),
+
     'probe_timeout_seconds' => (int) env('VAULT_PROBE_TIMEOUT', 30),
 
     'scan_timeout_seconds' => (int) env('VAULT_SCAN_TIMEOUT', 120),
@@ -186,5 +193,58 @@ return [
     'doctor_web_enabled' => (bool) env('VAULT_DOCTOR_WEB_ENABLED', false),
 
     'doctor_resolve_ip' => env('VAULT_DOCTOR_RESOLVE_IP') ?: null,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Consultation (admin review of derivatives)
+    |--------------------------------------------------------------------------
+    |
+    | An admin never receives original bytes: every format is shown through a
+    | server-generated derivative encrypted with the file's own DEK and a
+    | stored random nonce. See app/Infrastructure/Render.
+    |
+    */
+
+    'consult' => [
+        'url_ttl_minutes' => (int) env('VAULT_CONSULT_URL_TTL', 30),
+        'audit_window_minutes' => (int) env('VAULT_CONSULT_AUDIT_WINDOW', 10),
+        'watermark' => (bool) env('VAULT_CONSULT_WATERMARK', true),
+        'pdf_max_pages' => (int) env('VAULT_CONSULT_PDF_MAX_PAGES', 300),
+        'page_max_edge' => (int) env('VAULT_CONSULT_PAGE_MAX_EDGE', 1600),
+        'image_max_edge' => (int) env('VAULT_CONSULT_IMAGE_MAX_EDGE', 2000),
+        'convert_timeout' => (int) env('VAULT_CONSULT_CONVERT_TIMEOUT', 180),
+        // The `previews` queue connection's retry_after, and the job timeout
+        // that must stay strictly below it (a test asserts it). The ffmpeg
+        // render timeout must in turn stay below the job timeout.
+        'retry_after' => (int) env('VAULT_CONSULT_RETRY_AFTER', 7200),
+        'job_timeout' => (int) env('VAULT_CONSULT_JOB_TIMEOUT', 6600),
+        'render_timeout' => (int) env('VAULT_CONSULT_RENDER_TIMEOUT', 5400),
+        // libx264 speed/size trade-off for the full-length video derivative.
+        'video_preset' => env('VAULT_CONSULT_VIDEO_PRESET', 'veryfast'),
+        'video_crf' => (int) env('VAULT_CONSULT_VIDEO_CRF', 28),
+        'video_max_height' => (int) env('VAULT_CONSULT_VIDEO_MAX_HEIGHT', 480),
+        'audio_bitrate' => env('VAULT_CONSULT_AUDIO_BITRATE', '128k'),
+        'sheet_max_rows' => (int) env('VAULT_CONSULT_SHEET_MAX_ROWS', 5000),
+        'sheet_max_cols' => (int) env('VAULT_CONSULT_SHEET_MAX_COLS', 100),
+        'sheet_max_bytes' => (int) env('VAULT_CONSULT_SHEET_MAX_BYTES', 15 * 1024 * 1024),
+        'text_max_bytes' => (int) env('VAULT_CONSULT_TEXT_MAX_BYTES', 2 * 1024 * 1024),
+        // Stuck-in-pending threshold for vault:doctor, seconds.
+        'pending_warn_seconds' => (int) env('VAULT_CONSULT_PENDING_WARN', 900),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Download policy
+    |--------------------------------------------------------------------------
+    |
+    | `owner_enabled` gates the author's own original stream/link. It is
+    | enforced server-side on issuance AND on the stream. There is no flag
+    | that lets an admin download an original; that is a design decision.
+    |
+    */
+
+    'download' => [
+        'owner_enabled' => (bool) env('VAULT_OWNER_DOWNLOAD_ENABLED', true),
+    ],
 
 ];

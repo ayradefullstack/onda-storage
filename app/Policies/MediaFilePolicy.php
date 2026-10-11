@@ -27,6 +27,17 @@ final class MediaFilePolicy
         return $user->id === $mediaFile->oeuvre->author_id || $user->hasRole('admin');
     }
 
+    /**
+     * The vault-scale ORIGINAL (`media.link` / `media.stream`). Owner only —
+     * an admin reviews deposits through derivatives (see
+     * OeuvreFileReviewController) and is never handed original bytes.
+     * `view` stays admin-inclusive: it is metadata and derivative access.
+     */
+    public function streamOriginal(User $user, MediaFile $mediaFile): bool
+    {
+        return $user->id === $mediaFile->oeuvre->author_id;
+    }
+
     public function update(User $user, MediaFile $mediaFile): bool
     {
         return $user->id === $mediaFile->oeuvre->author_id;

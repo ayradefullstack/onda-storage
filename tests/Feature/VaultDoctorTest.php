@@ -1,8 +1,11 @@
 <?php
 
 use App\Console\Commands\VaultDoctorCommand;
+use App\Domain\Deposit\VaultConsistencyChecks;
+use App\Domain\Deposit\WritabilityChecks;
 use App\Domain\Vault\Doctor\CheckResult;
 use App\Domain\Vault\Doctor\VaultDoctor;
+use App\Infrastructure\Render\ConsultationChecks;
 use App\Models\User;
 use Illuminate\Config\Repository;
 use Illuminate\Support\Facades\Artisan;
@@ -63,7 +66,12 @@ test('--json output is valid JSON and includes every check', function () {
         expect($row)->toHaveKeys(['key', 'label', 'status', 'value', 'rationale', 'sapi_sensitive']);
     }
 
-    expect(count($decoded))->toBe(app(VaultDoctor::class)->run()->count());
+    expect(count($decoded))->toBe(
+        app(VaultDoctor::class)->run()->count()
+            + app(ConsultationChecks::class)->run()->count()
+            + app(VaultConsistencyChecks::class)->run()->count()
+            + app(WritabilityChecks::class)->run()->count(),
+    );
 });
 
 function assetSourceCheckArgs(): array

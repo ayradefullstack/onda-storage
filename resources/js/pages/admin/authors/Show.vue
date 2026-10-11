@@ -267,7 +267,7 @@ const hasOeuvres = computed(() => props.oeuvres.data.length > 0);
                                     :href="oeuvreShow(oeuvre.uuid)"
                                     class="font-medium hover:underline"
                                 >
-                                    <bdi>{{
+                                    <bdi dir="ltr">{{
                                         oeuvreLabel(
                                             oeuvre,
                                             locale,
