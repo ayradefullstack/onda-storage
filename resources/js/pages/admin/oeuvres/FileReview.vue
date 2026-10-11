@@ -111,11 +111,11 @@ async function copyHash(): Promise<void> {
                     class="inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
                 >
                     <ArrowLeft class="size-4 rtl:rotate-180" />
-                    <bdi>{{ title }}</bdi>
+                    <bdi dir="ltr">{{ title }}</bdi>
                 </Link>
                 <span class="text-muted-foreground">/</span>
                 <span v-if="consultation.meta.slotLabel" class="text-sm">
-                    <bdi>{{ consultation.meta.slotLabel }}</bdi>
+                    <bdi dir="ltr">{{ consultation.meta.slotLabel }}</bdi>
                 </span>
             </div>
 
@@ -124,7 +124,7 @@ async function copyHash(): Promise<void> {
                     class="min-w-0 text-lg font-semibold"
                     :title="file.original_name"
                 >
-                    <bdi>{{
+                    <bdi dir="ltr">{{
                         truncateFilenameMiddle(file.original_name, 60)
                     }}</bdi>
                 </h1>

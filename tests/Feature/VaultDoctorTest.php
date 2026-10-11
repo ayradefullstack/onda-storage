@@ -2,6 +2,7 @@
 
 use App\Console\Commands\VaultDoctorCommand;
 use App\Domain\Deposit\VaultConsistencyChecks;
+use App\Domain\Deposit\WritabilityChecks;
 use App\Domain\Vault\Doctor\CheckResult;
 use App\Domain\Vault\Doctor\VaultDoctor;
 use App\Infrastructure\Render\ConsultationChecks;
@@ -68,7 +69,8 @@ test('--json output is valid JSON and includes every check', function () {
     expect(count($decoded))->toBe(
         app(VaultDoctor::class)->run()->count()
             + app(ConsultationChecks::class)->run()->count()
-            + app(VaultConsistencyChecks::class)->run()->count(),
+            + app(VaultConsistencyChecks::class)->run()->count()
+            + app(WritabilityChecks::class)->run()->count(),
     );
 });
 

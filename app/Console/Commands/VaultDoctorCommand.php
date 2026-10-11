@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Domain\Deposit\VaultConsistencyChecks;
+use App\Domain\Deposit\WritabilityChecks;
 use App\Domain\Vault\Doctor\CheckResult;
 use App\Domain\Vault\Doctor\VaultDoctor;
 use App\Infrastructure\Render\ConsultationChecks;
@@ -23,11 +24,11 @@ final class VaultDoctorCommand extends Command
 
     protected $description = 'Audit the local environment for ONDA vault readiness (CLI and, with --fpm, FPM).';
 
-    public function handle(VaultDoctor $doctor, ConsultationChecks $consultation, VaultConsistencyChecks $consistency): int
+    public function handle(VaultDoctor $doctor, ConsultationChecks $consultation, VaultConsistencyChecks $consistency, WritabilityChecks $writability): int
     {
         // The consultation renderers' WARNs live next to the command, not in
         // the frozen Domain/Vault/Doctor.
-        $cli = $doctor->run()->concat($consultation->run())->concat($consistency->run())->values();
+        $cli = $doctor->run()->concat($consultation->run())->concat($consistency->run())->concat($writability->run())->values();
 
         if ($this->option('fpm')) {
             return $this->compareWithFpm($cli);

@@ -187,3 +187,63 @@ test('the scratch directory (plaintext included) is removed even when the render
     expect(MediaConsultation::where('media_file_id', $file->id)->value('status'))->toBe('failed')
         ->and(glob(Storage::disk('work')->path('consult-*')) ?: [])->toBe([]);
 });
+
+test('CleanupTemp dispatches the previews job on the previews connection and queue', function () {
+    Queue::fake();
+    $file = pipelineFile($this->author, $this->oeuvre, 'a', 'a.txt', 'text/plain', 'ready');
+
+    app()->call([new CleanupTemp($file->uuid), 'handle']);
+
+    Queue::assertPushed(
+        GenerateConsultationDerivative::class,
+        fn (GenerateConsultationDerivative $job): bool => $job->connection === 'previews' && $job->queue === 'previews',
+    );
+});
+
+test('vault:generate-previews dispatches on the previews connection and queue and says so', function () {
+    Queue::fake();
+    $file = pipelineFile($this->author, $this->oeuvre, 'a', 'a.txt', 'text/plain', 'ready');
+
+    $this->artisan('vault:generate-previews', ['--uuid' => $file->uuid])
+        ->expectsOutputToContain("on the 'previews' queue")
+        ->assertSuccessful();
+
+    Queue::assertPushed(
+        GenerateConsultationDerivative::class,
+        fn (GenerateConsultationDerivative $job): bool => $job->connection === 'previews' && $job->queue === 'previews',
+    );
+});
+
+test('a logger that throws cannot leave the consultation pending or fail the job', function () {
+    $file = pipelineFile($this->author, $this->oeuvre, 'some bytes', 'a.txt', 'text/plain', 'ready');
+    // Bytes gone: rendering fails, so the catch block runs.
+    @unlink(Storage::disk($file->disk)->path($file->path));
+
+    Log::partialMock()->shouldReceive('warning')->andThrow(new RuntimeException('log disk full'));
+
+    $result = app(GenerateDerivative::class)->handle($file);
+
+    expect($result->status)->toBe(MediaConsultation::FAILED)
+        ->and(MediaConsultation::where('media_file_id', $file->id)->value('status'))->toBe('failed')
+        ->and(MediaConsultation::where('media_file_id', $file->id)->value('reason'))->not->toBeNull();
+});
+
+test('vault:generate-previews --only-missing picks up rows left pending or failed, skips ready', function () {
+    Queue::fake();
+    $pending = pipelineFile($this->author, $this->oeuvre, 'a', 'a.txt', 'text/plain', 'ready');
+    $failed = pipelineFile($this->author, $this->oeuvre, 'b', 'b.txt', 'text/plain', 'ready');
+    $ready = pipelineFile($this->author, $this->oeuvre, 'c', 'c.txt', 'text/plain', 'ready');
+
+    foreach ([[$pending, MediaConsultation::PENDING], [$failed, MediaConsultation::FAILED], [$ready, MediaConsultation::READY]] as [$file, $status]) {
+        $row = MediaConsultation::forFile($file);
+        $row->family = 'text';
+        $row->status = $status;
+        $row->save();
+    }
+
+    $this->artisan('vault:generate-previews', ['--all' => true, '--only-missing' => true])->assertSuccessful();
+
+    Queue::assertPushed(GenerateConsultationDerivative::class, 2);
+    Queue::assertPushed(GenerateConsultationDerivative::class, fn ($job): bool => $job->mediaFileUuid === $pending->uuid);
+    Queue::assertNotPushed(GenerateConsultationDerivative::class, fn ($job): bool => $job->mediaFileUuid === $ready->uuid);
+});

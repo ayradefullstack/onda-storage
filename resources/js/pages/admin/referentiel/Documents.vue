@@ -360,7 +360,7 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                             <td
                                 class="px-3 py-2 font-mono text-[11px] whitespace-nowrap text-muted-foreground"
                             >
-                                <bdi>{{ row.document_key }}</bdi>
+                                <bdi dir="ltr">{{ row.document_key }}</bdi>
                             </td>
                             <td class="max-w-[16rem] px-3 py-2">
                                 <bdi class="block truncate font-medium">{{

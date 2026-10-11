@@ -379,7 +379,9 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
                             <td
                                 class="px-3 py-2 font-mono text-[11px] whitespace-nowrap text-muted-foreground"
                             >
-                                <bdi>{{ row.code_college ?? '—' }}</bdi>
+                                <bdi dir="ltr">{{
+                                    row.code_college ?? '—'
+                                }}</bdi>
                             </td>
                             <td class="max-w-[18rem] px-3 py-2">
                                 <bdi class="block truncate font-medium">{{

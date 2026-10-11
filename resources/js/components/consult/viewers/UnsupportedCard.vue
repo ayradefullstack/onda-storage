@@ -79,7 +79,7 @@ const reasonText = computed(() => {
         >
             <dt>{{ t('consult.meta.name') }}</dt>
             <dd>
-                <bdi>{{ descriptor.meta.filename }}</bdi>
+                <bdi dir="ltr">{{ descriptor.meta.filename }}</bdi>
             </dd>
             <dt>{{ t('consult.meta.size') }}</dt>
             <dd>

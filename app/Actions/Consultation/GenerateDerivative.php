@@ -85,12 +85,18 @@ final class GenerateDerivative
             $result = $this->renderer($family)->render($mediaFile, $source, $workspace);
             $this->persist($mediaFile, $consultation, $result, $workspace);
         } catch (Throwable $e) {
-            Log::warning("GenerateDerivative failed for [{$mediaFile->uuid}].", ['error' => $e->getMessage()]);
-
+            // Resolve the row FIRST: nothing below (a logger that throws, a
+            // full disk on the log file) may leave it `pending`.
             $consultation->status = MediaConsultation::FAILED;
             $consultation->reason = $this->reasonFrom($e);
             $consultation->generated_at = null;
             $consultation->save();
+
+            try {
+                Log::warning("GenerateDerivative failed for [{$mediaFile->uuid}].", ['error' => $e->getMessage()]);
+            } catch (Throwable) {
+                // A logging failure must never escape and fail the job.
+            }
         } finally {
             PipelineWorkspace::removeDirectory($workspace);
         }

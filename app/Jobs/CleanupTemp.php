@@ -42,7 +42,9 @@ final class CleanupTemp extends PipelineJob
                 ->exists();
 
             if ($ready) {
-                GenerateConsultationDerivative::dispatch($this->mediaFileUuid);
+                GenerateConsultationDerivative::dispatch($this->mediaFileUuid)
+                    ->onConnection('previews')
+                    ->onQueue('previews');
             }
         } catch (Throwable $e) {
             Log::warning("CleanupTemp: could not queue previews for [{$this->mediaFileUuid}].", ['error' => $e->getMessage()]);

@@ -118,7 +118,7 @@ function reviewUrl(file: MediaFileDetail): string {
         <div>
             <div class="flex flex-wrap items-center gap-2">
                 <h1 class="text-2xl font-semibold tracking-tight">
-                    <bdi>{{ label }}</bdi>
+                    <bdi dir="ltr">{{ label }}</bdi>
                 </h1>
                 <StatusBadge kind="oeuvre" :status="oeuvre.status" />
             </div>
@@ -183,7 +183,7 @@ function reviewUrl(file: MediaFileDetail): string {
                             :title="file.original_name"
                             @click="select(file.uuid)"
                         >
-                            <bdi>{{
+                            <bdi dir="ltr">{{
                                 truncateFilenameMiddle(file.original_name, 28)
                             }}</bdi>
                         </button>

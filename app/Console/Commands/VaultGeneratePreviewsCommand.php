@@ -14,7 +14,7 @@ use Illuminate\Console\Command;
 /**
  * Backfill for files deposited before the consultation feature (or whose
  * derivative failed). Queues one `GenerateConsultationDerivative` per file on
- * the `media` queue; that job is `ShouldBeUnique`, so running this twice never
+ * the `previews` connection and queue; that job is `ShouldBeUnique`, so running this twice never
  * queues duplicates. Never touches an original.
  *
  * `--force` regenerates: the new assets are stored first (fresh random
@@ -75,11 +75,13 @@ final class VaultGeneratePreviewsCommand extends Command
                 continue;
             }
 
-            GenerateConsultationDerivative::dispatch($mediaFile->uuid, (bool) $this->option('force'));
+            GenerateConsultationDerivative::dispatch($mediaFile->uuid, (bool) $this->option('force'))
+                ->onConnection('previews')
+                ->onQueue('previews');
             $queued++;
         }
 
-        $this->info("Queued {$queued} file(s) on the 'media' queue; skipped {$skipped}.");
+        $this->info("Queued {$queued} file(s) on the 'previews' queue (connection 'previews'); skipped {$skipped}.");
 
         return self::SUCCESS;
     }

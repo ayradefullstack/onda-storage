@@ -355,7 +355,7 @@ function clearFilters(): void {
                                 :href="oeuvreShow(oeuvre.uuid)"
                                 class="font-medium text-foreground transition-colors hover:text-primary"
                             >
-                                <bdi>{{
+                                <bdi dir="ltr">{{
                                     oeuvreLabel(
                                         oeuvre,
                                         locale,

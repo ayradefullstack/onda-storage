@@ -95,7 +95,7 @@ async function copyHash(): Promise<void> {
         <div class="flex flex-wrap items-start justify-between gap-3">
             <div>
                 <p class="font-medium" :title="file.original_name">
-                    <bdi>{{
+                    <bdi dir="ltr">{{
                         truncateFilenameMiddle(file.original_name, 60)
                     }}</bdi>
                 </p>

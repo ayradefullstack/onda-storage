@@ -286,7 +286,7 @@ const applyCollege = (value: string) => {
                             <td
                                 class="px-3 py-2 font-mono text-[11px] whitespace-nowrap text-muted-foreground"
                             >
-                                <bdi>{{ row.code_qlt ?? '—' }}</bdi>
+                                <bdi dir="ltr">{{ row.code_qlt ?? '—' }}</bdi>
                             </td>
                             <td
                                 class="hidden max-w-[14rem] px-3 py-2 lg:table-cell"
