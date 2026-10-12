@@ -288,6 +288,8 @@ test('no route exists that changes an existing oeuvre\'s classification', functi
         'DELETE oeuvres.destroy',
         // Read-only file review (derivative viewing); none of them writes.
         'GET admin.oeuvres.files.consult.asset',
+        // Browser-native preview: the decrypted original, inline, read-only.
+        'GET admin.oeuvres.files.consult.original',
         'GET admin.oeuvres.files.review',
         'GET admin.oeuvres.files.review.assets',
         'GET admin.oeuvres.show',

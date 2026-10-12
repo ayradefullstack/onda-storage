@@ -10,10 +10,12 @@ use App\Domain\Vault\Contracts\VaultContract;
 use App\Infrastructure\Render\AudioRenderer;
 use App\Infrastructure\Render\ConsultationRenderer;
 use App\Infrastructure\Render\CsvRenderer;
+use App\Infrastructure\Render\DeliveryMode;
 use App\Infrastructure\Render\ImageRenderer;
 use App\Infrastructure\Render\OfficeRenderer;
 use App\Infrastructure\Render\OtherRenderer;
 use App\Infrastructure\Render\PdfRenderer;
+use App\Infrastructure\Render\PptxOutlineRenderer;
 use App\Infrastructure\Render\PreviewFamily;
 use App\Infrastructure\Render\PreviewFamilyResolver;
 use App\Infrastructure\Render\RenderResult;
@@ -66,7 +68,30 @@ final class GenerateDerivative
             return $consultation;
         }
 
-        $consultation->family = $this->resolver->resolve($mediaFile)->value;
+        $guess = $this->resolver->resolve($mediaFile);
+        $consultation->family = $guess->value;
+
+        // `original_inline`: the browser renders the original, so there is
+        // nothing to generate and — deliberately — nothing is decrypted. The
+        // stored extension and registry-checked MIME decide the family here
+        // (upload already rejected content that does not match them), and
+        // `inlineMime()` re-verifies on every request.
+        if ($this->resolver->deliveryMode($guess, $mediaFile->extension) === DeliveryMode::OriginalInline
+            && $this->resolver->inlineMime($mediaFile) !== null) {
+            return $this->markOriginalInline($mediaFile, $consultation);
+        }
+
+        // Unsupported by configuration: a card, with no decrypt. Only `Other`
+        // can still change once the bytes are measured (an .ai that is a PDF).
+        if ($guess !== PreviewFamily::Other
+            && $this->resolver->deliveryMode($guess, $mediaFile->extension) === DeliveryMode::Unsupported) {
+            $this->persist($mediaFile, $consultation, RenderResult::unsupported(
+                $guess === PreviewFamily::Archive ? 'unsupported_format' : 'format_unavailable',
+            ), '');
+
+            return $consultation;
+        }
+
         $consultation->status = MediaConsultation::PENDING;
         $consultation->reason = null;
         $consultation->save();
@@ -82,7 +107,16 @@ final class GenerateDerivative
             $family = $this->resolver->resolve($mediaFile, $this->detectMime($source));
             $consultation->family = $family->value;
 
-            $result = $this->renderer($family)->render($mediaFile, $source, $workspace);
+            $result = match ($this->resolver->deliveryMode($family, $mediaFile->extension)) {
+                DeliveryMode::Derivative => $this->renderer($family, $mediaFile)->render($mediaFile, $source, $workspace),
+                // The bytes only turned out to be an inline family after
+                // decryption (e.g. an .ai that is a PDF) but the stored MIME
+                // does not allow serving it: a card, never an original.
+                DeliveryMode::OriginalInline => RenderResult::unsupported('format_unavailable'),
+                DeliveryMode::Unsupported => RenderResult::unsupported(
+                    in_array($family, [PreviewFamily::Other, PreviewFamily::Archive], true) ? 'unsupported_format' : 'format_unavailable',
+                ),
+            };
             $this->persist($mediaFile, $consultation, $result, $workspace);
         } catch (Throwable $e) {
             // Resolve the row FIRST: nothing below (a logger that throws, a
@@ -100,6 +134,25 @@ final class GenerateDerivative
         } finally {
             PipelineWorkspace::removeDirectory($workspace);
         }
+
+        return $consultation;
+    }
+
+    /**
+     * Ready, no assets, no decryption. A stale derivative left from an
+     * earlier `derivative` configuration is removed. (There is no `kind`
+     * column to record `original_inline`: the mode is derived from the
+     * delivery map, never stored.)
+     */
+    private function markOriginalInline(MediaFile $mediaFile, MediaConsultation $consultation): MediaConsultation
+    {
+        $this->delete->handle($mediaFile->consultationAssets()->get());
+
+        $consultation->status = MediaConsultation::READY;
+        $consultation->reason = null;
+        $consultation->page_count = null;
+        $consultation->generated_at = now();
+        $consultation->save();
 
         return $consultation;
     }
@@ -159,8 +212,14 @@ final class GenerateDerivative
         $consultation->save();
     }
 
-    private function renderer(PreviewFamily $family): ConsultationRenderer
+    private function renderer(PreviewFamily $family, MediaFile $mediaFile): ConsultationRenderer
     {
+        // A pptx under `derivative` is the pure-PHP text outline; ppt / odp
+        // explicitly set to `derivative` still go through LibreOffice.
+        if ($family === PreviewFamily::Presentation && strtolower($mediaFile->extension) === 'pptx') {
+            return app(PptxOutlineRenderer::class);
+        }
+
         foreach (self::RENDERERS as $class) {
             $renderer = app($class);
 

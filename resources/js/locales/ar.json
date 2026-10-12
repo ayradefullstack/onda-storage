@@ -823,5 +823,19 @@
     "consult.previousFile": "الملف السابق",
     "consult.nextFile": "الملف التالي",
     "consult.copyHash": "نسخ البصمة",
-    "consult.openInNewTab": "فتح في تبويب جديد"
+    "consult.openInNewTab": "فتح في تبويب جديد",
+    "consult.original.videoUnreadable": "لا يستطيع هذا المتصفح تشغيل صيغة الفيديو هذه",
+    "consult.original.audioUnreadable": "لا يستطيع هذا المتصفح تشغيل صيغة الصوت هذه",
+    "consult.original.codecHint": "الصيغة التي يذكرها الملف:",
+    "consult.pdf.search": "بحث في المستند",
+    "consult.pdf.noMatch": "لا توجد نتائج",
+    "consult.pdf.previousMatch": "النتيجة السابقة",
+    "consult.pdf.nextMatch": "النتيجة التالية",
+    "consult.pptx.notice": "مخطط نصي للعرض التقديمي، وليس عرضًا مرئيًا.",
+    "consult.pptx.slide": "الشريحة {n}",
+    "consult.pptx.noText": "لا يوجد نص في هذه الشريحة.",
+    "consult.pptx.notes": "ملاحظات المقدّم",
+    "consult.reason.format_unavailable": "المعاينة غير متاحة لهذه الصيغة.",
+    "consult.reason.docx_too_large": "المستند كبير جدًا للمعاينة.",
+    "upload.hint.videoMp4": "لمعاينة سلسة، يُفضَّل صيغة MP4 (H.264)."
 }

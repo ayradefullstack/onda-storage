@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AuthorController;
 use App\Http\Controllers\Admin\ConsultationAssetController;
+use App\Http\Controllers\Admin\ConsultOriginalController;
 use App\Http\Controllers\Admin\LanguageController;
 use App\Http\Controllers\Admin\MediaVariantController;
 use App\Http\Controllers\Admin\OeuvreController;
@@ -60,6 +61,13 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
             Route::get('/{oeuvre:uuid}/files/{mediaFile:uuid}/consult/{asset}', ConsultationAssetController::class)
                 ->middleware(['signed', EnsureConsultationAccess::class])
                 ->name('files.consult.asset');
+            // The decrypted ORIGINAL of a pdf / docx / video / audio file,
+            // inline, for the browser to render. Same gate as the asset
+            // route plus a delivery-mode check; scoped binding makes a file
+            // of another oeuvre a 404. See ConsultOriginalController.
+            Route::get('/{oeuvre:uuid}/files/{mediaFile:uuid}/original', ConsultOriginalController::class)
+                ->middleware(['signed', EnsureConsultationAccess::class])
+                ->name('files.consult.original');
         });
     });
 

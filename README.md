@@ -168,7 +168,8 @@ starts short-lived ones every minute:
 **Backend**
 
 ```powershell
-php artisan test --compact          # the full Pest suite (temporary storage roots, see below)
+composer test                       # THE way to run the full suite (config:clear first)
+php artisan test --compact          # same suite, no lint/types; safe: the TestCase guard below
 composer lint                       # Pint, fix
 composer types:check                # PHPStan (Larastan, level 7)
 composer test                       # config:clear + lint:check + types:check + tests
@@ -176,6 +177,19 @@ php artisan vault:doctor            # environment audit (CLI)
 php artisan vault:doctor --fpm      # ...and the web SAPI, side by side
 ```
 
+
+**Never run `config:cache`, `route:cache` or `optimize` on a dev machine.**
+A cached config makes the test run ignore `phpunit.xml`, and `RefreshDatabase`
+then runs `migrate:fresh` against whatever database `.env` names — this wiped a
+developer's MySQL database once. Run `php artisan optimize:clear` if you ever
+did. Protection that does not depend on anyone remembering this:
+`Tests\TestCase` calls `Tests\Support\TestEnvironmentGuard` before any test
+trait boots and **aborts the whole run, before a single query**, if the config
+or routes are cached, `app.env` is not `testing`, or the default connection is
+not sqlite `:memory:` (or a database whose name ends in `_test`). It has its
+own test (`tests/Feature/Isolation/TestEnvironmentGuardTest.php`). Tool-backed
+tests (ffmpeg, pdftoppm, soffice) run under hard timeouts set in `TestCase`,
+so a hung converter fails the test instead of blocking the suite.
 
 **Tests never touch the real vault.** `Tests\TestCase` points the `vault`,
 `incoming`, `work` and `variants` disks at a temporary directory created for

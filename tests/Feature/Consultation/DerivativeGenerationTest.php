@@ -181,6 +181,7 @@ test('an archive or unknown format gets a metadata card and no asset', function 
 });
 
 test('a docx with LibreOffice missing is unsupported with that reason, and the deposit is untouched', function () {
+    consultDerivativeMode('document:docx');
     config(['vault.soffice_binary' => 'C:/definitely/not/soffice.exe']);
 
     $file = consultDeposit($this, consultFixture('formats/sample.docx'), 'lettre.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
@@ -249,6 +250,7 @@ test('a failed regeneration keeps the previous derivatives working', function ()
 });
 
 test('a pdf becomes page images when a rasterizer exists', function () {
+    consultDerivativeMode('pdf');
     if (consultBinary('pdftoppm_binary') === null && ! extension_loaded('imagick')) {
         $this->markTestSkipped('No PDF rasterizer on this machine (pdftoppm / imagick).');
     }
@@ -264,6 +266,7 @@ test('a pdf becomes page images when a rasterizer exists', function () {
 });
 
 test('pdf without a rasterizer is unsupported with the exact tool named', function () {
+    consultDerivativeMode('pdf');
     config(['vault.pdftoppm_binary' => 'C:/definitely/not/pdftoppm.exe']);
 
     if (extension_loaded('imagick')) {
@@ -279,6 +282,7 @@ test('pdf without a rasterizer is unsupported with the exact tool named', functi
 });
 
 test('a docx converts through LibreOffice to page images', function () {
+    consultDerivativeMode('document:docx');
     if (consultBinary('soffice_binary') === null || (consultBinary('pdftoppm_binary') === null && ! extension_loaded('imagick'))) {
         $this->markTestSkipped('LibreOffice and a PDF rasterizer are both required.');
     }
@@ -292,6 +296,7 @@ test('a docx converts through LibreOffice to page images', function () {
 });
 
 test('a video keeps the existing poster instead of generating a second one', function () {
+    consultDerivativeMode('video');
     if (consultBinary('ffmpeg_binary') === null) {
         $this->markTestSkipped('ffmpeg is not available.');
     }
@@ -318,6 +323,7 @@ test('a video keeps the existing poster instead of generating a second one', fun
 });
 
 test('an audio file becomes an mp3 and reuses the waveform', function () {
+    consultDerivativeMode('audio');
     $ffmpeg = consultBinary('ffmpeg_binary');
 
     if ($ffmpeg === null) {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Consultation;
 
+use App\Infrastructure\Render\DeliveryMode;
 use App\Infrastructure\Render\PreviewFamily;
 use App\Infrastructure\Render\PreviewFamilyResolver;
 use App\Models\MediaConsultation;
@@ -19,7 +20,7 @@ use App\Models\User;
  * metadata card, never a "download instead").
  *
  * Shape (mirrored in resources/js/types/consultation.ts):
- *   { family, status, reason, notice, assets:[{kind, pageIndex, url}],
+ *   { family, mode, original:{url,mime,extension}|null, status, reason, notice, assets:[{kind, pageIndex, url}],
  *     pageCount, watermark, meta:{filename,sizeBytes,mime,sha256,depositedAt,slotLabel},
  *     actions:{download} }
  */
@@ -28,6 +29,7 @@ final class ConsultationDescriptor
     public function __construct(
         private readonly PreviewFamilyResolver $resolver,
         private readonly IssueAssetUrl $urls,
+        private readonly IssueOriginalUrl $originalUrls,
     ) {}
 
     /**
@@ -42,9 +44,35 @@ final class ConsultationDescriptor
             : $this->resolver->resolve($mediaFile);
 
         $status = $consultation === null ? MediaConsultation::PENDING : $consultation->status;
+        $reason = $consultation === null
+            ? 'not_generated'
+            : (in_array($status, [MediaConsultation::FAILED, MediaConsultation::UNSUPPORTED], true) ? $consultation->reason : null);
+        $mode = $this->resolver->deliveryMode($family, $mediaFile->extension);
         $assets = [];
+        $original = null;
 
-        if ($consultation !== null && $status === MediaConsultation::READY) {
+        if ($consultation !== null && $status === MediaConsultation::READY && $mode === DeliveryMode::OriginalInline) {
+            $mime = $this->resolver->inlineMime($mediaFile);
+
+            if ($mime === null) {
+                [$status, $reason] = [MediaConsultation::UNSUPPORTED, 'format_unavailable'];
+            } elseif ($family === PreviewFamily::Document && $mediaFile->size_bytes > (int) config('vault.consult.docx_max_bytes')) {
+                // docx-preview loads the whole file in the browser.
+                [$status, $reason] = [MediaConsultation::UNSUPPORTED, 'docx_too_large'];
+            } else {
+                $original = [
+                    'url' => $this->originalUrls->handle($oeuvre, $mediaFile, $viewer),
+                    'mime' => $mime,
+                    'extension' => strtolower($mediaFile->extension),
+                ];
+            }
+        } elseif ($consultation !== null && $status === MediaConsultation::READY && $mode !== DeliveryMode::Derivative) {
+            // `ready` is stale: the file was prepared under another delivery
+            // map. Re-run vault:generate-previews --all --force.
+            [$status, $reason] = [MediaConsultation::PENDING, 'not_generated'];
+        }
+
+        if ($consultation !== null && $status === MediaConsultation::READY && $mode === DeliveryMode::Derivative) {
             foreach ($mediaFile->consultationAssets()->orderBy('kind')->orderBy('page_index')->get() as $asset) {
                 $assets[] = [
                     'kind' => $asset->kind,
@@ -52,17 +80,24 @@ final class ConsultationDescriptor
                     'url' => $this->urls->handle($oeuvre, $mediaFile, $asset, $viewer),
                 ];
             }
+
+            if ($assets === []) {
+                // Prepared as `original_inline` under an earlier delivery map.
+                [$status, $reason] = [MediaConsultation::PENDING, 'not_generated'];
+            }
         }
 
         return [
             'family' => $family->value,
+            'mode' => $mode->value,
+            // The signed consult-original URL; only for a ready
+            // `original_inline` file. Never a storage path.
+            'original' => $original,
             'status' => $status,
             // Unsupported / failed carry the reason. No row at all means the
             // derivative was never generated (a deposit older than the
             // feature): see vault:generate-previews.
-            'reason' => $consultation === null
-                ? 'not_generated'
-                : (in_array($status, [MediaConsultation::FAILED, MediaConsultation::UNSUPPORTED], true) ? $consultation->reason : null),
+            'reason' => $reason,
             // A ready file may carry a notice (e.g. "first N pages shown").
             'notice' => $status === MediaConsultation::READY ? $consultation?->reason : null,
             'assets' => $assets,

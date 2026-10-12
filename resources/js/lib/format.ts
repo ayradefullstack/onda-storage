@@ -28,6 +28,12 @@ export function formatSpeed(bytesPerSecond: number, locale: string): string {
     return `${formatBytes(bytesPerSecond, locale)}/s`;
 }
 
+/** U+200E LRM, U+200F RLM, U+061C ALM — built from code points, not typed. */
+const BIDI_MARKS = new RegExp(
+    `[${String.fromCharCode(0x200e, 0x200f, 0x061c)}]`,
+    'g',
+);
+
 /** Locale month/weekday names, Latin digits — same digit policy as the rest of this file. */
 export function formatDate(isoString: string, locale: string): string {
     const date = new Date(isoString);
@@ -36,10 +42,17 @@ export function formatDate(isoString: string, locale: string): string {
         return isoString;
     }
 
+    // The Arabic CLDR pattern embeds invisible direction marks (U+200F RLM,
+    // U+200E LRM, U+061C ALM) around the separators. Inside a
+    // `<bdi dir="ltr">` those strong RTL marks still re-order the slashes
+    // ("12/10/2026" rendered as "122026/10/"), so the date is returned
+    // without them: the caller's own bidi isolation decides the direction.
     return new Intl.DateTimeFormat(locale, {
         dateStyle: 'medium',
         numberingSystem: 'latn',
-    }).format(date);
+    })
+        .format(date)
+        .replace(BIDI_MARKS, '');
 }
 
 export function formatDuration(totalSeconds: number | null): string {

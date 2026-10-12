@@ -48,6 +48,18 @@ const BODIES: Partial<Record<PreviewFamily, Component>> = {
     text: defineAsyncComponent(() => import('./viewers/TextViewer.vue')),
 };
 
+/** Bodies for a file the browser renders itself from the decrypted original. */
+const ORIGINAL_BODIES: Partial<Record<PreviewFamily, Component>> = {
+    pdf: defineAsyncComponent(() => import('./viewers/PdfViewer.vue')),
+    document: defineAsyncComponent(() => import('./viewers/DocxViewer.vue')),
+    video: BODIES.video,
+    audio: BODIES.audio,
+};
+
+const OUTLINE_BODY = defineAsyncComponent(
+    () => import('./viewers/PptxOutlineViewer.vue'),
+);
+
 const status = computed(() => props.descriptor?.status);
 
 const { gaveUp } = useConsultationPolling(status, toRef(props, 'fileKey'), () =>
@@ -59,7 +71,17 @@ const body = computed<Component | null>(() => {
         return null;
     }
 
-    return BODIES[props.descriptor.family] ?? null;
+    const { family, mode, assets, original } = props.descriptor;
+
+    if (mode === 'original_inline') {
+        return original === null ? null : (ORIGINAL_BODIES[family] ?? null);
+    }
+
+    if (family === 'presentation' && assets.some((a) => a.kind === 'outline')) {
+        return OUTLINE_BODY;
+    }
+
+    return BODIES[family] ?? null;
 });
 
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;

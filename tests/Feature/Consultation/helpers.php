@@ -145,6 +145,17 @@ function consultVariant(MediaFile $mediaFile, string $kind, string $plaintext): 
     return $variant;
 }
 
+/**
+ * The ffmpeg / pdftoppm / soffice renderers only run for a family explicitly
+ * configured `derivative`; production's default map never selects them.
+ */
+function consultDerivativeMode(string ...$keys): void
+{
+    foreach ($keys as $key) {
+        config(["vault.consult.delivery.{$key}" => 'derivative']);
+    }
+}
+
 function consultBinary(string $configKey): ?string
 {
     return app(ToolLocator::class)->find($configKey);

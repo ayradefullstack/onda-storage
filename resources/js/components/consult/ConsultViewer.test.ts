@@ -21,6 +21,8 @@ function descriptor(
 ): ConsultationDescriptor {
     return {
         family: 'pdf',
+        mode: 'derivative',
+        original: null,
         status: 'ready',
         reason: null,
         notice: null,
@@ -149,7 +151,9 @@ describe('ConsultViewer picks its body from the family', () => {
         expect(html).toContain('loading="lazy"');
         expect(html).toContain('draggable="false"');
         expect(html).toContain('data-testid="watermark"');
-    });
+        // First test to import the page viewer: its cold transform can take
+        // more than the 5 s default when 20 test files run in parallel.
+    }, 20000);
 
     it('uses the same page viewer for a converted document', async () => {
         const html = await render(
@@ -233,7 +237,7 @@ describe('static guarantees', () => {
     ];
 
     it.each(files.map((f) => [f.split(/[\\/]resources[\\/]js[\\/]/)[1], f]))(
-        '%s has no v-html, iframe, embed or object',
+        '%s has no v-html, embed or object, and no iframe outside the sandboxed docx viewer',
         (_name, file) => {
             // Comments may *mention* these (to say why they are absent).
             const source = readFileSync(file, 'utf8')
@@ -241,7 +245,16 @@ describe('static guarantees', () => {
                 .replace(/<!--[\s\S]*?-->/g, '');
 
             expect(source).not.toMatch(/v-html/);
-            expect(source).not.toMatch(/<(iframe|embed|object)[\s>]/i);
+            expect(source).not.toMatch(/<(embed|object)[\s>]/i);
+
+            // DELIBERATE EXCEPTION (browser-native preview): the docx viewer
+            // renders into ONE sandboxed iframe, bound to the constant that
+            // omits allow-scripts (see original/viewerSafety.test.ts).
+            if (file.endsWith('DocxViewer.vue')) {
+                expect(source).toContain(':sandbox="DOCX_IFRAME_SANDBOX"');
+            } else {
+                expect(source).not.toMatch(/<iframe[\s>]/i);
+            }
         },
     );
 });

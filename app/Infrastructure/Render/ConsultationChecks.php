@@ -11,9 +11,9 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use Throwable;
 
 /**
- * `vault:doctor` additions for the consultation renderers. WARN, never FAIL:
- * a missing tool degrades a family to an unsupported card and blocks no
- * deposit.
+ * `vault:doctor` additions for the consultation renderers. The binaries are
+ * INFO when absent (optional: used only for a family configured `derivative`),
+ * never WARN or FAIL, plus one INFO line with the effective delivery map.
  */
 final class ConsultationChecks
 {
@@ -26,15 +26,16 @@ final class ConsultationChecks
     {
         $checks = collect();
 
-        $checks->push($this->tool('consult.soffice', 'LibreOffice (soffice)', $this->tools->find('soffice_binary'),
-            'Without it doc/docx/odt/rtf and ppt/pptx/odp show an "unsupported" card.'));
+        $optional = 'Optional, used only if a family is configured as derivative (vault.consult.delivery).';
+
+        $checks->push($this->tool('consult.soffice', 'LibreOffice (soffice)', $this->tools->find('soffice_binary'), $optional));
 
         $rasterizer = $this->tools->find('pdftoppm_binary') ?? (extension_loaded('imagick') ? 'imagick extension' : null);
-        $checks->push($this->tool('consult.pdf', 'PDF rasterizer (pdftoppm / imagick)', $rasterizer,
-            'Without one, PDFs (and converted documents) show an "unsupported" card.'));
+        $checks->push($this->tool('consult.pdf', 'PDF rasterizer (pdftoppm / imagick)', $rasterizer, $optional));
 
-        $checks->push($this->tool('consult.ffmpeg', 'ffmpeg (consultation video/audio)', $this->tools->find('ffmpeg_binary'),
-            'Without it video and audio show an "unsupported" card.'));
+        $checks->push($this->tool('consult.ffmpeg', 'ffmpeg (consultation video/audio)', $this->tools->find('ffmpeg_binary'), $optional));
+
+        $checks->push(new CheckResult('consult.delivery', 'Consultation delivery map', 'INFO', $this->deliveryMap(), 'family => mode, from vault.consult.delivery. original_inline = the browser renders the decrypted original; derivative = server-generated; unsupported = card.'));
 
         $checks->push(class_exists(IOFactory::class)
             ? new CheckResult('consult.spreadsheet', 'phpoffice/phpspreadsheet', CheckResult::PASS, 'installed', 'xls/xlsx/ods are read in pure PHP.')
@@ -47,9 +48,21 @@ final class ConsultationChecks
 
     private function tool(string $key, string $label, ?string $path, string $rationale): CheckResult
     {
+        // INFO, never WARN: production has none of these tools by design.
         return $path !== null
             ? new CheckResult($key, $label, CheckResult::PASS, $path, $rationale)
-            : new CheckResult($key, $label, CheckResult::WARN, 'not found', $rationale);
+            : new CheckResult($key, $label, 'INFO', 'not found', $rationale);
+    }
+
+    private function deliveryMap(): string
+    {
+        $parts = [];
+
+        foreach ((array) config('vault.consult.delivery', []) as $key => $mode) {
+            $parts[] = $key.'='.(is_string($mode) ? $mode : '?');
+        }
+
+        return implode(', ', $parts);
     }
 
     private function stuckPending(): CheckResult

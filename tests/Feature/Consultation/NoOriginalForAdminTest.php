@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Actions\Consultation\IssueOriginalUrl;
 use App\Domain\Access\SignedMediaUrl;
 use App\Models\Oeuvre;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 require_once __DIR__.'/helpers.php';
 
@@ -19,10 +21,15 @@ afterEach(function () {
 });
 
 /**
- * Every body an admin can obtain for a file must differ from the original's
- * SHA-256. Binary families only: for a plain-text file the "derivative" IS
- * the text (that is what viewing text means), so it is covered by the
- * closed-endpoint assertions below instead.
+ * DELIBERATELY CHANGED (browser-native preview). For DERIVATIVE families every
+ * body an admin can obtain still differs from the original's SHA-256. Binary
+ * families only: for a plain-text file the "derivative" IS the text (that is
+ * what viewing text means), so it is covered by the closed-endpoint
+ * assertions below instead.
+ *
+ * The mp4 case moved out of this list: video is now `original_inline`, and
+ * its original may reach an admin through exactly ONE route — see the
+ * `original_inline` tests below.
  */
 test('no admin-obtainable response body equals the original', function (string $name, string $mime, string $fixture) {
     $bytes = consultFixture($fixture);
@@ -59,8 +66,68 @@ test('no admin-obtainable response body equals the original', function (string $
 })->with([
     'png' => ['image.png', 'image/png', 'formats/sample.png'],
     'csv' => ['noms.csv', 'text/csv', 'consult/arabic.csv'],
-    'mp4' => ['clip.mp4', 'video/mp4', 'sample.mp4'],
 ]);
+
+/**
+ * For `original_inline` families a body MAY equal the original, but ONLY when
+ * served by the consult-original endpoint, inline and never as an attachment.
+ * Every other admin-obtainable body still differs.
+ */
+test('for original_inline families the original is served only by the consult original endpoint, inline', function (string $name, string $mime, string $fixture) {
+    $bytes = consultFixture($fixture);
+    $original = hash('sha256', $bytes);
+    $file = consultFile($this->author, $this->oeuvre, $bytes, $name, $mime);
+    $this->files[] = $file;
+    consultVariant($file, 'poster', "\xFF\xD8\xFF\xE0 poster-bytes");
+    consultGenerate($file);
+
+    $others = [];
+    $others[] = $this->actingAs($this->admin)->get(route('admin.oeuvres.files.review', [$this->oeuvre, $file]))->getContent();
+    $others[] = $this->actingAs($this->admin)->get(route('admin.oeuvres.show', $this->oeuvre))->getContent();
+    $others[] = $this->actingAs($this->admin)->getJson(route('admin.oeuvres.files.review.assets', [$this->oeuvre, $file]))->getContent();
+    $others[] = $this->actingAs($this->admin)->get(route('admin.media.variant', [$file, 'poster']))->getContent();
+
+    foreach ($others as $body) {
+        expect(hash('sha256', (string) $body))->not->toBe($original);
+    }
+
+    // The one route: the whole (small) file in one capped slice.
+    config(['vault.consult.range_max_bytes' => strlen($bytes) + 1]);
+    $response = $this->actingAs($this->admin)->get(app(IssueOriginalUrl::class)->handle($this->oeuvre, $file, $this->admin));
+
+    $response->assertStatus(206);
+    expect(hash('sha256', $response->streamedContent()))->toBe($original)
+        ->and((string) $response->headers->get('Content-Disposition'))->toStartWith('inline')
+        ->and((string) $response->headers->get('Content-Disposition'))->not->toContain('attachment');
+})->with([
+    'mp4' => ['clip.mp4', 'video/mp4', 'sample.mp4'],
+    'pdf' => ['acte.pdf', 'application/pdf', 'formats/sample.pdf'],
+]);
+
+test('no other route returns original bytes to an admin', function () {
+    $bytes = consultFixture('formats/sample.pdf');
+    $original = hash('sha256', $bytes);
+    $file = consultFile($this->author, $this->oeuvre, $bytes, 'acte.pdf', 'application/pdf');
+    $this->files[] = $file;
+    consultGenerate($file);
+
+    $routes = [
+        $this->actingAs($this->admin)->getJson(route('media.link', $file)),
+        $this->actingAs($this->admin)->get(SignedMediaUrl::forStreaming($file, $this->admin)),
+        $this->actingAs($this->admin)->get(route('media.stream', $file)),
+        $this->actingAs($this->admin)->get(route('admin.media.variant', [$file, 'poster'])),
+        $this->actingAs($this->admin)->get(route('admin.oeuvres.files.review', [$this->oeuvre, $file])),
+        $this->actingAs($this->admin)->get(route('admin.oeuvres.show', $this->oeuvre)),
+    ];
+
+    foreach ($routes as $response) {
+        expect(hash('sha256', $response->baseResponse instanceof StreamedResponse ? $response->streamedContent() : (string) $response->getContent()))->not->toBe($original);
+    }
+
+    // A consult ASSET url cannot be pointed at the original either: there is
+    // no asset row for an original_inline file.
+    expect($file->consultationAssets()->count())->toBe(0);
+});
 
 test('an admin cannot reach the original by any route, signed or not', function () {
     $file = consultFile($this->author, $this->oeuvre, 'original plaintext body', 'notes.txt', 'text/plain');

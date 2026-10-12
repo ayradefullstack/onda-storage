@@ -5,6 +5,7 @@ namespace Tests;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Fortify\Features;
+use Tests\Support\TestEnvironmentGuard;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -22,9 +23,33 @@ abstract class TestCase extends BaseTestCase
      * instant, as the vault requires) and are removed in tearDown.
      * `Tests\Feature\Isolation\StorageIsolationTest` fails if this is bypassed.
      */
+    /**
+     * Runs after the application exists and BEFORE any trait (RefreshDatabase
+     * included) boots: a cached config or a real database stops the run here,
+     * before a single query. See TestEnvironmentGuard.
+     */
+    protected function setUpTraits(): array
+    {
+        TestEnvironmentGuard::assertSafe($this->app);
+
+        return parent::setUpTraits();
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
+
+        // HARD CAPS. Real ffmpeg / pdftoppm / soffice exist on dev machines
+        // and the tests that use them must fail fast, never hang the suite:
+        // every external tool already runs under one of these timeouts, so
+        // they are tightened here, and one test may not run past 5 minutes.
+        config([
+            'vault.consult.convert_timeout' => 60,
+            'vault.consult.render_timeout' => 60,
+            'vault.variant_timeout_seconds' => 60,
+            'vault.probe_timeout_seconds' => 30,
+        ]);
+        set_time_limit(300);
 
         $this->storageRoot = str_replace('\\', '/', sys_get_temp_dir()).'/onda-test-'.getmypid().'-'.bin2hex(random_bytes(4));
 

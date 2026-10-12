@@ -228,6 +228,47 @@ return [
         'sheet_max_cols' => (int) env('VAULT_CONSULT_SHEET_MAX_COLS', 100),
         'sheet_max_bytes' => (int) env('VAULT_CONSULT_SHEET_MAX_BYTES', 15 * 1024 * 1024),
         'text_max_bytes' => (int) env('VAULT_CONSULT_TEXT_MAX_BYTES', 2 * 1024 * 1024),
+        // pptx slide-outline caps (pure PHP, ZipArchive).
+        'pptx_max_slides' => (int) env('VAULT_CONSULT_PPTX_MAX_SLIDES', 300),
+        'pptx_max_text_bytes' => (int) env('VAULT_CONSULT_PPTX_MAX_TEXT_BYTES', 2 * 1024 * 1024),
+        // Consult-original endpoint: every 206 is capped at this many bytes
+        // (a player asking `bytes=0-` gets one slice and asks for the next),
+        // streamed in 1 MiB pieces. Also keeps a request inside FPM's
+        // max_execution_time.
+        'range_max_bytes' => (int) env('VAULT_CONSULT_RANGE_MAX_BYTES', 8 * 1024 * 1024),
+        // docx-preview loads the whole file in the browser: above this the
+        // viewer shows a "too large for preview" card instead.
+        'docx_max_bytes' => (int) env('VAULT_CONSULT_DOCX_MAX_BYTES', 30 * 1024 * 1024),
+        /*
+         * Delivery map: how each preview family reaches the reviewer. Read
+         * ONLY by PreviewFamilyResolver::deliveryMode(). A `family:ext` key
+         * overrides the bare `family` key for that extension.
+         *
+         *  original_inline  the browser renders the decrypted original (the
+         *                   admin is a sworn, authenticated official; every
+         *                   consultation is audited). No server-side tool.
+         *  derivative       a server-generated, encrypted derivative.
+         *  unsupported      a "preview unavailable" card.
+         *
+         * The ffmpeg / pdftoppm / soffice renderers stay in the code but run
+         * ONLY for a family explicitly set to `derivative` here.
+         */
+        'delivery' => [
+            'pdf' => 'original_inline',
+            'document' => 'unsupported',
+            'document:docx' => 'original_inline',
+            'video' => 'original_inline',
+            'audio' => 'original_inline',
+            'image' => 'derivative',
+            'spreadsheet' => 'derivative',
+            'csv' => 'derivative',
+            'text' => 'derivative',
+            'presentation' => 'unsupported',
+            'presentation:pptx' => 'derivative',
+            // No zip-listing renderer exists yet.
+            'archive' => 'unsupported',
+            'other' => 'unsupported',
+        ],
         // Stuck-in-pending threshold for vault:doctor, seconds.
         'pending_warn_seconds' => (int) env('VAULT_CONSULT_PENDING_WARN', 900),
     ],

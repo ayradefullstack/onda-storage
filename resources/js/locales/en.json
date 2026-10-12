@@ -823,5 +823,19 @@
     "consult.previousFile": "Previous file",
     "consult.nextFile": "Next file",
     "consult.copyHash": "Copy fingerprint",
-    "consult.openInNewTab": "Open in new tab"
+    "consult.openInNewTab": "Open in new tab",
+    "consult.original.videoUnreadable": "This browser cannot play this video format",
+    "consult.original.audioUnreadable": "This browser cannot play this audio format",
+    "consult.original.codecHint": "Format reported by the file:",
+    "consult.pdf.search": "Search in document",
+    "consult.pdf.noMatch": "No match",
+    "consult.pdf.previousMatch": "Previous match",
+    "consult.pdf.nextMatch": "Next match",
+    "consult.pptx.notice": "Text outline of the presentation, not a visual rendering.",
+    "consult.pptx.slide": "Slide {n}",
+    "consult.pptx.noText": "No text on this slide.",
+    "consult.pptx.notes": "Speaker notes",
+    "consult.reason.format_unavailable": "Preview unavailable for this format.",
+    "consult.reason.docx_too_large": "Document too large for the preview.",
+    "upload.hint.videoMp4": "For smooth review, prefer the MP4 (H.264) format."
 }

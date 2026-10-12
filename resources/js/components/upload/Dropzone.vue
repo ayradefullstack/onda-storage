@@ -46,6 +46,24 @@ const accept = computed(() =>
         ? acceptAttribute(props.requirement.extensions)
         : undefined,
 );
+const VIDEO_EXTENSIONS = [
+    'mp4',
+    'mov',
+    'avi',
+    'mkv',
+    'webm',
+    'm4v',
+    'mpeg',
+    'mpg',
+];
+
+/** A slot that accepts video gets one line of guidance; no validation change. */
+const acceptsVideo = computed(() =>
+    (props.requirement
+        ? props.requirement.extensions
+        : allowedExtensionList()
+    ).some((extension) => VIDEO_EXTENSIONS.includes(extension.toLowerCase())),
+);
 const multiple = computed(() => props.requirement?.allows_multiple ?? true);
 
 function handleFiles(fileList: FileList | null): void {
@@ -147,6 +165,13 @@ function onInputChange(event: Event): void {
                             >
                         </template>
                     </i18n-t>
+                    <p
+                        v-if="acceptsVideo"
+                        class="text-[11px] text-muted-foreground"
+                        data-testid="video-hint"
+                    >
+                        {{ t('upload.hint.videoMp4') }}
+                    </p>
                 </div>
             </div>
 

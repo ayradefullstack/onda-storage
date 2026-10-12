@@ -22,11 +22,66 @@ use App\Support\FileFormats;
 final class PreviewFamilyResolver
 {
     /** MIME types whose content is plain text, safe to show as source. */
+    public const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
     private const TEXT_MIMES = ['text/plain'];
 
     public function resolve(MediaFile $mediaFile, ?string $verifiedMime = null): PreviewFamily
     {
         return $this->forExtension($mediaFile->extension, $verifiedMime);
+    }
+
+    /**
+     * How this family reaches the reviewer, from `vault.consult.delivery`:
+     * the `family:ext` key wins over the bare `family` key; anything missing
+     * or unknown is `unsupported` (fail closed — never an original by default).
+     */
+    public function deliveryMode(PreviewFamily $family, string $extension): DeliveryMode
+    {
+        $map = (array) config('vault.consult.delivery', []);
+        $value = $map[$family->value.':'.strtolower($extension)] ?? $map[$family->value] ?? null;
+
+        return is_string($value) ? (DeliveryMode::tryFrom($value) ?? DeliveryMode::Unsupported) : DeliveryMode::Unsupported;
+    }
+
+    /**
+     * The mode for a stored file: the family the consultation row recorded
+     * (authoritative once a job ran), else the registry's guess.
+     */
+    public function modeFor(MediaFile $mediaFile): DeliveryMode
+    {
+        $recorded = $mediaFile->consultation()->value('family');
+        $family = is_string($recorded) ? (PreviewFamily::tryFrom($recorded) ?? PreviewFamily::Other) : $this->resolve($mediaFile);
+
+        return $this->deliveryMode($family, $mediaFile->extension);
+    }
+
+    /**
+     * The Content-Type an `original_inline` response may carry: the file's
+     * verified stored MIME, and only when it belongs to one of the four
+     * families (PDF, DOCX, video/*, audio/*) AND is one the format registry
+     * accepts for that extension. Anything else is null (404).
+     */
+    public function inlineMime(MediaFile $mediaFile): ?string
+    {
+        $mime = strtolower($mediaFile->mime);
+        $format = FileFormats::get(strtolower($mediaFile->extension));
+
+        if ($format === null || ! in_array($mime, array_map('strtolower', [...$format['mimes'], $format['stored_mime']]), true)) {
+            return null;
+        }
+
+        // A real docx is measured as application/zip by finfo; the registry
+        // accepts both and the response carries the proper docx type.
+        if (strtolower($mediaFile->extension) === 'docx') {
+            return self::DOCX_MIME;
+        }
+
+        $allowed = $mime === 'application/pdf'
+            || str_starts_with($mime, 'video/')
+            || str_starts_with($mime, 'audio/');
+
+        return $allowed ? $mime : null;
     }
 
     public function forExtension(string $extension, ?string $verifiedMime = null): PreviewFamily

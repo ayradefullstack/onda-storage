@@ -1,8 +1,15 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { ConsultationDescriptor } from '@/types/consultation';
+import MediaUnreadableCard from '../original/MediaUnreadableCard.vue';
+import { useOriginalMedia } from '../original/useOriginalMedia';
+import Watermark from '../Watermark.vue';
 
-/** The 128 kbps derivative, with the waveform image the pipeline already made. */
+/**
+ * A plain <audio>: the signed consult-original URL for an `original_inline`
+ * file, else the 128 kbps derivative with the waveform the pipeline already
+ * made. Same expiry / resume / unreadable handling as the video viewer.
+ */
 const props = defineProps<{
     descriptor: ConsultationDescriptor;
     compact?: boolean;
@@ -11,11 +18,13 @@ const props = defineProps<{
 const emit = defineEmits<{ 'asset-expired': [] }>();
 
 const player = ref<HTMLAudioElement | null>(null);
-let resumeAt = 0;
+const seconds = ref<number | null>(null);
 
-const audio = computed(
+const src = computed(
     () =>
-        props.descriptor.assets.find((asset) => asset.kind === 'audio') ?? null,
+        props.descriptor.original?.url ??
+        props.descriptor.assets.find((asset) => asset.kind === 'audio')?.url ??
+        null,
 );
 const waveform = computed(
     () =>
@@ -23,23 +32,27 @@ const waveform = computed(
         null,
 );
 
-function onError(): void {
-    resumeAt = player.value?.currentTime ?? 0;
-    emit('asset-expired');
-}
+const { unreadable, onError, onLoadedMetadata } = useOriginalMedia(
+    player,
+    () => src.value ?? '',
+    () => emit('asset-expired'),
+);
 
 function onLoaded(): void {
-    if (resumeAt > 0 && player.value !== null) {
-        player.value.currentTime = resumeAt;
-        resumeAt = 0;
-        void player.value.play().catch(() => undefined);
-    }
+    seconds.value = player.value?.duration ?? null;
+    onLoadedMetadata();
 }
 </script>
 
 <template>
+    <MediaUnreadableCard
+        v-if="unreadable"
+        kind="audio"
+        :mime="descriptor.original?.mime ?? descriptor.meta.mime"
+    />
     <div
-        class="flex h-full flex-col items-center justify-center gap-4 p-4"
+        v-else
+        class="relative flex h-full flex-col items-center justify-center gap-4 p-4"
         @contextmenu.prevent
     >
         <img
@@ -51,10 +64,10 @@ function onLoaded(): void {
             @error="emit('asset-expired')"
         />
         <audio
-            v-if="audio"
+            v-if="src"
             ref="player"
-            :key="audio.url"
-            :src="audio.url"
+            :key="src"
+            :src="src"
             controls
             controlslist="nodownload noplaybackrate"
             preload="metadata"
@@ -62,5 +75,13 @@ function onLoaded(): void {
             @error="onError"
             @loadedmetadata="onLoaded"
         />
+        <p
+            v-if="seconds !== null && Number.isFinite(seconds) && !compact"
+            class="font-mono text-xs text-muted-foreground"
+            dir="ltr"
+        >
+            {{ Math.round(seconds) }}s
+        </p>
+        <Watermark v-if="descriptor.watermark" :label="descriptor.watermark" />
     </div>
 </template>

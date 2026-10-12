@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Infrastructure\Render\DeliveryMode;
+use App\Infrastructure\Render\PreviewFamilyResolver;
 use App\Models\MediaConsultation;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -20,13 +22,18 @@ use Symfony\Component\HttpFoundation\Response;
  *  - the `admin` parameter inside the signature is THIS session's user (a URL
  *    copied into another admin's session fails),
  *  - the oeuvre is consultable (the same `inspect` rule as the oeuvre page),
- *  - the media file's consultation is `ready`.
+ *  - the media file's consultation is `ready`,
+ *  - for the consult-ORIGINAL route only: the family's delivery mode is
+ *    `original_inline` (404 otherwise — checked before `ready`, so a file
+ *    configured `derivative` / `unsupported` never reveals its state there).
  *
  * Belonging (file in oeuvre, asset in file) is enforced by scoped route
  * binding and by the controller resolving the asset through the file.
  */
 final class EnsureConsultationAccess
 {
+    public function __construct(private readonly PreviewFamilyResolver $resolver) {}
+
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
@@ -40,6 +47,10 @@ final class EnsureConsultationAccess
         abort_unless($oeuvre instanceof Oeuvre && $mediaFile instanceof MediaFile, 404);
 
         Gate::forUser($user)->authorize('inspect', $oeuvre);
+
+        if ($request->route()?->getName() === 'admin.oeuvres.files.consult.original') {
+            abort_unless($this->resolver->modeFor($mediaFile) === DeliveryMode::OriginalInline, 404);
+        }
 
         $ready = MediaConsultation::where('media_file_id', $mediaFile->id)
             ->where('status', MediaConsultation::READY)

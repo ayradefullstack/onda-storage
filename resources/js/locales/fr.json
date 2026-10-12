@@ -823,5 +823,19 @@
     "consult.previousFile": "Fichier précédent",
     "consult.nextFile": "Fichier suivant",
     "consult.copyHash": "Copier l’empreinte",
-    "consult.openInNewTab": "Ouvrir dans un nouvel onglet"
+    "consult.openInNewTab": "Ouvrir dans un nouvel onglet",
+    "consult.original.videoUnreadable": "Ce format vidéo n'est pas lisible par ce navigateur",
+    "consult.original.audioUnreadable": "Ce format audio n'est pas lisible par ce navigateur",
+    "consult.original.codecHint": "Format indiqué par le fichier :",
+    "consult.pdf.search": "Rechercher dans le document",
+    "consult.pdf.noMatch": "Aucun résultat",
+    "consult.pdf.previousMatch": "Résultat précédent",
+    "consult.pdf.nextMatch": "Résultat suivant",
+    "consult.pptx.notice": "Plan textuel de la présentation, pas un rendu visuel.",
+    "consult.pptx.slide": "Diapositive {n}",
+    "consult.pptx.noText": "Aucun texte sur cette diapositive.",
+    "consult.pptx.notes": "Notes du présentateur",
+    "consult.reason.format_unavailable": "Aperçu indisponible pour ce format.",
+    "consult.reason.docx_too_large": "Document trop volumineux pour l'aperçu.",
+    "upload.hint.videoMp4": "Pour une consultation fluide, privilégiez le format MP4 (H.264)."
 }

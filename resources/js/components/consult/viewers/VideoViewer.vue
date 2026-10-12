@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import type { ConsultationDescriptor } from '@/types/consultation';
+import MediaUnreadableCard from '../original/MediaUnreadableCard.vue';
+import { useOriginalMedia } from '../original/useOriginalMedia';
 import Watermark from '../Watermark.vue';
 
 /**
- * The 480p derivative in a plain <video>: no native download or
- * picture-in-picture, no context menu. When the signed URL expires mid-play
- * (a 403 error) the position is remembered, fresh descriptors are requested
- * through `asset-expired`, and playback resumes from the same second.
+ * A plain <video>. For an `original_inline` file the source is the signed
+ * consult-original URL (decrypted on the fly, Range); for a `derivative` one
+ * it is the 480p asset. No native download or picture-in-picture, no context
+ * menu. Dimensions and duration come from the element itself. When the signed
+ * URL expires mid-play the position is remembered, fresh descriptors are
+ * requested through `asset-expired`, and playback resumes at the same second;
+ * a codec the browser cannot decode shows a card, never a download.
  */
 const props = defineProps<{
     descriptor: ConsultationDescriptor;
@@ -17,49 +22,80 @@ const props = defineProps<{
 const emit = defineEmits<{ 'asset-expired': [] }>();
 
 const player = ref<HTMLVideoElement | null>(null);
-let resumeAt = 0;
+const facts = ref<{ width: number; height: number; seconds: number } | null>(
+    null,
+);
 
-const video = computed(
+const src = computed(
     () =>
-        props.descriptor.assets.find((asset) => asset.kind === 'video') ?? null,
+        props.descriptor.original?.url ??
+        props.descriptor.assets.find((asset) => asset.kind === 'video')?.url ??
+        null,
 );
 const poster = computed(
     () => props.descriptor.assets.find((asset) => asset.kind === 'poster')?.url,
 );
 
-function onError(): void {
-    resumeAt = player.value?.currentTime ?? 0;
-    emit('asset-expired');
-}
+const { unreadable, onError, onLoadedMetadata } = useOriginalMedia(
+    player,
+    () => src.value ?? '',
+    () => emit('asset-expired'),
+);
 
 function onLoaded(): void {
-    if (resumeAt > 0 && player.value !== null) {
-        player.value.currentTime = resumeAt;
-        resumeAt = 0;
-        void player.value.play().catch(() => undefined);
+    const element = player.value;
+
+    if (element !== null) {
+        facts.value = {
+            width: element.videoWidth,
+            height: element.videoHeight,
+            seconds: element.duration,
+        };
     }
+
+    onLoadedMetadata();
 }
 </script>
 
 <template>
+    <MediaUnreadableCard
+        v-if="unreadable"
+        kind="video"
+        :mime="descriptor.original?.mime ?? descriptor.meta.mime"
+    />
     <div
-        class="relative flex h-full items-center justify-center bg-black"
+        v-else
+        class="relative flex h-full flex-col items-center justify-center bg-black"
         @contextmenu.prevent
     >
-        <video
-            v-if="video"
-            ref="player"
-            :key="video.url"
-            :src="video.url"
-            :poster="poster"
-            controls
-            controlslist="nodownload noplaybackrate"
-            disablepictureinpicture
-            preload="metadata"
-            class="max-h-full max-w-full"
-            @error="onError"
-            @loadedmetadata="onLoaded"
-        />
-        <Watermark v-if="descriptor.watermark" :label="descriptor.watermark" />
+        <div class="relative flex min-h-0 flex-1 items-center justify-center">
+            <video
+                v-if="src"
+                ref="player"
+                :key="src"
+                :src="src"
+                :poster="poster"
+                controls
+                controlslist="nodownload noplaybackrate"
+                disablepictureinpicture
+                preload="metadata"
+                class="max-h-full max-w-full"
+                @error="onError"
+                @loadedmetadata="onLoaded"
+            />
+            <Watermark
+                v-if="descriptor.watermark"
+                :label="descriptor.watermark"
+            />
+        </div>
+        <p
+            v-if="facts && facts.width > 0 && !compact"
+            class="py-1 font-mono text-xs text-neutral-400"
+            dir="ltr"
+            data-testid="media-facts"
+        >
+            {{ facts.width }}×{{ facts.height }} ·
+            {{ Math.round(facts.seconds) }}s
+        </p>
     </div>
 </template>

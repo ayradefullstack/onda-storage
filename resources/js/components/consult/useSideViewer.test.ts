@@ -5,6 +5,8 @@ import { useSideViewer } from './useSideViewer';
 function descriptorFor(name: string): ConsultationDescriptor {
     return {
         family: 'text',
+        mode: 'derivative',
+        original: null,
         status: 'ready',
         reason: null,
         notice: null,

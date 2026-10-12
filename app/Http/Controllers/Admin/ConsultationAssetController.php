@@ -34,6 +34,7 @@ final class ConsultationAssetController extends Controller
         'video' => 'video/mp4',
         'audio' => 'audio/mpeg',
         'sheet' => 'application/json',
+        'outline' => 'application/json',
         'text' => 'text/plain; charset=utf-8',
     ];
 
