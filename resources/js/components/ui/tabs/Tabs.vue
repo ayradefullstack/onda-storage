@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { Component } from 'vue';
 import { cn } from '@/lib/utils';
 
@@ -28,6 +28,40 @@ const emit = defineEmits<{
     (e: 'update:modelValue', value: string | number): void;
     (e: 'change', value: string | number): void;
 }>();
+
+// Underline variant: one indicator that slides between tabs (transform only).
+// Until it has been measured the active tab keeps its own border, so the
+// server render and the first paint are never without an underline.
+const list = ref<HTMLElement | null>(null);
+const indicator = ref<{ x: number; width: number } | null>(null);
+let observer: ResizeObserver | null = null;
+
+const measure = (): void => {
+    const active = list.value?.querySelector<HTMLElement>(
+        '[role="tab"][aria-selected="true"]',
+    );
+
+    indicator.value =
+        active === null || active === undefined || active.offsetWidth === 0
+            ? null
+            : { x: active.offsetLeft, width: active.offsetWidth };
+};
+
+onMounted(() => {
+    measure();
+
+    if (typeof ResizeObserver !== 'undefined' && list.value !== null) {
+        observer = new ResizeObserver(measure);
+        observer.observe(list.value);
+    }
+});
+
+onBeforeUnmount(() => observer?.disconnect());
+
+watch(
+    () => [props.modelValue, props.tabs.length],
+    () => void nextTick(measure),
+);
 
 const selectTab = (tab: TabItem) => {
     if (tab.disabled) return;
@@ -117,10 +151,11 @@ const handleKeyDown = (event: KeyboardEvent, index: number) => {
     <!-- Underline Variant -->
     <div
         v-else
+        ref="list"
         role="tablist"
         :class="
             cn(
-                'flex items-center gap-2 border-b border-border text-sm select-none',
+                'relative flex items-center gap-2 border-b border-border text-sm select-none',
                 props.class,
             )
         "
@@ -137,7 +172,12 @@ const handleKeyDown = (event: KeyboardEvent, index: number) => {
                     'relative inline-flex items-center gap-2 -mb-px border-b-2 py-2.5 font-medium transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:pointer-events-none disabled:opacity-40 cursor-pointer',
                     size === 'sm' ? 'px-2.5 text-xs' : 'px-3.5 text-sm',
                     modelValue === tab.value
-                        ? 'border-primary text-foreground font-semibold'
+                        ? [
+                              'text-foreground font-semibold',
+                              indicator === null
+                                  ? 'border-primary'
+                                  : 'border-transparent',
+                          ]
                         : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
                 )
             "
@@ -165,5 +205,14 @@ const handleKeyDown = (event: KeyboardEvent, index: number) => {
                 {{ tab.count }}
             </span>
         </button>
+        <span
+            v-if="indicator !== null"
+            data-slot="tabs-indicator"
+            aria-hidden="true"
+            class="motion-tab-indicator pointer-events-none absolute -bottom-px left-0 h-0.5 w-px bg-primary"
+            :style="{
+                transform: `translateX(${indicator.x}px) scaleX(${indicator.width})`,
+            }"
+        />
     </div>
 </template>

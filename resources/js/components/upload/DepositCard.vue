@@ -23,15 +23,8 @@ import {
 import { computed, inject, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { FILE_PREVIEW } from '@/components/consult/previewContext';
+import { AppDialog } from '@/components/ui/app-dialog';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import {
     alertToneOf,
     createEtaSmoother,
@@ -43,6 +36,7 @@ import {
 } from '@/components/upload/depositJourney';
 import type { DepositEntry } from '@/components/upload/depositJourney';
 import DepositStateTrack from '@/components/upload/DepositStateTrack.vue';
+import { usePulseOnChange } from '@/composables/usePulseOnChange';
 import {
     formatBytes,
     formatDate,
@@ -86,6 +80,8 @@ const collapsed = computed(
     () => props.entry.kind === 'media' && props.entry.collapsedReady,
 );
 const isReady = computed(() => mediaFile.value?.status === 'ready');
+// One soft highlight on the file icon the moment the deposit is sealed.
+const justChanged = usePulseOnChange(() => isReady.value);
 
 // Upload percentage calculation
 const uploadPercent = computed(() => {
@@ -358,7 +354,11 @@ async function copyFingerprint(): Promise<void> {
                 <!-- File Icon -->
                 <div
                     class="flex size-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover/card:scale-105"
-                    :class="fileDetails.bg"
+                    :class="[
+                        fileDetails.bg,
+                        fileDetails.color,
+                        justChanged && isReady ? 'motion-pulse-once' : '',
+                    ]"
                 >
                     <component
                         :is="fileDetails.icon"
@@ -794,56 +794,46 @@ async function copyFingerprint(): Promise<void> {
         </template>
 
         <!-- REMOVE DIALOG -->
-        <Dialog v-model:open="removeConfirmOpen">
-            <DialogContent class="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>{{
-                        t('oeuvres.files.removeTitle')
-                    }}</DialogTitle>
-                    <DialogDescription>
-                        <i18n-t keypath="oeuvres.files.removeBody" tag="span">
-                            <template #name>
-                                <bdi class="font-semibold text-foreground">{{
-                                    filename
-                                }}</bdi>
-                            </template>
-                        </i18n-t>
-                    </DialogDescription>
-                </DialogHeader>
-
+        <AppDialog v-model:open="removeConfirmOpen" size="md">
+            <template #title>{{ t('oeuvres.files.removeTitle') }}</template>
+            <template #description
+                ><i18n-t keypath="oeuvres.files.removeBody" tag="span">
+                    <template #name>
+                        <bdi class="font-semibold text-foreground">{{
+                            filename
+                        }}</bdi>
+                    </template>
+                </i18n-t></template
+            >
+            <div class="grid gap-4">
                 <p
                     class="rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-xs leading-relaxed text-muted-foreground"
                 >
                     {{ t('oeuvres.files.removeBytes') }}
                 </p>
-
-                <DialogFooter class="gap-2 sm:gap-2">
-                    <Button
-                        variant="outline"
-                        class="cursor-pointer"
-                        @click="removeConfirmOpen = false"
-                    >
-                        {{ t('oeuvres.files.removeCancel') }}
-                    </Button>
-                    <Button
-                        variant="destructive"
-                        class="cursor-pointer"
-                        @click="onRemoveConfirm"
-                    >
-                        {{ t('oeuvres.files.removeConfirm') }}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            </div>
+            <template #footer
+                ><Button
+                    variant="outline"
+                    class="cursor-pointer"
+                    @click="removeConfirmOpen = false"
+                >
+                    {{ t('oeuvres.files.removeCancel') }}
+                </Button>
+                <Button
+                    variant="destructive"
+                    class="cursor-pointer"
+                    @click="onRemoveConfirm"
+                >
+                    {{ t('oeuvres.files.removeConfirm') }}
+                </Button></template
+            >
+        </AppDialog>
 
         <!-- CANCEL DIALOG -->
-        <Dialog v-model:open="cancelConfirmOpen">
-            <DialogContent class="sm:max-w-sm">
-                <DialogHeader>
-                    <DialogTitle>{{
-                        t('upload.cancel.confirmTitle')
-                    }}</DialogTitle>
-                </DialogHeader>
+        <AppDialog v-model:open="cancelConfirmOpen" size="sm">
+            <template #title>{{ t('upload.cancel.confirmTitle') }}</template>
+            <div class="grid gap-4">
                 <p v-if="uploadFile" class="text-sm text-muted-foreground">
                     {{
                         t('upload.cancel.confirmBody', {
@@ -851,19 +841,16 @@ async function copyFingerprint(): Promise<void> {
                         })
                     }}
                 </p>
-                <DialogFooter class="gap-2 sm:gap-2">
-                    <Button
-                        variant="outline"
-                        @click="cancelConfirmOpen = false"
-                    >
-                        {{ t('upload.cancel.keepGoing') }}
-                    </Button>
-                    <Button variant="destructive" @click="confirmCancel">
-                        {{ t('upload.cancel.confirmAction') }}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            </div>
+            <template #footer
+                ><Button variant="outline" @click="cancelConfirmOpen = false">
+                    {{ t('upload.cancel.keepGoing') }}
+                </Button>
+                <Button variant="destructive" @click="confirmCancel">
+                    {{ t('upload.cancel.confirmAction') }}
+                </Button></template
+            >
+        </AppDialog>
     </div>
 </template>
 

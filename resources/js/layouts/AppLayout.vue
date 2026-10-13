@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import FullscreenPreloader from '@/components/public/FullscreenPreloader.vue';
+import AppLoader from '@/components/AppLoader.vue';
 import AggregateProgressBar from '@/components/upload/AggregateProgressBar.vue';
 import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
 import type { BreadcrumbItem } from '@/types';
@@ -11,7 +11,7 @@ const { breadcrumbs = [] } = defineProps<{
 
 <template>
     <!-- Global Request / Navigation Feedback -->
-    <FullscreenPreloader :min-duration="0" />
+    <AppLoader />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <slot />

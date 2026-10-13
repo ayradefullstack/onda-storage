@@ -7,13 +7,12 @@ import {
     Send,
     ShieldCheck,
     Sparkles,
-    X,
-    ExternalLink,
 } from '@lucide/vue';
 import { computed, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ConsultViewer from '@/components/consult/ConsultViewer.vue';
 import { FILE_PREVIEW } from '@/components/consult/previewContext';
+import SideViewerLayout from '@/components/consult/SideViewerLayout.vue';
 import { useSideViewer } from '@/components/consult/useSideViewer';
 import ClassificationCard from '@/components/oeuvre/ClassificationCard.vue';
 import type { OeuvreClassification } from '@/components/oeuvre/ClassificationCard.vue';
@@ -33,8 +32,9 @@ import Dropzone from '@/components/upload/Dropzone.vue';
 import type { RequirementSlot } from '@/components/upload/requirement';
 import RequirementSlotCard from '@/components/upload/RequirementSlotCard.vue';
 import ResumeBanner from '@/components/upload/ResumeBanner.vue';
+import { silent } from '@/composables/useGlobalLoader';
 import { useUploadQueue } from '@/composables/useUploadQueue';
-import { formatBytes, formatDate, truncateFilenameMiddle } from '@/lib/format';
+import { formatBytes, formatDate } from '@/lib/format';
 import {
     allowedExtensionList,
     MAX_FILE_SIZE_BYTES,
@@ -140,7 +140,12 @@ const selectedFile = computed(
     () => props.mediaFiles.find((m) => m.uuid === selectedUuid.value) ?? null,
 );
 
+// Below lg the viewer is a sheet; it opens when a card asks for a preview.
+const sheetOpen = ref(false);
+
 function openPreview(uuid: string): void {
+    sheetOpen.value = true;
+
     if (uuid === selectedUuid.value) {
         void refreshViewer();
 
@@ -199,13 +204,15 @@ function schedulePoll(): void {
         POLL_INTERVALS_MS[Math.min(pollAttempt, POLL_INTERVALS_MS.length - 1)];
 
     pollTimer = setTimeout(() => {
-        router.reload({
-            only: [...RELOAD_PROPS],
-            onFinish: () => {
-                pollAttempt++;
-                schedulePoll();
-            },
-        });
+        router.reload(
+            silent({
+                only: [...RELOAD_PROPS],
+                onFinish: () => {
+                    pollAttempt++;
+                    schedulePoll();
+                },
+            }),
+        );
     }, delay);
 }
 
@@ -230,7 +237,7 @@ const completedForThisOeuvre = computed(
 
 watch(completedForThisOeuvre, (next, previous) => {
     if (next > previous) {
-        router.reload({ only: [...RELOAD_PROPS] });
+        router.reload(silent({ only: [...RELOAD_PROPS] }));
     }
 });
 
@@ -259,7 +266,7 @@ const progressPercent = computed(() =>
 );
 
 watch(locale, () => {
-    router.reload({ only: ['classification', 'requirements'] });
+    router.reload(silent({ only: ['classification', 'requirements'] }));
 });
 
 const pendingResumesForOeuvre = computed(() =>
@@ -339,476 +346,507 @@ const statusBadge = computed(() => {
 <template>
     <Head :title="label" />
 
+    <!-- With the viewer open the page uses the whole width; without it the
+         content keeps a readable measure. -->
     <div
-        class="mx-auto w-full max-w-5xl space-y-8 p-4 sm:p-6 lg:p-8"
-        :class="selectedFile ? 'lg:pe-[30rem]' : ''"
+        class="w-full p-4 sm:p-6 lg:p-8"
+        :class="selectedFile ? '' : 'mx-auto max-w-5xl'"
     >
-        <!-- Top Hero Navigation & Meta Header -->
-        <div class="space-y-4">
-            <div class="flex flex-wrap items-center justify-between gap-3">
-                <Link
-                    :href="index()"
-                    class="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
-                >
-                    <ArrowLeft class="size-3.5 rtl:rotate-180" />
-                    <span>Retour au catalogue des œuvres</span>
-                </Link>
-
-                <div class="flex items-center gap-2">
-                    <span
-                        class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold"
-                        :class="statusBadge.class"
+        <SideViewerLayout
+            v-model:sheet-open="sheetOpen"
+            :active="selectedFile !== null"
+            :title="selectedFile?.original_name ?? ''"
+            :new-tab-href="
+                selectedFile
+                    ? preview({
+                          oeuvre: oeuvre.uuid,
+                          mediaFile: selectedFile.uuid,
+                      }).url
+                    : null
+            "
+            closable
+            @close="closePreview"
+        >
+            <div class="space-y-8">
+                <!-- Top Hero Navigation & Meta Header -->
+                <div class="space-y-4">
+                    <div
+                        class="flex flex-wrap items-center justify-between gap-3"
                     >
-                        <span
-                            class="size-1.5 rounded-full"
-                            :class="statusBadge.dotClass"
-                        />
-                        <span>{{ statusBadge.label }}</span>
-                    </span>
-
-                    <span
-                        v-if="oeuvre.code_college_snapshot"
-                        class="rounded-md border border-border/80 bg-muted px-2 py-0.5 font-mono text-[11px] font-semibold text-muted-foreground"
-                    >
-                        <bdi dir="ltr"
-                            >[{{ oeuvre.code_college_snapshot }}]</bdi
+                        <Link
+                            :href="index()"
+                            class="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
                         >
-                    </span>
-                </div>
-            </div>
+                            <ArrowLeft class="size-3.5 rtl:rotate-180" />
+                            <span>Retour au catalogue des œuvres</span>
+                        </Link>
 
-            <!-- Title & CTA Bar -->
-            <div
-                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-            >
-                <div class="min-w-0 space-y-1">
-                    <h1
-                        class="truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
-                    >
-                        <bdi>{{ label }}</bdi>
-                    </h1>
-                    <p
-                        v-if="oeuvre.description"
-                        class="text-sm text-muted-foreground"
-                    >
-                        {{ oeuvre.description }}
-                    </p>
-                    <p
-                        v-else-if="oeuvre.college_name"
-                        class="text-xs text-muted-foreground"
-                    >
-                        Discipline :
-                        <span class="font-medium text-foreground">{{
-                            oeuvre.college_name
-                        }}</span>
-                        • Créée le {{ formatDate(oeuvre.created_at, locale) }}
-                    </p>
-                </div>
-
-                <!-- Direct Header Submit CTA if ready -->
-                <div v-if="submission.can_submit && editable" class="shrink-0">
-                    <Button
-                        class="h-10 cursor-pointer gap-2 bg-emerald-600 px-4 text-xs font-semibold text-white shadow-onda-card hover:bg-emerald-700 dark:bg-emerald-500"
-                        @click="openSubmitDialog"
-                    >
-                        <Send class="size-3.5 rtl:rotate-180" />
-                        <span>{{ t('oeuvres.table.submit') }}</span>
-                    </Button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Official Classification Card -->
-        <ClassificationCard
-            v-if="classification"
-            :classification="classification"
-        />
-
-        <!-- STEP 2: DOCUMENTS DEPOSIT JOURNEY -->
-        <template v-if="hasRequirements">
-            <!-- Modern Bento Stats Card: Documents Progress & Quota Bar -->
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <!-- 1. Documents Progress Card -->
-                <Card
-                    class="border-border/80 shadow-onda-card sm:col-span-2 lg:col-span-2"
-                >
-                    <CardContent
-                        class="space-y-3.5 p-5 sm:p-6"
-                        data-test="required-progress"
-                    >
-                        <div
-                            class="flex flex-wrap items-baseline justify-between gap-2"
-                        >
-                            <div class="flex items-center gap-2">
-                                <Sparkles
-                                    class="size-4 text-onda-blue-600 dark:text-onda-blue-400"
+                        <div class="flex items-center gap-2">
+                            <span
+                                class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold"
+                                :class="statusBadge.class"
+                            >
+                                <span
+                                    class="size-1.5 rounded-full"
+                                    :class="statusBadge.dotClass"
                                 />
-                                <h2
-                                    class="text-sm font-semibold tracking-tight text-foreground"
-                                >
-                                    {{ t('oeuvres.step2.title') }}
-                                </h2>
-                            </div>
+                                <span>{{ statusBadge.label }}</span>
+                            </span>
 
                             <span
-                                class="font-mono text-xs font-bold text-foreground"
+                                v-if="oeuvre.code_college_snapshot"
+                                class="rounded-md border border-border/80 bg-muted px-2 py-0.5 font-mono text-[11px] font-semibold text-muted-foreground"
                             >
-                                {{ progressPercent }}% validé
+                                <bdi dir="ltr"
+                                    >[{{ oeuvre.code_college_snapshot }}]</bdi
+                                >
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Title & CTA Bar -->
+                    <div
+                        class="flex flex-col gap-3 @lg:flex-row @lg:items-center @lg:justify-between"
+                    >
+                        <div class="min-w-0 space-y-1">
+                            <h1
+                                class="truncate text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
+                            >
+                                <bdi>{{ label }}</bdi>
+                            </h1>
+                            <p
+                                v-if="oeuvre.description"
+                                class="text-sm text-muted-foreground"
+                            >
+                                {{ oeuvre.description }}
+                            </p>
+                            <p
+                                v-else-if="oeuvre.college_name"
+                                class="text-xs text-muted-foreground"
+                            >
+                                Discipline :
+                                <span class="font-medium text-foreground">{{
+                                    oeuvre.college_name
+                                }}</span>
+                                • Créée le
+                                {{ formatDate(oeuvre.created_at, locale) }}
+                            </p>
+                        </div>
+
+                        <!-- Direct Header Submit CTA if ready -->
+                        <div
+                            v-if="submission.can_submit && editable"
+                            class="shrink-0"
+                        >
+                            <Button
+                                class="h-10 cursor-pointer gap-2 bg-emerald-600 px-4 text-xs font-semibold text-white shadow-onda-card hover:bg-emerald-700 dark:bg-emerald-500"
+                                @click="openSubmitDialog"
+                            >
+                                <Send class="size-3.5 rtl:rotate-180" />
+                                <span>{{ t('oeuvres.table.submit') }}</span>
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Official Classification Card -->
+                <ClassificationCard
+                    v-if="classification"
+                    :classification="classification"
+                />
+
+                <!-- STEP 2: DOCUMENTS DEPOSIT JOURNEY -->
+                <template v-if="hasRequirements">
+                    <!-- Modern Bento Stats Card: Documents Progress & Quota Bar -->
+                    <div
+                        class="grid grid-cols-1 gap-4 @xl:grid-cols-2 @4xl:grid-cols-3"
+                    >
+                        <!-- 1. Documents Progress Card -->
+                        <Card
+                            class="border-border/80 shadow-onda-card @xl:col-span-2"
+                        >
+                            <CardContent
+                                class="space-y-3.5 p-5 sm:p-6"
+                                data-test="required-progress"
+                            >
+                                <div
+                                    class="flex flex-wrap items-baseline justify-between gap-2"
+                                >
+                                    <div class="flex items-center gap-2">
+                                        <Sparkles
+                                            class="size-4 text-onda-blue-600 dark:text-onda-blue-400"
+                                        />
+                                        <h2
+                                            class="text-sm font-semibold tracking-tight text-foreground"
+                                        >
+                                            {{ t('oeuvres.step2.title') }}
+                                        </h2>
+                                    </div>
+
+                                    <span
+                                        class="font-mono text-xs font-bold text-foreground"
+                                    >
+                                        {{ progressPercent }}% validé
+                                    </span>
+                                </div>
+
+                                <!-- Progress Bar -->
+                                <div class="space-y-1.5">
+                                    <div
+                                        class="relative h-2.5 w-full overflow-hidden rounded-full bg-muted shadow-inner"
+                                        role="progressbar"
+                                        :aria-valuenow="progress.satisfied"
+                                        aria-valuemin="0"
+                                        :aria-valuemax="progress.total"
+                                    >
+                                        <div
+                                            class="h-full rounded-full bg-gradient-to-r from-onda-blue-600 via-onda-blue-500 to-onda-teal-500 transition-all duration-500 ease-out"
+                                            :style="{
+                                                width: `${progressPercent}%`,
+                                            }"
+                                        />
+                                    </div>
+
+                                    <div
+                                        class="flex items-center justify-between text-xs"
+                                    >
+                                        <span
+                                            class="font-semibold text-foreground tabular-nums"
+                                        >
+                                            {{
+                                                t('oeuvres.step2.progress', {
+                                                    satisfied:
+                                                        progress.satisfied,
+                                                    total: progress.total,
+                                                })
+                                            }}
+                                        </span>
+                                        <span
+                                            v-if="progress.conditional > 0"
+                                            class="text-[11px] text-muted-foreground"
+                                        >
+                                            {{
+                                                t(
+                                                    'oeuvres.step2.mayNotApply',
+                                                    {
+                                                        count: progress.conditional,
+                                                    },
+                                                    progress.conditional,
+                                                )
+                                            }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <p
+                                    class="text-xs leading-relaxed text-muted-foreground"
+                                >
+                                    {{ t('oeuvres.step2.intro') }}
+                                </p>
+                            </CardContent>
+                        </Card>
+
+                        <!-- 2. Sovereign Quota & Security Card -->
+                        <Card class="border-border/80 shadow-onda-card">
+                            <CardContent
+                                class="flex h-full flex-col justify-between space-y-3.5 p-5 sm:p-6"
+                            >
+                                <div class="space-y-2">
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
+                                        <div
+                                            class="flex items-center gap-2 text-xs font-semibold text-foreground"
+                                        >
+                                            <HardDrive
+                                                class="size-4 text-onda-blue-600 dark:text-onda-blue-400"
+                                            />
+                                            <span>Espace de stockage</span>
+                                        </div>
+                                        <span
+                                            class="font-mono text-xs font-bold text-foreground"
+                                        >
+                                            {{ quotaPercent }}%
+                                        </span>
+                                    </div>
+
+                                    <!-- Mini Quota Bar -->
+                                    <div
+                                        class="h-2 w-full overflow-hidden rounded-full bg-muted shadow-inner"
+                                    >
+                                        <div
+                                            class="h-full rounded-full transition-all duration-500"
+                                            :class="[
+                                                quotaPercent > 90
+                                                    ? 'bg-rose-500'
+                                                    : quotaPercent > 75
+                                                      ? 'bg-amber-500'
+                                                      : 'bg-onda-blue-600',
+                                            ]"
+                                            :style="{
+                                                width: `${quotaPercent}%`,
+                                            }"
+                                        />
+                                    </div>
+
+                                    <div
+                                        class="flex justify-between font-mono text-[11px] text-muted-foreground"
+                                    >
+                                        <span>{{
+                                            formatBytes(
+                                                quota.used_bytes,
+                                                locale,
+                                            )
+                                        }}</span>
+                                        <span>{{
+                                            formatBytes(
+                                                quota.limit_bytes,
+                                                locale,
+                                            )
+                                        }}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Trust lines -->
+                                <div
+                                    class="space-y-1.5 border-t border-border/60 pt-3 text-[11px] text-muted-foreground"
+                                >
+                                    <div class="flex items-center gap-2">
+                                        <Lock
+                                            class="size-3.5 text-emerald-600 dark:text-emerald-400"
+                                        />
+                                        <span
+                                            >Chiffrement au repos AES-256</span
+                                        >
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <ShieldCheck
+                                            class="size-3.5 text-emerald-600 dark:text-emerald-400"
+                                        />
+                                        <span
+                                            >Empreinte cryptographique
+                                            certifiée</span
+                                        >
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <!-- Resume Banner (when interrupted uploads can be recovered) -->
+                    <ResumeBanner
+                        :files="pendingResumesForOeuvre"
+                        @reselect="onReselect"
+                    />
+
+                    <!-- Sequence of Required Document Slots -->
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h2
+                                class="text-base font-bold tracking-tight text-foreground"
+                            >
+                                Pièces exigées pour ce collège ({{
+                                    requirements.length
+                                }})
+                            </h2>
+                            <span class="text-xs text-muted-foreground">
+                                Déposez les pièces conformément aux
+                                spécifications
                             </span>
                         </div>
 
-                        <!-- Progress Bar -->
-                        <div class="space-y-1.5">
-                            <div
-                                class="relative h-2.5 w-full overflow-hidden rounded-full bg-muted shadow-inner"
-                                role="progressbar"
-                                :aria-valuenow="progress.satisfied"
-                                aria-valuemin="0"
-                                :aria-valuemax="progress.total"
+                        <ol class="space-y-4">
+                            <li
+                                v-for="(requirement, position) in requirements"
+                                :key="requirement.id"
                             >
-                                <div
-                                    class="h-full rounded-full bg-gradient-to-r from-onda-blue-600 via-onda-blue-500 to-onda-teal-500 transition-all duration-500 ease-out"
-                                    :style="{ width: `${progressPercent}%` }"
+                                <RequirementSlotCard
+                                    :requirement="requirement"
+                                    :position="position + 1"
+                                    :oeuvre-id="oeuvre.id"
+                                    :entries="
+                                        grouped.bySlot.get(requirement.id) ?? []
+                                    "
+                                    :quota="quota"
+                                    :editable="editable"
+                                    @pause="queue.pauseFile"
+                                    @resume="queue.resumeFile"
+                                    @cancel="queue.cancelFile"
+                                    @remove="removeFile"
                                 />
-                            </div>
-
-                            <div
-                                class="flex items-center justify-between text-xs"
-                            >
-                                <span
-                                    class="font-semibold text-foreground tabular-nums"
-                                >
-                                    {{
-                                        t('oeuvres.step2.progress', {
-                                            satisfied: progress.satisfied,
-                                            total: progress.total,
-                                        })
-                                    }}
-                                </span>
-                                <span
-                                    v-if="progress.conditional > 0"
-                                    class="text-[11px] text-muted-foreground"
-                                >
-                                    {{
-                                        t(
-                                            'oeuvres.step2.mayNotApply',
-                                            { count: progress.conditional },
-                                            progress.conditional,
-                                        )
-                                    }}
-                                </span>
-                            </div>
-                        </div>
-
-                        <p
-                            class="text-xs leading-relaxed text-muted-foreground"
-                        >
-                            {{ t('oeuvres.step2.intro') }}
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <!-- 2. Sovereign Quota & Security Card -->
-                <Card class="border-border/80 shadow-onda-card">
-                    <CardContent
-                        class="flex h-full flex-col justify-between space-y-3.5 p-5 sm:p-6"
-                    >
-                        <div class="space-y-2">
-                            <div class="flex items-center justify-between">
-                                <div
-                                    class="flex items-center gap-2 text-xs font-semibold text-foreground"
-                                >
-                                    <HardDrive
-                                        class="size-4 text-onda-blue-600 dark:text-onda-blue-400"
-                                    />
-                                    <span>Espace de stockage</span>
-                                </div>
-                                <span
-                                    class="font-mono text-xs font-bold text-foreground"
-                                >
-                                    {{ quotaPercent }}%
-                                </span>
-                            </div>
-
-                            <!-- Mini Quota Bar -->
-                            <div
-                                class="h-2 w-full overflow-hidden rounded-full bg-muted shadow-inner"
-                            >
-                                <div
-                                    class="h-full rounded-full transition-all duration-500"
-                                    :class="[
-                                        quotaPercent > 90
-                                            ? 'bg-rose-500'
-                                            : quotaPercent > 75
-                                              ? 'bg-amber-500'
-                                              : 'bg-onda-blue-600',
-                                    ]"
-                                    :style="{ width: `${quotaPercent}%` }"
-                                />
-                            </div>
-
-                            <div
-                                class="flex justify-between font-mono text-[11px] text-muted-foreground"
-                            >
-                                <span>{{
-                                    formatBytes(quota.used_bytes, locale)
-                                }}</span>
-                                <span>{{
-                                    formatBytes(quota.limit_bytes, locale)
-                                }}</span>
-                            </div>
-                        </div>
-
-                        <!-- Trust lines -->
-                        <div
-                            class="space-y-1.5 border-t border-border/60 pt-3 text-[11px] text-muted-foreground"
-                        >
-                            <div class="flex items-center gap-2">
-                                <Lock
-                                    class="size-3.5 text-emerald-600 dark:text-emerald-400"
-                                />
-                                <span>Chiffrement au repos AES-256</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <ShieldCheck
-                                    class="size-3.5 text-emerald-600 dark:text-emerald-400"
-                                />
-                                <span>Empreinte cryptographique certifiée</span>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <!-- Resume Banner (when interrupted uploads can be recovered) -->
-            <ResumeBanner
-                :files="pendingResumesForOeuvre"
-                @reselect="onReselect"
-            />
-
-            <!-- Sequence of Required Document Slots -->
-            <div class="space-y-4">
-                <div class="flex items-center justify-between">
-                    <h2
-                        class="text-base font-bold tracking-tight text-foreground"
-                    >
-                        Pièces exigées pour ce collège ({{
-                            requirements.length
-                        }})
-                    </h2>
-                    <span class="text-xs text-muted-foreground">
-                        Déposez les pièces conformément aux spécifications
-                    </span>
-                </div>
-
-                <ol class="space-y-4">
-                    <li
-                        v-for="(requirement, position) in requirements"
-                        :key="requirement.id"
-                    >
-                        <RequirementSlotCard
-                            :requirement="requirement"
-                            :position="position + 1"
-                            :oeuvre-id="oeuvre.id"
-                            :entries="grouped.bySlot.get(requirement.id) ?? []"
-                            :quota="quota"
-                            :editable="editable"
-                            @pause="queue.pauseFile"
-                            @resume="queue.resumeFile"
-                            @cancel="queue.cancelFile"
-                            @remove="removeFile"
-                        />
-                    </li>
-                </ol>
-            </div>
-
-            <!-- Unassigned / Extra Files Section (if any) -->
-            <div
-                v-if="grouped.unassigned.length > 0"
-                class="space-y-3 border-t border-border/80 pt-4"
-            >
-                <div>
-                    <h2
-                        class="text-sm font-semibold tracking-tight text-foreground"
-                    >
-                        {{ t('oeuvres.step2.otherFiles') }}
-                    </h2>
-                    <p class="text-xs text-muted-foreground">
-                        {{ t('oeuvres.step2.otherFilesHint') }}
-                    </p>
-                </div>
-                <ul class="space-y-3">
-                    <li
-                        v-for="entry in grouped.unassigned"
-                        :key="entryKey(entry)"
-                    >
-                        <DepositCard
-                            :entry="entry"
-                            :quota="quota"
-                            :editable="editable"
-                            @pause="queue.pauseFile"
-                            @resume="queue.resumeFile"
-                            @cancel="queue.cancelFile"
-                            @remove="removeFile"
-                        />
-                    </li>
-                </ul>
-            </div>
-
-            <!-- Global Submit Gate Area -->
-            <SubmitArea
-                :submission="submission"
-                :status="oeuvre.status"
-                :editable="editable"
-                :reason-text="reasonText"
-                @submit="openSubmitDialog"
-            />
-        </template>
-
-        <!-- FALLBACK UNCLASSIFIED OEUVRE (Single Flat Dropzone) -->
-        <template v-else>
-            <Card class="border-border/80 shadow-onda-card">
-                <CardContent class="space-y-4 p-6">
-                    <div class="flex items-center justify-between gap-3">
-                        <h2 class="text-sm font-semibold text-foreground">
-                            {{ t('oeuvres.show.addFiles') }}
-                        </h2>
-                        <i18n-t
-                            keypath="oeuvres.show.quota"
-                            tag="span"
-                            class="text-xs text-muted-foreground"
-                        >
-                            <template #used>
-                                <bdi dir="ltr" class="font-mono">{{
-                                    formatBytes(quota.used_bytes, locale)
-                                }}</bdi>
-                            </template>
-                            <template #limit>
-                                <bdi dir="ltr" class="font-mono">{{
-                                    formatBytes(quota.limit_bytes, locale)
-                                }}</bdi>
-                            </template>
-                            <template #remaining>
-                                <bdi
-                                    dir="ltr"
-                                    class="font-mono font-medium text-foreground"
-                                    >{{
-                                        formatBytes(quotaRemaining, locale)
-                                    }}</bdi
-                                >
-                            </template>
-                        </i18n-t>
+                            </li>
+                        </ol>
                     </div>
-                    <Dropzone v-if="editable" :oeuvre-id="oeuvre.id" />
-                </CardContent>
-            </Card>
 
-            <div class="space-y-4">
-                <h2 class="text-sm font-semibold text-foreground">
-                    {{ t('oeuvres.show.filesTitle') }}
-                </h2>
-
-                <ResumeBanner
-                    :files="pendingResumesForOeuvre"
-                    @reselect="onReselect"
-                />
-
-                <Card
-                    v-if="entries.length === 0"
-                    class="border-2 border-dashed"
-                >
-                    <CardContent
-                        class="py-12 text-center text-xs text-muted-foreground"
+                    <!-- Unassigned / Extra Files Section (if any) -->
+                    <div
+                        v-if="grouped.unassigned.length > 0"
+                        class="space-y-3 border-t border-border/80 pt-4"
                     >
-                        <i18n-t keypath="oeuvres.show.noFiles" tag="p">
-                            <template #size>
-                                <bdi
-                                    dir="ltr"
-                                    class="font-mono font-semibold"
-                                    >{{
-                                        formatBytes(MAX_FILE_SIZE_BYTES, locale)
-                                    }}</bdi
+                        <div>
+                            <h2
+                                class="text-sm font-semibold tracking-tight text-foreground"
+                            >
+                                {{ t('oeuvres.step2.otherFiles') }}
+                            </h2>
+                            <p class="text-xs text-muted-foreground">
+                                {{ t('oeuvres.step2.otherFilesHint') }}
+                            </p>
+                        </div>
+                        <ul class="space-y-3">
+                            <li
+                                v-for="entry in grouped.unassigned"
+                                :key="entryKey(entry)"
+                            >
+                                <DepositCard
+                                    :entry="entry"
+                                    :quota="quota"
+                                    :editable="editable"
+                                    @pause="queue.pauseFile"
+                                    @resume="queue.resumeFile"
+                                    @cancel="queue.cancelFile"
+                                    @remove="removeFile"
+                                />
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Global Submit Gate Area -->
+                    <SubmitArea
+                        :submission="submission"
+                        :status="oeuvre.status"
+                        :editable="editable"
+                        :reason-text="reasonText"
+                        @submit="openSubmitDialog"
+                    />
+                </template>
+
+                <!-- FALLBACK UNCLASSIFIED OEUVRE (Single Flat Dropzone) -->
+                <template v-else>
+                    <Card class="border-border/80 shadow-onda-card">
+                        <CardContent class="space-y-4 p-6">
+                            <div
+                                class="flex items-center justify-between gap-3"
+                            >
+                                <h2
+                                    class="text-sm font-semibold text-foreground"
                                 >
-                            </template>
-                            <template #extensions>
-                                <bdi dir="ltr" class="font-mono">{{
-                                    allowedExtensionList().join(', ')
-                                }}</bdi>
-                            </template>
-                        </i18n-t>
-                    </CardContent>
-                </Card>
+                                    {{ t('oeuvres.show.addFiles') }}
+                                </h2>
+                                <i18n-t
+                                    keypath="oeuvres.show.quota"
+                                    tag="span"
+                                    class="text-xs text-muted-foreground"
+                                >
+                                    <template #used>
+                                        <bdi dir="ltr" class="font-mono">{{
+                                            formatBytes(
+                                                quota.used_bytes,
+                                                locale,
+                                            )
+                                        }}</bdi>
+                                    </template>
+                                    <template #limit>
+                                        <bdi dir="ltr" class="font-mono">{{
+                                            formatBytes(
+                                                quota.limit_bytes,
+                                                locale,
+                                            )
+                                        }}</bdi>
+                                    </template>
+                                    <template #remaining>
+                                        <bdi
+                                            dir="ltr"
+                                            class="font-mono font-medium text-foreground"
+                                            >{{
+                                                formatBytes(
+                                                    quotaRemaining,
+                                                    locale,
+                                                )
+                                            }}</bdi
+                                        >
+                                    </template>
+                                </i18n-t>
+                            </div>
+                            <Dropzone v-if="editable" :oeuvre-id="oeuvre.id" />
+                        </CardContent>
+                    </Card>
 
-                <ul v-else class="space-y-3">
-                    <li v-for="entry in entries" :key="entryKey(entry)">
-                        <DepositCard
-                            :entry="entry"
-                            :quota="quota"
-                            :editable="editable"
-                            @pause="queue.pauseFile"
-                            @resume="queue.resumeFile"
-                            @cancel="queue.cancelFile"
-                            @remove="removeFile"
+                    <div class="space-y-4">
+                        <h2 class="text-sm font-semibold text-foreground">
+                            {{ t('oeuvres.show.filesTitle') }}
+                        </h2>
+
+                        <ResumeBanner
+                            :files="pendingResumesForOeuvre"
+                            @reselect="onReselect"
                         />
-                    </li>
-                </ul>
 
-                <SubmitArea
-                    class="mt-6"
-                    :submission="submission"
-                    :status="oeuvre.status"
-                    :editable="editable"
-                    :reason-text="reasonText"
-                    @submit="openSubmitDialog"
-                />
-            </div>
-        </template>
+                        <Card
+                            v-if="entries.length === 0"
+                            class="border-2 border-dashed"
+                        >
+                            <CardContent
+                                class="py-12 text-center text-xs text-muted-foreground"
+                            >
+                                <i18n-t keypath="oeuvres.show.noFiles" tag="p">
+                                    <template #size>
+                                        <bdi
+                                            dir="ltr"
+                                            class="font-mono font-semibold"
+                                            >{{
+                                                formatBytes(
+                                                    MAX_FILE_SIZE_BYTES,
+                                                    locale,
+                                                )
+                                            }}</bdi
+                                        >
+                                    </template>
+                                    <template #extensions>
+                                        <bdi dir="ltr" class="font-mono">{{
+                                            allowedExtensionList().join(', ')
+                                        }}</bdi>
+                                    </template>
+                                </i18n-t>
+                            </CardContent>
+                        </Card>
 
-        <!-- The side Viewer: the owner's own file, read-only. -->
-        <aside
-            v-if="selectedFile"
-            data-testid="side-viewer"
-            class="fixed inset-y-0 end-0 z-40 flex w-full flex-col gap-2 border-s bg-background p-3 shadow-xl sm:w-[28rem]"
-        >
-            <div class="flex items-center gap-2">
-                <h2 class="min-w-0 flex-1 truncate text-sm font-semibold">
-                    <bdi dir="ltr">{{
-                        truncateFilenameMiddle(selectedFile.original_name, 40)
-                    }}</bdi>
-                </h2>
-                <a
-                    :href="
-                        preview({
-                            oeuvre: oeuvre.uuid,
-                            mediaFile: selectedFile.uuid,
-                        }).url
-                    "
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="p-2 text-muted-foreground hover:text-foreground"
-                    :title="t('consult.openInNewTab')"
-                    :aria-label="t('consult.openInNewTab')"
-                >
-                    <ExternalLink class="size-4" />
-                </a>
-                <button
-                    type="button"
-                    class="cursor-pointer p-2 text-muted-foreground hover:text-foreground"
-                    :aria-label="t('consult.closePreview')"
-                    @click="closePreview"
-                >
-                    <X class="size-4" />
-                </button>
+                        <ul v-else class="space-y-3">
+                            <li v-for="entry in entries" :key="entryKey(entry)">
+                                <DepositCard
+                                    :entry="entry"
+                                    :quota="quota"
+                                    :editable="editable"
+                                    @pause="queue.pauseFile"
+                                    @resume="queue.resumeFile"
+                                    @cancel="queue.cancelFile"
+                                    @remove="removeFile"
+                                />
+                            </li>
+                        </ul>
+
+                        <SubmitArea
+                            class="mt-6"
+                            :submission="submission"
+                            :status="oeuvre.status"
+                            :editable="editable"
+                            :reason-text="reasonText"
+                            @submit="openSubmitDialog"
+                        />
+                    </div>
+                </template>
             </div>
-            <div class="min-h-0 flex-1">
+
+            <!-- The side Viewer: the owner's own file, read-only. -->
+            <template #viewer>
                 <ConsultViewer
                     :descriptor="viewerDescriptor"
                     :file-key="selectedUuid ?? ''"
                     compact
                     @refresh="refreshViewer"
                 />
-            </div>
-        </aside>
+            </template>
+        </SideViewerLayout>
 
         <!-- Official Submission Confirmation Dialog -->
         <OeuvreSubmitDialog

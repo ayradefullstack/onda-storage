@@ -11,6 +11,7 @@ import DashboardWorksTable from '@/components/dashboard/DashboardWorksTable.vue'
 import type { Work } from '@/components/dashboard/DashboardWorksTable.vue';
 import NewDepositModal from '@/components/dashboard/NewDepositModal.vue';
 import { useDashboardModal } from '@/composables/useDashboardModal';
+import { vReveal } from '@/composables/useReveal';
 import { dashboard } from '@/routes/author';
 
 const { isDepositOpen, initialDepositCategory, openDeposit } =
@@ -75,16 +76,20 @@ useEventListener('keydown', (e: KeyboardEvent) => {
         <DashboardStats />
 
         <!-- 3. Quick Multi-Domain Deposit Launchpad -->
-        <DashboardQuickActions @select-category="handleSelectCategory" />
+        <DashboardQuickActions
+            v-reveal
+            @select-category="handleSelectCategory"
+        />
 
         <!-- 4. Works & Declarations Registry Table -->
         <DashboardWorksTable
+            v-reveal
             @view-certificate="handleViewCertificate"
             @open-deposit="openDeposit('music')"
         />
 
         <!-- 5. Royalties Distribution Analytics & Payout History -->
-        <div id="royalties-section" class="pt-2">
+        <div id="royalties-section" v-reveal data-anchor class="pt-2">
             <DashboardRoyaltiesChart />
         </div>
     </div>

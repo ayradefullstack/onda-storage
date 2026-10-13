@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { cn } from '@/lib/utils';
+import TableScroll from './TableScroll.vue';
 
 interface Props {
     loading?: boolean;
@@ -22,9 +23,9 @@ defineProps<Props>();
         <slot name="toolbar" />
 
         <!-- Table Viewport (Horizontal Scroll on Mobile/Dense Grids) -->
-        <div class="relative w-full overflow-x-auto">
+        <TableScroll>
             <slot />
-        </div>
+        </TableScroll>
 
         <!-- Pagination Slot -->
         <slot name="pagination" />

@@ -26,6 +26,10 @@ createInertiaApp({
     },
     progress: {
         color: '#1C9976',
+        // The thin bar covers short visits; the AppLoader overlay takes
+        // over after 300 ms (see useGlobalLoader), so no spinner here.
+        delay: 100,
+        showSpinner: false,
     },
     withApp(app, { page }) {
         // `locale` and `languages` are shared by the backend and already

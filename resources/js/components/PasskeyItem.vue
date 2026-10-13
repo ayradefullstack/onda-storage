@@ -1,17 +1,11 @@
 <script setup lang="ts">
 import { KeyRound, Trash2 } from '@lucide/vue';
 import { ref } from 'vue';
+import { AppDialog } from '@/components/ui/app-dialog';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
 import type { Passkey } from '@/types/auth';
+
+const confirming = ref(false);
 
 const props = defineProps<{
     passkey: Passkey;
@@ -59,8 +53,13 @@ const handleDelete = () => {
             </div>
         </div>
 
-        <Dialog>
-            <DialogTrigger as-child>
+        <AppDialog
+            v-model:open="confirming"
+            title="Remove passkey"
+            size="sm"
+            :busy="isDeleting"
+        >
+            <template #trigger>
                 <Button
                     variant="ghost"
                     size="sm"
@@ -69,27 +68,25 @@ const handleDelete = () => {
                     <Trash2 class="h-4 w-4" />
                     <span class="sr-only">Remove</span>
                 </Button>
-            </DialogTrigger>
+            </template>
 
-            <DialogContent>
-                <DialogTitle>Remove passkey</DialogTitle>
-                <DialogDescription>
-                    Are you sure you want to remove the "{{ passkey.name }}"
-                    passkey? You will no longer be able to use it to sign in.
-                </DialogDescription>
-                <DialogFooter class="gap-2">
-                    <DialogClose as-child>
-                        <Button variant="secondary">Cancel</Button>
-                    </DialogClose>
-                    <Button
-                        variant="destructive"
-                        :disabled="isDeleting"
-                        @click="handleDelete"
-                    >
-                        {{ isDeleting ? 'Removing...' : 'Remove passkey' }}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            <p class="text-sm text-muted-foreground">
+                Are you sure you want to remove the "{{ passkey.name }}"
+                passkey? You will no longer be able to use it to sign in.
+            </p>
+
+            <template #footer>
+                <Button variant="secondary" @click="confirming = false"
+                    >Cancel</Button
+                >
+                <Button
+                    variant="destructive"
+                    :disabled="isDeleting"
+                    @click="handleDelete"
+                >
+                    {{ isDeleting ? 'Removing...' : 'Remove passkey' }}
+                </Button>
+            </template>
+        </AppDialog>
     </div>
 </template>

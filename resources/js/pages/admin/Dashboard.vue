@@ -39,7 +39,7 @@ const user = computed(() => page.props.auth.user);
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Link
                 :href="authorsIndex()"
-                class="flex items-center gap-3 rounded-lg border border-border bg-card p-4 hover:bg-accent/50"
+                class="motion-fade-up motion-lift flex items-center gap-3 rounded-lg border border-border bg-card p-4 outline-none hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring/40"
             >
                 <Users class="size-5 text-muted-foreground" />
                 <div>
@@ -51,7 +51,7 @@ const user = computed(() => page.props.auth.user);
             </Link>
             <Link
                 :href="oeuvresIndex()"
-                class="flex items-center gap-3 rounded-lg border border-border bg-card p-4 hover:bg-accent/50"
+                class="motion-fade-up motion-lift flex items-center gap-3 rounded-lg border border-border bg-card p-4 outline-none hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring/40"
             >
                 <FolderOpen class="size-5 text-muted-foreground" />
                 <div>

@@ -82,7 +82,7 @@ const rows = computed<Row[]>(() => {
 
 <template>
     <Card>
-        <CardContent class="py-5">
+        <CardContent class="@container py-5">
             <div class="mb-4 flex items-start gap-3">
                 <div
                     class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-onda-blue-500/10 text-onda-blue-600 dark:text-onda-blue-400"
@@ -100,8 +100,10 @@ const rows = computed<Row[]>(() => {
             </div>
 
             <dl
-                class="grid gap-3 sm:grid-cols-2"
-                :class="rows.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'"
+                class="grid gap-3 @md:grid-cols-2"
+                :class="
+                    rows.length === 4 ? '@4xl:grid-cols-4' : '@4xl:grid-cols-3'
+                "
             >
                 <div
                     v-for="row in rows"

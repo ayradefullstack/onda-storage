@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Badge } from '@/components/ui/badge';
 import type { BadgeVariants } from '@/components/ui/badge';
+import { usePulseOnChange } from '@/composables/usePulseOnChange';
 
 /**
  * Renders either an `Oeuvre` status (`oeuvres.status.*`, already established by
@@ -16,6 +17,7 @@ const props = defineProps<{
 }>();
 
 const { t } = useI18n();
+const pulsing = usePulseOnChange(() => props.status);
 
 const WORK_VARIANTS: Record<string, BadgeVariants['variant']> = {
     draft: 'outline',
@@ -52,5 +54,7 @@ const label = computed(() =>
 </script>
 
 <template>
-    <Badge :variant="variant">{{ label }}</Badge>
+    <Badge :variant="variant" :class="pulsing ? 'motion-pulse-once' : ''">{{
+        label
+    }}</Badge>
 </template>

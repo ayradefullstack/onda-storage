@@ -38,7 +38,7 @@ const { t } = useI18n();
                   : 'border-border/80 bg-card/70',
         ]"
     >
-        <CardContent class="space-y-4 p-5 sm:p-6">
+        <CardContent class="@container space-y-4 p-5 sm:p-6">
             <!-- Frozen: submitted, under review, or registered -->
             <template v-if="!submission.is_open">
                 <div class="flex items-start gap-3.5">
@@ -72,7 +72,7 @@ const { t } = useI18n();
             <!-- Active / Editable Submission Gate -->
             <template v-else>
                 <div
-                    class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                    class="flex flex-col gap-4 @lg:flex-row @lg:items-center @lg:justify-between"
                 >
                     <div class="flex items-start gap-3.5">
                         <div

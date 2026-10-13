@@ -4,15 +4,9 @@ import { Plus } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ActionButton } from '@/components/ui/action';
+import { AppDialog } from '@/components/ui/app-dialog';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { TableScroll } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { makeDefault, store, update } from '@/routes/admin/languages';
@@ -152,123 +146,127 @@ const toggle = (row: LanguageRow) =>
         </p>
 
         <div class="overflow-hidden rounded-lg border border-border bg-card">
-            <table class="w-full border-collapse text-xs">
-                <thead>
-                    <tr
-                        class="border-b border-border bg-muted/40 text-muted-foreground"
-                    >
-                        <th class="px-3 py-2.5 text-start font-medium">
-                            {{ t('admin.languages.col.language') }}
-                        </th>
-                        <th class="px-3 py-2.5 text-start font-medium">
-                            {{ t('admin.languages.col.code') }}
-                        </th>
-                        <th class="px-3 py-2.5 text-start font-medium">
-                            {{ t('admin.languages.col.direction') }}
-                        </th>
-                        <th class="px-3 py-2.5 text-start font-medium">
-                            {{ t('admin.languages.col.status') }}
-                        </th>
-                        <th class="px-3 py-2.5 text-end font-medium">
-                            {{ t('admin.languages.col.actions') }}
-                        </th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-border/70">
-                    <tr
-                        v-for="row in languages"
-                        :key="row.code"
-                        class="transition-colors hover:bg-accent/30"
-                    >
-                        <td class="px-3 py-2">
-                            <bdi class="block font-medium">{{
-                                row.native_name
-                            }}</bdi>
-                            <bdi
-                                class="block text-[11px] text-muted-foreground"
-                                >{{ row.name }}</bdi
-                            >
-                        </td>
-                        <td class="px-3 py-2 font-mono">
-                            <bdi>{{ row.code }}</bdi>
-                        </td>
-                        <td class="px-3 py-2 uppercase">
-                            <bdi>{{ row.direction }}</bdi>
-                        </td>
-                        <td class="space-x-1 px-3 py-2 rtl:space-x-reverse">
-                            <span
-                                v-if="row.is_default"
-                                class="rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary"
-                                >{{ t('admin.languages.default') }}</span
-                            >
-                            <span
-                                class="rounded px-1.5 py-0.5 text-[11px] font-medium"
-                                :class="
-                                    row.is_active
-                                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                                        : 'bg-muted text-muted-foreground'
-                                "
-                                >{{
-                                    row.is_active
-                                        ? t('admin.languages.active')
-                                        : t('admin.languages.inactive')
-                                }}</span
-                            >
-                            <span
-                                v-if="!row.has_bundle"
-                                class="rounded bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300"
-                                :title="t('admin.languages.noBundleHint')"
-                                >{{ t('admin.languages.noBundle') }}</span
-                            >
-                        </td>
-                        <td
-                            class="space-x-1 px-3 py-2 text-end rtl:space-x-reverse"
+            <TableScroll>
+                <table class="w-full border-collapse text-xs">
+                    <thead>
+                        <tr
+                            class="border-b border-border bg-muted/40 text-muted-foreground"
                         >
-                            <Button
-                                v-if="!row.is_default && row.is_active"
-                                variant="outline"
-                                size="sm"
-                                class="cursor-pointer"
-                                @click="setDefault(row)"
-                                >{{ t('admin.languages.makeDefault') }}</Button
+                            <th class="px-3 py-2.5 text-start font-medium">
+                                {{ t('admin.languages.col.language') }}
+                            </th>
+                            <th class="px-3 py-2.5 text-start font-medium">
+                                {{ t('admin.languages.col.code') }}
+                            </th>
+                            <th class="px-3 py-2.5 text-start font-medium">
+                                {{ t('admin.languages.col.direction') }}
+                            </th>
+                            <th class="px-3 py-2.5 text-start font-medium">
+                                {{ t('admin.languages.col.status') }}
+                            </th>
+                            <th class="px-3 py-2.5 text-end font-medium">
+                                {{ t('admin.languages.col.actions') }}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border/70">
+                        <tr
+                            v-for="row in languages"
+                            :key="row.code"
+                            class="transition-colors hover:bg-accent/30"
+                        >
+                            <td class="px-3 py-2">
+                                <bdi class="block font-medium">{{
+                                    row.native_name
+                                }}</bdi>
+                                <bdi
+                                    class="block text-[11px] text-muted-foreground"
+                                    >{{ row.name }}</bdi
+                                >
+                            </td>
+                            <td class="px-3 py-2 font-mono">
+                                <bdi>{{ row.code }}</bdi>
+                            </td>
+                            <td class="px-3 py-2 uppercase">
+                                <bdi>{{ row.direction }}</bdi>
+                            </td>
+                            <td class="space-x-1 px-3 py-2 rtl:space-x-reverse">
+                                <span
+                                    v-if="row.is_default"
+                                    class="rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary"
+                                    >{{ t('admin.languages.default') }}</span
+                                >
+                                <span
+                                    class="rounded px-1.5 py-0.5 text-[11px] font-medium"
+                                    :class="
+                                        row.is_active
+                                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                            : 'bg-muted text-muted-foreground'
+                                    "
+                                    >{{
+                                        row.is_active
+                                            ? t('admin.languages.active')
+                                            : t('admin.languages.inactive')
+                                    }}</span
+                                >
+                                <span
+                                    v-if="!row.has_bundle"
+                                    class="rounded bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300"
+                                    :title="t('admin.languages.noBundleHint')"
+                                    >{{ t('admin.languages.noBundle') }}</span
+                                >
+                            </td>
+                            <td
+                                class="space-x-1 px-3 py-2 text-end rtl:space-x-reverse"
                             >
-                            <Button
-                                v-if="!row.is_default"
-                                variant="outline"
-                                size="sm"
-                                class="cursor-pointer"
-                                @click="toggle(row)"
-                                >{{
-                                    row.is_active
-                                        ? t('admin.languages.deactivate')
-                                        : t('admin.languages.activate')
-                                }}</Button
-                            >
-                            <ActionButton
-                                action="edit"
-                                size="sm"
-                                :label="t('admin.languages.edit')"
-                                @click="openEdit(row)"
-                            />
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+                                <Button
+                                    v-if="!row.is_default && row.is_active"
+                                    variant="outline"
+                                    size="sm"
+                                    class="cursor-pointer"
+                                    @click="setDefault(row)"
+                                    >{{
+                                        t('admin.languages.makeDefault')
+                                    }}</Button
+                                >
+                                <Button
+                                    v-if="!row.is_default"
+                                    variant="outline"
+                                    size="sm"
+                                    class="cursor-pointer"
+                                    @click="toggle(row)"
+                                    >{{
+                                        row.is_active
+                                            ? t('admin.languages.deactivate')
+                                            : t('admin.languages.activate')
+                                    }}</Button
+                                >
+                                <ActionButton
+                                    action="edit"
+                                    size="sm"
+                                    :label="t('admin.languages.edit')"
+                                    @click="openEdit(row)"
+                                />
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </TableScroll>
         </div>
 
-        <Dialog :open="dialog !== null" @update:open="(o) => !o && close()">
-            <DialogContent class="sm:max-w-lg">
-                <DialogHeader>
-                    <DialogTitle>{{
-                        creating
-                            ? t('admin.languages.add')
-                            : t('admin.languages.edit')
-                    }}</DialogTitle>
-                    <DialogDescription>{{
-                        t('admin.languages.dialogHint')
-                    }}</DialogDescription>
-                </DialogHeader>
-
+        <AppDialog
+            :open="dialog !== null"
+            @update:open="(o) => !o && close()"
+            size="md"
+            :busy="saving"
+        >
+            <template #title>{{
+                creating ? t('admin.languages.add') : t('admin.languages.edit')
+            }}</template>
+            <template #description>{{
+                t('admin.languages.dialogHint')
+            }}</template>
+            <div class="grid gap-4">
                 <p
                     v-if="errors.language"
                     class="text-xs text-destructive"
@@ -364,23 +362,22 @@ const toggle = (row: LanguageRow) =>
                         {{ t('admin.languages.active') }}
                     </label>
                 </div>
-
-                <DialogFooter class="gap-2 sm:gap-2">
-                    <Button
-                        variant="outline"
-                        class="cursor-pointer"
-                        :disabled="saving"
-                        @click="close"
-                        >{{ t('admin.referentiel.cancel') }}</Button
-                    >
-                    <Button
-                        class="cursor-pointer"
-                        :disabled="saving"
-                        @click="save"
-                        >{{ t('admin.referentiel.save') }}</Button
-                    >
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            </div>
+            <template #footer
+                ><Button
+                    variant="outline"
+                    class="cursor-pointer"
+                    :disabled="saving"
+                    @click="close"
+                    >{{ t('admin.referentiel.cancel') }}</Button
+                >
+                <Button
+                    class="cursor-pointer"
+                    :disabled="saving"
+                    @click="save"
+                    >{{ t('admin.referentiel.save') }}</Button
+                ></template
+            >
+        </AppDialog>
     </div>
 </template>

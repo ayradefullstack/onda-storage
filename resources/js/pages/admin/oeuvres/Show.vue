@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { ExternalLink, FileEdit } from '@lucide/vue';
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import EmptyState from '@/components/admin/EmptyState.vue';
 import MediaFileInspectionCard from '@/components/admin/MediaFileInspectionCard.vue';
 import StatusBadge from '@/components/admin/StatusBadge.vue';
 import ConsultViewer from '@/components/consult/ConsultViewer.vue';
+import SideViewerLayout from '@/components/consult/SideViewerLayout.vue';
 import { useSideViewer } from '@/components/consult/useSideViewer';
 import { oeuvreLabel } from '@/components/oeuvre/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -99,6 +101,18 @@ const { selectedUuid, descriptor, select, refresh } = useSideViewer(
 
 onMounted(refresh);
 
+const selectedFile = computed(
+    () => props.files.find((file) => file.uuid === selectedUuid.value) ?? null,
+);
+
+// Below lg the viewer is a sheet: it opens on a tap, not on page load.
+const sheetOpen = ref(false);
+
+function show(uuid: string): void {
+    select(uuid);
+    sheetOpen.value = true;
+}
+
 function reviewUrl(file: MediaFileDetail): string {
     return review({ oeuvre: props.oeuvre.uuid, mediaFile: file.uuid }).url;
 }
@@ -107,7 +121,7 @@ function reviewUrl(file: MediaFileDetail): string {
 <template>
     <Head :title="label" />
 
-    <div class="mx-auto w-full max-w-6xl space-y-6 p-4 md:p-6">
+    <div class="w-full space-y-6 p-4 md:p-6">
         <Alert v-if="oeuvre.is_draft" role="status">
             <FileEdit />
             <AlertDescription>
@@ -124,7 +138,7 @@ function reviewUrl(file: MediaFileDetail): string {
             </div>
             <p
                 v-if="oeuvre.description"
-                class="mt-1 text-sm text-muted-foreground"
+                class="mt-1 max-w-3xl text-sm text-muted-foreground"
             >
                 {{ oeuvre.description }}
             </p>
@@ -151,47 +165,55 @@ function reviewUrl(file: MediaFileDetail): string {
             </p>
         </div>
 
-        <div class="space-y-4">
-            <h2 class="text-sm font-medium">
-                {{ t('admin.oeuvres.filesTitle') }}
-            </h2>
+        <EmptyState
+            v-if="files.length === 0"
+            :title="t('admin.oeuvres.noFiles')"
+        />
 
-            <p v-if="files.length === 0" class="text-sm text-muted-foreground">
-                {{ t('admin.oeuvres.noFiles') }}
-            </p>
+        <SideViewerLayout
+            v-else
+            v-model:sheet-open="sheetOpen"
+            :active="selectedFile !== null"
+            :title="selectedFile?.original_name ?? ''"
+            :new-tab-href="selectedFile ? reviewUrl(selectedFile) : null"
+        >
+            <div class="space-y-4">
+                <h2 class="text-sm font-medium">
+                    {{ t('admin.oeuvres.filesTitle') }}
+                    <span class="text-muted-foreground tabular-nums"
+                        >({{ files.length }})</span
+                    >
+                </h2>
 
-            <div
-                v-if="files.length > 0"
-                class="grid gap-4 lg:grid-cols-[16rem_1fr]"
-            >
                 <ul class="space-y-1" data-testid="file-list">
                     <li
-                        v-for="file in files"
+                        v-for="(file, i) in files"
                         :key="file.uuid"
-                        class="flex items-center gap-1 rounded-md border"
+                        class="motion-fade-up flex items-center gap-1 rounded-md border transition-colors"
                         :class="
                             file.uuid === selectedUuid
                                 ? 'border-primary bg-accent'
-                                : 'border-border'
+                                : 'border-border hover:bg-accent/50'
                         "
+                        :style="{ '--motion-index': i }"
                         :data-selected="file.uuid === selectedUuid"
                     >
                         <button
                             type="button"
-                            class="min-w-0 flex-1 truncate px-2 py-2 text-start text-sm"
+                            class="min-w-0 flex-1 cursor-pointer truncate rounded-md px-3 py-2 text-start text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                             :aria-current="file.uuid === selectedUuid"
                             :title="file.original_name"
-                            @click="select(file.uuid)"
+                            @click="show(file.uuid)"
                         >
                             <bdi dir="ltr">{{
-                                truncateFilenameMiddle(file.original_name, 28)
+                                truncateFilenameMiddle(file.original_name, 44)
                             }}</bdi>
                         </button>
                         <a
                             :href="reviewUrl(file)"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="shrink-0 p-2 text-muted-foreground hover:text-foreground"
+                            class="shrink-0 rounded-md p-2 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
                             :title="t('consult.openInNewTab')"
                             :aria-label="t('consult.openInNewTab')"
                         >
@@ -200,21 +222,22 @@ function reviewUrl(file: MediaFileDetail): string {
                     </li>
                 </ul>
 
-                <div class="h-[28rem]">
-                    <ConsultViewer
-                        :descriptor="descriptor"
-                        :file-key="selectedUuid ?? ''"
-                        compact
-                        @refresh="refresh"
-                    />
-                </div>
+                <!-- Facts of the file shown in the viewer, and only that one. -->
+                <MediaFileInspectionCard
+                    v-if="selectedFile"
+                    :key="selectedFile.uuid"
+                    :file="selectedFile"
+                />
             </div>
 
-            <MediaFileInspectionCard
-                v-for="file in files"
-                :key="file.uuid"
-                :file="file"
-            />
-        </div>
+            <template #viewer>
+                <ConsultViewer
+                    :descriptor="descriptor"
+                    :file-key="selectedUuid ?? ''"
+                    compact
+                    @refresh="refresh"
+                />
+            </template>
+        </SideViewerLayout>
     </div>
 </template>

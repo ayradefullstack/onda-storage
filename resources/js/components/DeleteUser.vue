@@ -5,17 +5,12 @@ import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileCo
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
-import { Button } from '@/components/ui/button';
 import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
+    AppDialog,
+    AppDialogBody,
+    AppDialogFooter,
+} from '@/components/ui/app-dialog';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 
 const passwordInput = useTemplateRef('passwordInput');
@@ -37,13 +32,19 @@ const passwordInput = useTemplateRef('passwordInput');
                     Please proceed with caution, this cannot be undone.
                 </p>
             </div>
-            <Dialog>
-                <DialogTrigger as-child>
+            <AppDialog
+                title="Are you sure you want to delete your account?"
+                description="Once your account is deleted, all of its resources and data will also be permanently deleted. Please enter your password to confirm you would like to permanently delete your account."
+            >
+                <template #trigger>
                     <Button variant="destructive" data-test="delete-user-button"
                         >Delete account</Button
                     >
-                </DialogTrigger>
-                <DialogContent>
+                </template>
+
+                <!-- Body and footer share the Form (its slot props drive
+                     both), so this dialog lays them out itself. -->
+                <template #content="{ close }">
                     <Form
                         v-bind="ProfileController.destroy.form()"
                         reset-on-success
@@ -51,50 +52,38 @@ const passwordInput = useTemplateRef('passwordInput');
                         :options="{
                             preserveScroll: true,
                         }"
-                        class="space-y-6"
+                        class="flex min-h-0 flex-auto flex-col"
                         v-slot="{ errors, processing, reset, clearErrors }"
                     >
-                        <DialogHeader class="space-y-3">
-                            <DialogTitle
-                                >Are you sure you want to delete your
-                                account?</DialogTitle
-                            >
-                            <DialogDescription>
-                                Once your account is deleted, all of its
-                                resources and data will also be permanently
-                                deleted. Please enter your password to confirm
-                                you would like to permanently delete your
-                                account.
-                            </DialogDescription>
-                        </DialogHeader>
-
-                        <div class="grid gap-2">
-                            <Label for="password" class="sr-only"
-                                >Password</Label
-                            >
-                            <PasswordInput
-                                id="password"
-                                name="password"
-                                ref="passwordInput"
-                                placeholder="Password"
-                            />
-                            <InputError :message="errors.password" />
-                        </div>
-
-                        <DialogFooter class="gap-2">
-                            <DialogClose as-child>
-                                <Button
-                                    variant="secondary"
-                                    @click="
-                                        () => {
-                                            clearErrors();
-                                            reset();
-                                        }
-                                    "
+                        <AppDialogBody>
+                            <div class="grid gap-2">
+                                <Label for="password" class="sr-only"
+                                    >Password</Label
                                 >
-                                    Cancel
-                                </Button>
-                            </DialogClose>
+                                <PasswordInput
+                                    id="password"
+                                    name="password"
+                                    ref="passwordInput"
+                                    placeholder="Password"
+                                />
+                                <InputError :message="errors.password" />
+                            </div>
+                        </AppDialogBody>
+
+                        <AppDialogFooter>
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                @click="
+                                    () => {
+                                        clearErrors();
+                                        reset();
+                                        close();
+                                    }
+                                "
+                            >
+                                Cancel
+                            </Button>
 
                             <Button
                                 type="submit"
@@ -104,10 +93,10 @@ const passwordInput = useTemplateRef('passwordInput');
                             >
                                 Delete account
                             </Button>
-                        </DialogFooter>
+                        </AppDialogFooter>
                     </Form>
-                </DialogContent>
-            </Dialog>
+                </template>
+            </AppDialog>
         </div>
     </div>
 </template>

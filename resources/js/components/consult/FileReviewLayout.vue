@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
 import { ArrowLeft, ChevronLeft, ChevronRight, Check, Copy } from '@lucide/vue';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs } from '@/components/ui/tabs';
+import { silent } from '@/composables/useGlobalLoader';
 import { formatBytes, formatDate, truncateFilenameMiddle } from '@/lib/format';
 import type { ConsultationDescriptor } from '@/types/consultation';
 import ConsultViewer from './ConsultViewer.vue';
+import FullscreenButton from './FullscreenButton.vue';
 
 /**
  * The body of a full-page file preview, shared by the admin review and the
@@ -16,6 +18,10 @@ import ConsultViewer from './ConsultViewer.vue';
  * viewer and, when `details` is on, a Preview / Details tab pair. The two
  * pages are thin wrappers that pass their own routes; nothing here knows
  * which area it is in. The audit trail is never a tab.
+ *
+ * The viewer takes everything the header leaves (100dvh). With `details`,
+ * choosing the Details tab does not replace the viewer: the receipt opens
+ * as a panel beside it from `xl` up and stacks under it on smaller screens.
  */
 const props = defineProps<{
     oeuvre: { uuid: string; title: string | null; created_at: string };
@@ -62,8 +68,23 @@ function open(target: { uuid: string } | null): void {
 }
 
 function refresh(): void {
-    router.reload({ only: ['consultation'] });
+    // Background refresh (the pending-derivative poll, an expired URL):
+    // never raises the global loader.
+    router.reload(silent({ only: ['consultation'] }));
 }
+
+// The fullscreen target is the stage: the viewer together with its watermark.
+const stage = ref<HTMLElement | null>(null);
+
+// Reading progress, for the families that scroll one long document.
+const READING: readonly string[] = ['pdf', 'document', 'text'];
+const reading = computed(() => READING.includes(props.consultation.family));
+const progress = ref(0);
+
+watch(
+    () => props.file.uuid,
+    () => (progress.value = 0),
+);
 
 function onKey(event: KeyboardEvent): void {
     const target = event.target as HTMLElement | null;
@@ -104,7 +125,10 @@ async function copyHash(): Promise<void> {
 </script>
 
 <template>
-    <div class="flex h-[calc(100dvh-5rem)] flex-col gap-3 p-4">
+    <div
+        class="flex min-h-[calc(100dvh-5rem)] flex-col gap-3 p-4 xl:h-[calc(100dvh-5rem)]"
+        :class="details && tab === 'details' ? '' : 'h-[calc(100dvh-5rem)]'"
+    >
         <header class="space-y-2">
             <div class="flex flex-wrap items-center gap-2">
                 <Link
@@ -145,6 +169,7 @@ async function copyHash(): Promise<void> {
                 </Badge>
 
                 <div class="ms-auto flex items-center gap-1">
+                    <FullscreenButton :target="stage" />
                     <Button
                         type="button"
                         size="sm"
@@ -229,84 +254,117 @@ async function copyHash(): Promise<void> {
             </dl>
         </header>
 
-        <div v-show="!details || tab === 'preview'" class="min-h-0 flex-1">
-            <ConsultViewer
-                :descriptor="consultation"
-                :file-key="file.uuid"
-                @refresh="refresh"
+        <!-- Reading progress of a long document (transform only). -->
+        <div
+            v-if="reading && consultation.status === 'ready'"
+            class="-mb-2 h-0.5 overflow-hidden rounded-full bg-muted"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            :aria-valuenow="Math.round(progress * 100)"
+            :aria-label="t('consult.readingProgress')"
+            data-testid="reading-progress"
+        >
+            <div
+                class="motion-progress h-full bg-primary"
+                :style="{ transform: `scaleX(${progress})` }"
             />
         </div>
 
-        <!-- Details: the deposit receipt. -->
-        <dl
-            v-if="details && tab === 'details'"
-            data-testid="file-details"
-            class="grid max-w-3xl gap-3 text-sm sm:grid-cols-[10rem_1fr]"
-        >
-            <dt class="text-muted-foreground">{{ t('consult.meta.name') }}</dt>
-            <dd>
-                <bdi dir="ltr">{{ consultation.meta.filename }}</bdi>
-            </dd>
+        <div class="flex min-h-0 flex-1 flex-col gap-4 xl:flex-row">
+            <div
+                ref="stage"
+                class="min-h-0 flex-1 bg-background"
+                :class="
+                    details && tab === 'details'
+                        ? 'h-[70dvh] flex-none xl:h-auto xl:flex-1'
+                        : ''
+                "
+            >
+                <ConsultViewer
+                    :descriptor="consultation"
+                    :file-key="file.uuid"
+                    @refresh="refresh"
+                    @progress="(ratio: number) => (progress = ratio)"
+                />
+            </div>
 
-            <template v-if="consultation.meta.slotLabel">
+            <!-- Details: the deposit receipt. Beside the viewer on xl and up,
+                 under it below. -->
+            <dl
+                v-if="details && tab === 'details'"
+                data-testid="file-details"
+                class="motion-fade-up grid content-start gap-x-3 gap-y-2 rounded-lg border bg-card p-4 text-sm sm:grid-cols-[10rem_1fr] xl:w-96 xl:shrink-0 xl:grid-cols-1 xl:overflow-y-auto"
+            >
                 <dt class="text-muted-foreground">
-                    {{ t('consult.meta.slot') }}
+                    {{ t('consult.meta.name') }}
                 </dt>
                 <dd>
-                    <bdi dir="ltr">{{ consultation.meta.slotLabel }}</bdi>
+                    <bdi dir="ltr">{{ consultation.meta.filename }}</bdi>
                 </dd>
-            </template>
 
-            <dt class="text-muted-foreground">
-                {{ t('consult.meta.format') }}
-            </dt>
-            <dd>
-                <bdi dir="ltr">{{ file.extension.toUpperCase() }}</bdi>
-                · {{ t(`consult.family.${consultation.family}`) }}
-            </dd>
+                <template v-if="consultation.meta.slotLabel">
+                    <dt class="text-muted-foreground">
+                        {{ t('consult.meta.slot') }}
+                    </dt>
+                    <dd>
+                        <bdi dir="ltr">{{ consultation.meta.slotLabel }}</bdi>
+                    </dd>
+                </template>
 
-            <dt class="text-muted-foreground">{{ t('consult.meta.size') }}</dt>
-            <dd>
-                <bdi dir="ltr">{{
-                    formatBytes(consultation.meta.sizeBytes, locale)
-                }}</bdi>
-            </dd>
-
-            <template v-if="consultation.meta.depositedAt">
                 <dt class="text-muted-foreground">
-                    {{ t('consult.meta.deposited') }}
+                    {{ t('consult.meta.format') }}
+                </dt>
+                <dd>
+                    <bdi dir="ltr">{{ file.extension.toUpperCase() }}</bdi>
+                    · {{ t(`consult.family.${consultation.family}`) }}
+                </dd>
+
+                <dt class="text-muted-foreground">
+                    {{ t('consult.meta.size') }}
                 </dt>
                 <dd>
                     <bdi dir="ltr">{{
-                        formatDate(consultation.meta.depositedAt, locale)
+                        formatBytes(consultation.meta.sizeBytes, locale)
                     }}</bdi>
                 </dd>
-            </template>
 
-            <template v-if="consultation.meta.sha256">
-                <dt class="text-muted-foreground">SHA-256</dt>
-                <dd class="flex min-w-0 items-start gap-1">
-                    <code dir="ltr" class="font-mono text-xs break-all">{{
-                        consultation.meta.sha256
-                    }}</code>
-                    <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        class="size-6 shrink-0"
-                        :aria-label="t('consult.copyHash')"
-                        @click="copyHash"
-                    >
-                        <Check v-if="copied" class="size-3.5" />
-                        <Copy v-else class="size-3.5" />
-                    </Button>
-                </dd>
-            </template>
+                <template v-if="consultation.meta.depositedAt">
+                    <dt class="text-muted-foreground">
+                        {{ t('consult.meta.deposited') }}
+                    </dt>
+                    <dd>
+                        <bdi dir="ltr">{{
+                            formatDate(consultation.meta.depositedAt, locale)
+                        }}</bdi>
+                    </dd>
+                </template>
 
-            <dt class="text-muted-foreground">
-                {{ t('consult.meta.previewStatus') }}
-            </dt>
-            <dd>{{ t(`consult.status.${consultation.status}`) }}</dd>
-        </dl>
+                <template v-if="consultation.meta.sha256">
+                    <dt class="text-muted-foreground">SHA-256</dt>
+                    <dd class="flex min-w-0 items-start gap-1">
+                        <code dir="ltr" class="font-mono text-xs break-all">{{
+                            consultation.meta.sha256
+                        }}</code>
+                        <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            class="size-6 shrink-0"
+                            :aria-label="t('consult.copyHash')"
+                            @click="copyHash"
+                        >
+                            <Check v-if="copied" class="size-3.5" />
+                            <Copy v-else class="size-3.5" />
+                        </Button>
+                    </dd>
+                </template>
+
+                <dt class="text-muted-foreground">
+                    {{ t('consult.meta.previewStatus') }}
+                </dt>
+                <dd>{{ t(`consult.status.${consultation.status}`) }}</dd>
+            </dl>
+        </div>
     </div>
 </template>

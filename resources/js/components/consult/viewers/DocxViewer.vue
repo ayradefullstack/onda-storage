@@ -22,11 +22,26 @@ const props = defineProps<{
     compact?: boolean;
 }>();
 
-const emit = defineEmits<{ 'asset-expired': [] }>();
+const emit = defineEmits<{
+    'asset-expired': [];
+    /** 0..1, how far the document has been scrolled. */
+    'scroll-progress': [ratio: number];
+}>();
+
+function reportProgress(element: HTMLElement): void {
+    const room = element.scrollHeight - element.clientHeight;
+
+    emit(
+        'scroll-progress',
+        room <= 0 ? 0 : Math.min(element.scrollTop / room, 1),
+    );
+}
 
 const { t } = useI18n();
 const frame = ref<HTMLIFrameElement | null>(null);
 const state = ref<'loading' | 'ready' | 'failed'>('loading');
+const contentHeight = ref<number | null>(null);
+let contentObserver: ResizeObserver | null = null;
 let frameReady = false;
 let generation = 0;
 
@@ -71,11 +86,34 @@ async function load(): Promise<void> {
             renderFooters: true,
         });
         makeLinksInert(doc);
+        followContentHeight(doc);
         state.value = 'ready';
     } catch {
         if (mine === generation) {
             state.value = 'failed';
         }
+    }
+}
+
+/**
+ * The iframe is as tall as the document inside it, so there is ONE vertical
+ * scroll (the viewer's own) instead of a frame scrolling inside a box. The
+ * height is re-read whenever the rendered document changes size (fonts and
+ * images settle after the first paint; a narrower viewer wraps differently).
+ */
+function followContentHeight(doc: Document): void {
+    const read = (): void => {
+        // The body, not the root element: the root is never shorter than
+        // the frame itself, so reading it could only ever grow the frame.
+        contentHeight.value = Math.ceil(doc.body.scrollHeight);
+    };
+
+    contentObserver?.disconnect();
+    read();
+
+    if (typeof ResizeObserver !== 'undefined') {
+        contentObserver = new ResizeObserver(read);
+        contentObserver.observe(doc.body);
     }
 }
 
@@ -97,22 +135,37 @@ watch(
 );
 
 onBeforeUnmount(() => {
+    contentObserver?.disconnect();
     generation++;
 });
 </script>
 
 <template>
     <div class="relative h-full min-h-72" @contextmenu.prevent>
-        <iframe
-            ref="frame"
-            :sandbox="DOCX_IFRAME_SANDBOX"
-            :srcdoc="DOCX_IFRAME_SRCDOC"
-            :title="descriptor.meta.filename"
-            referrerpolicy="no-referrer"
-            class="size-full border-0 bg-white"
-            data-testid="docx-frame"
-            @load="onFrameLoad"
-        />
+        <div
+            class="absolute inset-0 overflow-x-hidden overflow-y-auto"
+            data-testid="docx-scroller"
+            @scroll.passive="
+                reportProgress($event.currentTarget as HTMLElement)
+            "
+        >
+            <iframe
+                ref="frame"
+                :sandbox="DOCX_IFRAME_SANDBOX"
+                :srcdoc="DOCX_IFRAME_SRCDOC"
+                :title="descriptor.meta.filename"
+                referrerpolicy="no-referrer"
+                class="block w-full border-0 bg-white"
+                :class="contentHeight === null ? 'h-full' : ''"
+                :style="
+                    contentHeight === null
+                        ? undefined
+                        : { height: `${contentHeight}px` }
+                "
+                data-testid="docx-frame"
+                @load="onFrameLoad"
+            />
+        </div>
         <div
             v-if="state === 'loading'"
             class="absolute inset-0 flex items-center justify-center bg-background/70"

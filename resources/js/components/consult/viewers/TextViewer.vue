@@ -14,7 +14,20 @@ const props = defineProps<{
     compact?: boolean;
 }>();
 
-const emit = defineEmits<{ 'asset-expired': [] }>();
+const emit = defineEmits<{
+    'asset-expired': [];
+    /** 0..1, how far the document has been scrolled. */
+    'scroll-progress': [ratio: number];
+}>();
+
+function reportProgress(element: HTMLElement): void {
+    const room = element.scrollHeight - element.clientHeight;
+
+    emit(
+        'scroll-progress',
+        room <= 0 ? 0 : Math.min(element.scrollTop / room, 1),
+    );
+}
 
 const { t } = useI18n();
 
@@ -74,7 +87,12 @@ watch(() => asset.value?.url, load, { immediate: true });
             >
                 {{ t('consult.notice.text_truncated') }}
             </p>
-            <div class="relative min-h-0 flex-1 overflow-auto">
+            <div
+                class="relative min-h-0 flex-1 overflow-auto"
+                @scroll.passive="
+                    reportProgress($event.currentTarget as HTMLElement)
+                "
+            >
                 <Watermark
                     v-if="descriptor.watermark"
                     :label="descriptor.watermark"

@@ -8,8 +8,8 @@ import Watermark from '../Watermark.vue';
 /**
  * spreadsheet / csv: the derivative is JSON of cell VALUES only. Cells are
  * rendered through Vue's escaped interpolation — never as HTML — so a cell
- * holding markup is shown as text. Horizontal scroll stays inside the table
- * area; the header row is sticky.
+ * holding markup is shown as text. Scrolling stays inside the table area;
+ * the header row and the first column are sticky.
  */
 const props = defineProps<{
     descriptor: ConsultationDescriptor;
@@ -125,7 +125,7 @@ watch(active, () => {
                             <th
                                 v-for="(cell, c) in header"
                                 :key="c"
-                                class="border px-2 py-1 text-start font-medium"
+                                class="border bg-muted px-2 py-1 text-start font-medium first:sticky first:start-0 first:z-10"
                             >
                                 <bdi>{{ cell }}</bdi>
                             </th>
@@ -136,7 +136,7 @@ watch(active, () => {
                             <td
                                 v-for="(cell, c) in row"
                                 :key="c"
-                                class="border px-2 py-1 align-top"
+                                class="border px-2 py-1 align-top first:sticky first:start-0 first:bg-background"
                             >
                                 <bdi>{{ cell }}</bdi>
                             </td>

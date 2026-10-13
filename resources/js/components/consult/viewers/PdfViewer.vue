@@ -13,6 +13,7 @@ import {
 } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { ConsultationDescriptor } from '@/types/consultation';
+import { watchFitWidth } from '../original/fitWidth';
 import { PDF_WORKER_URL, pdfDocumentOptions } from '../original/pdfOptions';
 import {
     findMatches,
@@ -42,7 +43,11 @@ const props = defineProps<{
     compact?: boolean;
 }>();
 
-const emit = defineEmits<{ 'asset-expired': [] }>();
+const emit = defineEmits<{
+    'asset-expired': [];
+    /** 0..1, how far the document has been scrolled. */
+    'scroll-progress': [ratio: number];
+}>();
 
 pdfjs.GlobalWorkerOptions.workerSrc = PDF_WORKER_URL;
 
@@ -279,6 +284,15 @@ async function open(): Promise<void> {
 }
 
 function onScroll(): void {
+    if (scroller.value !== null) {
+        const room = scroller.value.scrollHeight - scroller.value.clientHeight;
+
+        emit(
+            'scroll-progress',
+            room <= 0 ? 0 : Math.min(scroller.value.scrollTop / room, 1),
+        );
+    }
+
     const top = scroller.value?.getBoundingClientRect().top ?? 0;
     let best = current.value;
     let distance = Infinity;
@@ -364,39 +378,33 @@ watch(
     () => void open(),
 );
 
-let resizeObserver: ResizeObserver | null = null;
+let stopFitWidth = (): void => {};
 
 onMounted(() => {
     void open();
     root.value?.focus({ preventScroll: true });
-    const measure = (): boolean => {
-        const width = (scroller.value?.offsetWidth ?? 0) - 48;
 
-        if (width < 100 || Math.abs(width - availableWidth.value) < 2) {
-            return false;
-        }
-
-        availableWidth.value = width;
-
-        return true;
-    };
-
-    measure();
-    resizeObserver = new ResizeObserver(() => {
-        if (measure() && zoom.value === 'fit' && doc.value !== null) {
-            void relayout();
-        }
-    });
-
+    // The width the pages may use follows the container (debounced). Only
+    // "fit width" re-renders; a manual zoom level is kept as it is.
     if (scroller.value !== null) {
-        resizeObserver.observe(scroller.value);
+        stopFitWidth = watchFitWidth(
+            scroller.value,
+            (width) => {
+                availableWidth.value = width;
+
+                if (zoom.value === 'fit' && doc.value !== null) {
+                    void relayout();
+                }
+            },
+            { padding: 48 },
+        );
     }
 });
 
 onBeforeUnmount(() => {
     generation++;
     observer?.disconnect();
-    resizeObserver?.disconnect();
+    stopFitWidth();
     void loadingTask?.destroy();
 });
 </script>

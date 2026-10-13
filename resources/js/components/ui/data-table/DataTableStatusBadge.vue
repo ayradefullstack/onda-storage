@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { usePulseOnChange } from '@/composables/usePulseOnChange';
 import { cn } from '@/lib/utils';
 
 export type StatusTone =
@@ -21,6 +22,8 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
     pulse: false,
 });
+
+const changed = usePulseOnChange(() => props.status);
 
 const resolvedTone = computed<StatusTone>(() => {
     if (props.tone) return props.tone;
@@ -118,6 +121,7 @@ const shouldPulse = computed(() => {
             cn(
                 'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-wide select-none',
                 toneClasses.badge,
+                changed ? 'motion-pulse-once' : '',
                 $props.class,
             )
         "

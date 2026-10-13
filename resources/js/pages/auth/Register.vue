@@ -14,11 +14,11 @@ import { useI18n } from 'vue-i18n';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import TextLink from '@/components/TextLink.vue';
+import { AppCombobox } from '@/components/ui/app-combobox';
+import type { ComboboxOption } from '@/components/ui/app-combobox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import SearchableSelect from '@/components/ui/SearchableSelect.vue';
-import type { SelectOption } from '@/components/ui/SearchableSelect.vue';
 import { Spinner } from '@/components/ui/spinner';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
@@ -69,8 +69,8 @@ const form = store.form();
 const countriesList = computed<CountryItem[]>(() => props.countries);
 const wilayasList = computed<WilayaItem[]>(() => props.wilayas);
 
-// Format Options with Search terms for SearchableSelect
-const countryOptions = computed<SelectOption[]>(() => {
+// Format Options with Search terms for AppCombobox
+const countryOptions = computed<ComboboxOption[]>(() => {
     return countriesList.value.map((c) => ({
         value: c.id,
         label: `${locale.value === 'ar' ? c.name_ar : c.name_fr} (${c.phone_code})`,
@@ -82,7 +82,7 @@ const countryOptions = computed<SelectOption[]>(() => {
     }));
 });
 
-const wilayaOptions = computed<SelectOption[]>(() => {
+const wilayaOptions = computed<ComboboxOption[]>(() => {
     return wilayasList.value.map((w) => ({
         value: w.id,
         label: `${w.code} - ${locale.value === 'ar' ? w.name_ar : w.name_fr}`,
@@ -92,7 +92,7 @@ const wilayaOptions = computed<SelectOption[]>(() => {
     }));
 });
 
-const communeOptions = computed<SelectOption[]>(() => {
+const communeOptions = computed<ComboboxOption[]>(() => {
     return communesList.value.map((cm) => ({
         value: cm.id,
         label: locale.value === 'ar' ? cm.name_ar : cm.name_fr,
@@ -334,7 +334,7 @@ function handlePhoneInput(event: Event) {
                     <span>{{ t('auth.country') }}</span>
                     <span class="text-destructive">*</span>
                 </Label>
-                <SearchableSelect
+                <AppCombobox
                     id="country_id"
                     name="country_id"
                     v-model="selectedCountryId"
@@ -361,7 +361,7 @@ function handlePhoneInput(event: Event) {
                         <span>{{ t('auth.wilaya') }}</span>
                         <span class="text-destructive">*</span>
                     </Label>
-                    <SearchableSelect
+                    <AppCombobox
                         id="wilaya_id"
                         name="wilaya_id"
                         v-model="selectedWilayaId"
@@ -385,7 +385,7 @@ function handlePhoneInput(event: Event) {
                         <span>{{ t('auth.commune') }}</span>
                         <span class="text-destructive">*</span>
                     </Label>
-                    <SearchableSelect
+                    <AppCombobox
                         id="commune_id"
                         name="commune_id"
                         v-model="selectedCommuneId"

@@ -843,5 +843,18 @@
     "consult.meta.previewStatus": "État de l’aperçu",
     "oeuvres.show.preview": "Aperçu",
     "oeuvres.show.previewing": "Aperçu en cours",
-    "consult.closePreview": "Fermer l’aperçu"
+    "consult.closePreview": "Fermer l’aperçu",
+    "ui.close": "Fermer",
+    "ui.backToTop": "Retour en haut",
+    "ui.combobox.placeholder": "Sélectionner…",
+    "ui.combobox.clear": "Effacer la sélection",
+    "ui.combobox.reset": "Réinitialiser la recherche",
+    "ui.combobox.unavailable": "Indisponible",
+    "consult.fullscreen": "Plein écran",
+    "consult.exitFullscreen": "Quitter le plein écran",
+    "consult.readingProgress": "Progression de la lecture",
+    "loader.loading": "Chargement…",
+    "loader.slow": "Encore un instant…",
+    "loader.verySlow": "La connexion semble lente",
+    "loader.retry": "Réessayer"
 }

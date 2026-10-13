@@ -8,7 +8,7 @@ import {
     CheckCircle2,
 } from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
-import FullscreenPreloader from '@/components/public/FullscreenPreloader.vue';
+import AppLoader from '@/components/AppLoader.vue';
 import LanguageSwitcher from '@/components/public/LanguageSwitcher.vue';
 import OrgLogo from '@/components/public/OrgLogo.vue';
 import ThemeToggle from '@/components/public/ThemeToggle.vue';
@@ -24,7 +24,7 @@ defineProps<{
 
 <template>
     <!-- Global Request Feedback -->
-    <FullscreenPreloader :min-duration="0" />
+    <AppLoader />
 
     <div
         class="relative flex min-h-screen flex-col justify-between bg-background text-foreground selection:bg-onda-blue-600 selection:text-white"

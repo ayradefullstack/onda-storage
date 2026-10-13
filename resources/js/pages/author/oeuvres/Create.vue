@@ -34,6 +34,7 @@ import ClassificationCascade from '@/components/oeuvre/ClassificationCascade.vue
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import Spinner from '@/components/ui/spinner/Spinner.vue';
+import { silent } from '@/composables/useGlobalLoader';
 import { create, index } from '@/routes/oeuvres';
 
 const props = defineProps<{
@@ -135,7 +136,7 @@ function submit(): void {
 // Names are localised server-side; after a client-side language switch,
 // refetch just the tree so option labels follow.
 watch(locale, () => {
-    router.reload({ only: ['classification'] });
+    router.reload(silent({ only: ['classification'] }));
 });
 </script>
 

@@ -3,8 +3,8 @@ import { BadgeCheck, Check, Landmark, Scale, UserRound } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import InputError from '@/components/InputError.vue';
-import SearchableSelect from '@/components/ui/SearchableSelect.vue';
-import type { SelectOption } from '@/components/ui/SearchableSelect.vue';
+import type { ComboboxOption } from '@/components/ui/app-combobox';
+import { AppCombobox } from '@/components/ui/app-combobox';
 import type { ClassificationSelection, ClassificationTree } from './cascade';
 import {
     collegesFor,
@@ -82,7 +82,7 @@ const memberStepNumber = computed(() => (isAuteur.value ? 4 : 3));
 const totalSteps = computed(() => (isAuteur.value ? 4 : 3));
 
 // Formatted select options with search terms, icons and badges
-const typeOptions = computed<SelectOption[]>(() =>
+const typeOptions = computed<ComboboxOption[]>(() =>
     props.tree.types.map((item) => ({
         value: item.id,
         label: item.name,
@@ -93,7 +93,7 @@ const typeOptions = computed<SelectOption[]>(() =>
     })),
 );
 
-const gestionOptions = computed<SelectOption[]>(() =>
+const gestionOptions = computed<ComboboxOption[]>(() =>
     (type.value?.gestions ?? []).map((item) => ({
         value: item.id,
         label: item.name,
@@ -102,7 +102,7 @@ const gestionOptions = computed<SelectOption[]>(() =>
     })),
 );
 
-const collegeOptions = computed<SelectOption[]>(() =>
+const collegeOptions = computed<ComboboxOption[]>(() =>
     colleges.value.map((item) => ({
         value: item.id,
         label: item.name,
@@ -114,7 +114,7 @@ const collegeOptions = computed<SelectOption[]>(() =>
     })),
 );
 
-const memberOptions = computed<SelectOption[]>(() =>
+const memberOptions = computed<ComboboxOption[]>(() =>
     members.value.map((item) => ({
         value: item.id,
         label: item.name,
@@ -208,7 +208,7 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
             </div>
 
             <div class="space-y-1.5">
-                <SearchableSelect
+                <AppCombobox
                     id="register_type_id"
                     name="register_type_id"
                     :model-value="selection.register_type_id"
@@ -295,7 +295,7 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                 </div>
 
                 <div class="space-y-1.5">
-                    <SearchableSelect
+                    <AppCombobox
                         id="type_gestion_id"
                         name="type_gestion_id"
                         :model-value="selection.type_gestion_id"
@@ -384,7 +384,7 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                 </div>
 
                 <div class="space-y-1.5">
-                    <SearchableSelect
+                    <AppCombobox
                         id="register_type_college_id"
                         name="register_type_college_id"
                         :model-value="selection.register_type_college_id"
@@ -480,7 +480,7 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                 </div>
 
                 <div class="space-y-1.5">
-                    <SearchableSelect
+                    <AppCombobox
                         id="register_type_member_id"
                         name="register_type_member_id"
                         :model-value="selection.register_type_member_id"

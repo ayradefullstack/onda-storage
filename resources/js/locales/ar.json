@@ -843,5 +843,18 @@
     "consult.meta.previewStatus": "حالة المعاينة",
     "oeuvres.show.preview": "معاينة",
     "oeuvres.show.previewing": "قيد المعاينة",
-    "consult.closePreview": "إغلاق المعاينة"
+    "consult.closePreview": "إغلاق المعاينة",
+    "ui.close": "إغلاق",
+    "ui.backToTop": "العودة إلى الأعلى",
+    "ui.combobox.placeholder": "اختر…",
+    "ui.combobox.clear": "مسح الاختيار",
+    "ui.combobox.reset": "إعادة ضبط البحث",
+    "ui.combobox.unavailable": "غير متاح",
+    "consult.fullscreen": "ملء الشاشة",
+    "consult.exitFullscreen": "الخروج من ملء الشاشة",
+    "consult.readingProgress": "تقدّم القراءة",
+    "loader.loading": "جارٍ التحميل…",
+    "loader.slow": "لحظة من فضلك…",
+    "loader.verySlow": "يبدو أن الاتصال بطيء",
+    "loader.retry": "إعادة المحاولة"
 }

@@ -74,9 +74,11 @@ const categories = computed(() => [
 
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <button
-                v-for="cat in categories"
+                v-for="(cat, i) in categories"
                 :key="cat.id"
                 type="button"
+                class="motion-fade-up"
+                :style="{ '--motion-index': i }"
                 :class="[
                     'group relative flex cursor-pointer flex-col justify-between rounded-xl border bg-card p-4.5 text-start transition-colors hover:shadow-xs',
                     cat.borderColor,

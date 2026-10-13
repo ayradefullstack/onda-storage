@@ -3,6 +3,7 @@ import type { FileCheck2 } from '@lucide/vue';
 import { ArrowUpRight, Award, Clock, Coins, Layers } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { CountUp } from '@/components/ui/count-up';
 
 const { t } = useI18n();
 
@@ -82,9 +83,10 @@ const stats = computed<StatItem[]>(() => [
 <template>
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div
-            v-for="stat in stats"
+            v-for="(stat, i) in stats"
             :key="stat.id"
-            class="group relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-xs transition-colors hover:border-border/80"
+            class="group motion-fade-up motion-lift relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-xs hover:border-border/80"
+            :style="{ '--motion-index': i }"
         >
             <!-- Card Header: Title & Icon -->
             <div class="flex items-center justify-between gap-2">
@@ -109,7 +111,7 @@ const stats = computed<StatItem[]>(() => [
                     <h3
                         class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
                     >
-                        {{ stat.value }}
+                        <CountUp :value="stat.value" />
                     </h3>
                     <span
                         v-if="stat.trend"

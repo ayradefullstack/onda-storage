@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table) {
             $table->string('first_name_ar')->nullable()->after('last_name');
             $table->string('last_name_ar')->nullable()->after('first_name_ar');
-            $table->foreignId('country_id')->nullable()->after('email')->constrained('countries')->nullOnDelete();
+            $table->foreignId('country_id')->nullable()->after('password')->constrained('countries')->nullOnDelete();
             $table->foreignId('wilaya_id')->nullable()->after('country_id')->constrained('wilayas')->nullOnDelete();
             $table->foreignId('commune_id')->nullable()->after('wilaya_id')->constrained('communes')->nullOnDelete();
             $table->string('city')->nullable()->after('commune_id');

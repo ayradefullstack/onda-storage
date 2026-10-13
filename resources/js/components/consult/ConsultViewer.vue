@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Loader2Icon } from '@lucide/vue';
 import { computed, defineAsyncComponent, toRef } from 'vue';
 import type { Component } from 'vue';
+import { Skeleton } from '@/components/ui/skeleton';
 import type {
     ConsultationDescriptor,
     PreviewFamily,
@@ -28,7 +28,11 @@ const props = defineProps<{
     compact?: boolean;
 }>();
 
-const emit = defineEmits<{ refresh: [] }>();
+const emit = defineEmits<{
+    refresh: [];
+    /** 0..1 reading position, from the bodies that scroll a document. */
+    progress: [ratio: number];
+}>();
 
 const BODIES: Partial<Record<PreviewFamily, Component>> = {
     pdf: defineAsyncComponent(() => import('./viewers/PageImagesViewer.vue')),
@@ -109,9 +113,13 @@ function onAssetExpired(): void {
     >
         <div
             v-if="descriptor === null"
-            class="flex h-full min-h-48 items-center justify-center"
+            class="flex h-full min-h-48 flex-col gap-3 p-4"
+            role="status"
+            aria-busy="true"
+            data-testid="viewer-skeleton"
         >
-            <Loader2Icon class="size-8 animate-spin text-muted-foreground" />
+            <Skeleton class="h-8 w-2/3" />
+            <Skeleton class="min-h-0 flex-1" />
         </div>
         <component
             :is="body"
@@ -120,6 +128,7 @@ function onAssetExpired(): void {
             :descriptor="descriptor"
             :compact="compact"
             @asset-expired="onAssetExpired"
+            @scroll-progress="(ratio: number) => emit('progress', ratio)"
         />
         <UnsupportedCard
             v-else

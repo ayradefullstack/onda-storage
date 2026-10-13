@@ -267,6 +267,420 @@
         0 0 0 4px color-mix(in srgb, var(--ring) 30%, transparent) !important;
 }
 
+/* ==========================================================================
+   MOTION
+   Keyframes and utilities for every animation in the app. Rules of the house:
+   transform and opacity only (no animated width/height/top/left, so nothing
+   shifts layout), existing colour tokens only, and everything non-essential
+   is switched off under prefers-reduced-motion at the end of this section.
+   The token sections above are not touched from here.
+   ========================================================================== */
+
+@keyframes motion-fade-in {
+    from {
+        opacity: 0;
+    }
+}
+
+@keyframes motion-fade-out {
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes motion-fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+}
+
+@keyframes motion-page-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+}
+
+@keyframes motion-dialog-in {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+}
+
+@keyframes motion-dialog-out {
+    to {
+        opacity: 0;
+        transform: scale(0.98);
+    }
+}
+
+@keyframes motion-sheet-in {
+    from {
+        transform: translateY(100%);
+    }
+}
+
+@keyframes motion-sheet-out {
+    to {
+        transform: translateY(100%);
+    }
+}
+
+/* A menu slides 4px away from its trigger; --motion-pop-* is set per side. */
+@keyframes motion-pop-in {
+    from {
+        opacity: 0;
+        transform: translate(var(--motion-pop-x, 0), var(--motion-pop-y, 0));
+    }
+}
+
+@keyframes motion-pop-out {
+    to {
+        opacity: 0;
+        transform: translate(var(--motion-pop-x, 0), var(--motion-pop-y, 0));
+    }
+}
+
+@keyframes motion-shimmer {
+    to {
+        transform: translateX(100%);
+    }
+}
+
+@keyframes motion-shimmer-rtl {
+    to {
+        transform: translateX(-100%);
+    }
+}
+
+@keyframes motion-pulse-once {
+    0% {
+        opacity: 0.55;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.6, 2);
+    }
+}
+
+/* Inertia page content: a quick fade/slide on arrival (see PageTransition). */
+.motion-page {
+    animation: motion-page-in 150ms ease-out backwards;
+}
+
+/* First render of a list or grid: the first 12 items stagger, the rest are
+   simply there. --motion-index is set inline by the template. */
+.motion-fade-up {
+    animation: motion-fade-up 260ms ease-out backwards;
+    animation-delay: calc(min(var(--motion-index, 0), 12) * 30ms);
+}
+
+/* useReveal: hidden until the element enters the viewport, then once. */
+.motion-reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    transition:
+        opacity 320ms ease-out,
+        transform 320ms ease-out;
+}
+
+.motion-reveal.is-revealed {
+    opacity: 1;
+    transform: none;
+}
+
+/* Cards lift one pixel and take the next shadow step. */
+.motion-lift {
+    @apply transition-[translate,box-shadow] duration-150 ease-out hover:-translate-y-px hover:shadow-md;
+}
+
+/* Buttons press in. */
+[data-slot='button'] {
+    transition-property:
+        color, background-color, border-color, box-shadow, opacity, scale;
+}
+
+[data-slot='button']:active:not(:disabled) {
+    scale: 0.98;
+}
+
+/* AppDialog: overlay fades; the panel scales in on desktop and slides up
+   from the bottom edge on small screens. Leaving is faster than entering. */
+.app-dialog-overlay[data-state='open'] {
+    animation: motion-fade-in 180ms ease-out;
+}
+
+.app-dialog-overlay[data-state='closed'] {
+    animation: motion-fade-out 120ms ease-in;
+}
+
+.app-dialog-panel[data-state='open'] {
+    animation: motion-sheet-in 220ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.app-dialog-panel[data-state='closed'] {
+    animation: motion-sheet-out 120ms ease-in;
+}
+
+@media (width >= 40rem) {
+    .app-dialog-panel[data-state='open'] {
+        animation: motion-dialog-in 180ms ease-out;
+    }
+
+    .app-dialog-panel[data-state='closed'] {
+        animation: motion-dialog-out 120ms ease-in;
+    }
+}
+
+/* The side Viewer on small screens: a full-height sheet from the bottom. */
+.motion-sheet[data-state='open'] {
+    animation: motion-sheet-in 240ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.motion-sheet[data-state='closed'] {
+    animation: motion-sheet-out 150ms ease-in;
+}
+
+/* Select / combobox menus. */
+.motion-pop[data-side='bottom'] {
+    --motion-pop-y: -4px;
+}
+
+.motion-pop[data-side='top'] {
+    --motion-pop-y: 4px;
+}
+
+.motion-pop[data-side='left'] {
+    --motion-pop-x: 4px;
+}
+
+.motion-pop[data-side='right'] {
+    --motion-pop-x: -4px;
+}
+
+.motion-pop[data-state='open'] {
+    animation: motion-pop-in 140ms ease-out;
+}
+
+.motion-pop[data-state='closed'] {
+    animation: motion-pop-out 100ms ease-in;
+}
+
+/* Skeleton shimmer: a band of the neutral token crossing the block, from
+   the start side of the text direction. */
+.motion-shimmer {
+    position: relative;
+    overflow: hidden;
+}
+
+.motion-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+        90deg,
+        transparent,
+        color-mix(in srgb, var(--background) 55%, transparent),
+        transparent
+    );
+    animation: motion-shimmer 1.6s ease-in-out infinite;
+}
+
+[dir='rtl'] .motion-shimmer::after {
+    transform: translateX(100%);
+    animation-name: motion-shimmer-rtl;
+}
+
+/* A status badge that just changed: one soft ring, once. */
+.motion-pulse-once {
+    position: relative;
+}
+
+.motion-pulse-once::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: currentColor;
+    opacity: 0;
+    pointer-events: none;
+    animation: motion-pulse-once 900ms ease-out 1;
+}
+
+/* Scroll shadows (ScrollArea) and scrolled headers (useScrolled): a fade
+   that is only opaque when there is more to scroll. */
+.motion-scroll-shadow {
+    position: absolute;
+    inset-inline: 0;
+    height: 1rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 150ms ease-out;
+    z-index: 5;
+}
+
+.motion-scroll-shadow[data-visible='true'] {
+    opacity: 1;
+}
+
+.motion-scroll-shadow[data-edge='top'] {
+    top: 0;
+    background: linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--foreground) 12%, transparent),
+        transparent
+    );
+}
+
+.motion-scroll-shadow[data-edge='bottom'] {
+    bottom: 0;
+    background: linear-gradient(
+        to top,
+        color-mix(in srgb, var(--foreground) 12%, transparent),
+        transparent
+    );
+}
+
+.motion-header-shadow {
+    @apply transition-shadow duration-200 ease-out;
+}
+
+.motion-header-shadow[data-scrolled='true'] {
+    @apply shadow-md;
+}
+
+/* Progress bars driven by a 0..1 scale: reading progress, tabs indicator. */
+.motion-progress {
+    transform-origin: left center;
+    transition: transform 120ms linear;
+}
+
+[dir='rtl'] .motion-progress {
+    transform-origin: right center;
+}
+
+.motion-tab-indicator {
+    transition:
+        transform 220ms cubic-bezier(0.32, 0.72, 0, 1),
+        opacity 150ms ease-out;
+    transform-origin: left center;
+}
+
+/* AppLoader: the global loading overlay (see components/AppLoader.vue).
+   Its look is the original landing-page preloader; the spin, pulse and ping
+   are the same Tailwind utilities it always used. Only what Tailwind has no
+   utility for lives here. */
+@keyframes loader-shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.app-loader-shimmer {
+    animation: loader-shimmer 2s infinite;
+}
+
+.app-loader-enter-active {
+    transition: opacity 250ms ease-out;
+}
+
+.app-loader-leave-active {
+    transition: opacity 200ms ease-in;
+}
+
+.app-loader-enter-from,
+.app-loader-leave-to {
+    opacity: 0;
+}
+
+/* Exit: the content eases forward while the overlay fades. */
+.app-loader-mark {
+    transition: transform 200ms ease-in;
+}
+
+.app-loader-leave-active .app-loader-mark {
+    transform: scale(1.04);
+}
+
+/* The arc follows the progress value. */
+.app-loader-arc {
+    transition: stroke-dasharray 150ms ease-out;
+}
+
+.app-loader-text-enter-active,
+.app-loader-text-leave-active {
+    transition: opacity 180ms ease-out;
+}
+
+.app-loader-text-enter-from,
+.app-loader-text-leave-to {
+    opacity: 0;
+}
+
+/* Static variant: reduced motion (also enforced by the media query below). */
+.app-loader--static,
+.app-loader--static * {
+    animation: none !important;
+}
+
+/* In-page anchors land below the sticky header. */
+:target,
+[data-anchor] {
+    scroll-margin-top: 5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .motion-page,
+    .motion-fade-up,
+    .motion-shimmer::after,
+    .motion-pulse-once::after,
+    .app-dialog-overlay,
+    .app-dialog-panel,
+    .motion-sheet,
+    .motion-pop {
+        animation: none !important;
+    }
+
+    .motion-reveal {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+
+    /* AppLoader: static rings, no trickle animation, a plain 120 ms fade. */
+    .app-loader,
+    .app-loader * {
+        animation: none !important;
+    }
+
+    .app-loader-enter-active,
+    .app-loader-leave-active {
+        transition: opacity 120ms linear !important;
+    }
+
+    .app-loader-leave-active .app-loader-mark {
+        transform: none;
+    }
+
+    .motion-lift:hover {
+        translate: none;
+    }
+
+    [data-slot='button']:active:not(:disabled) {
+        scale: 1;
+    }
+
+    *,
+    ::before,
+    ::after {
+        animation-delay: 0s !important;
+    }
+}
+
 /* Accessible Reduced Motion Guarantee */
 @media (prefers-reduced-motion: reduce) {
     *,

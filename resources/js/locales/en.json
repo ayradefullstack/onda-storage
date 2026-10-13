@@ -843,5 +843,18 @@
     "consult.meta.previewStatus": "Preview status",
     "oeuvres.show.preview": "Preview",
     "oeuvres.show.previewing": "Previewing",
-    "consult.closePreview": "Close preview"
+    "consult.closePreview": "Close preview",
+    "ui.close": "Close",
+    "ui.backToTop": "Back to top",
+    "ui.combobox.placeholder": "Select…",
+    "ui.combobox.clear": "Clear selection",
+    "ui.combobox.reset": "Reset search",
+    "ui.combobox.unavailable": "Unavailable",
+    "consult.fullscreen": "Full screen",
+    "consult.exitFullscreen": "Exit full screen",
+    "consult.readingProgress": "Reading progress",
+    "loader.loading": "Loading…",
+    "loader.slow": "Just a moment…",
+    "loader.verySlow": "The connection seems slow",
+    "loader.retry": "Try again"
 }

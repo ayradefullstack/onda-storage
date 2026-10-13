@@ -31,6 +31,7 @@ import { ActionButton } from '@/components/ui/action';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { CountUp } from '@/components/ui/count-up';
 import {
     DataTable,
     DataTableToolbar,
@@ -519,7 +520,7 @@ const resetFilters = () => {
                         <span
                             class="text-2xl font-black tracking-tight text-foreground sm:text-3xl"
                         >
-                            {{ totalOeuvresCount }}
+                            <CountUp :value="totalOeuvresCount" />
                         </span>
                         <span class="text-xs text-muted-foreground">
                             {{
@@ -551,7 +552,7 @@ const resetFilters = () => {
                         <span
                             class="text-2xl font-black tracking-tight text-emerald-600 sm:text-3xl dark:text-emerald-400"
                         >
-                            {{ registeredCount }}
+                            <CountUp :value="registeredCount" />
                         </span>
                         <span class="text-xs text-muted-foreground">
                             / {{ totalOeuvresCount }}
@@ -579,7 +580,7 @@ const resetFilters = () => {
                         <span
                             class="text-2xl font-black tracking-tight text-amber-600 sm:text-3xl dark:text-amber-400"
                         >
-                            {{ underReviewCount }}
+                            <CountUp :value="underReviewCount" />
                         </span>
                         <span class="text-xs text-muted-foreground">
                             {{
@@ -611,7 +612,7 @@ const resetFilters = () => {
                         <span
                             class="text-2xl font-black tracking-tight text-onda-teal-600 sm:text-3xl dark:text-onda-teal-400"
                         >
-                            {{ totalFilesCount }}
+                            <CountUp :value="totalFilesCount" />
                         </span>
                         <span class="text-xs text-muted-foreground">
                             {{ t('oeuvres.index.statFiles') }}
@@ -862,9 +863,10 @@ const resetFilters = () => {
                 class="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:p-5 lg:grid-cols-3"
             >
                 <div
-                    v-for="oeuvre in visibleOeuvres"
+                    v-for="(oeuvre, i) in visibleOeuvres"
                     :key="oeuvre.uuid"
-                    class="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-onda-blue-500/40 hover:shadow-xl hover:shadow-onda-blue-600/5 dark:bg-card/90 dark:hover:border-onda-blue-400/40"
+                    :style="{ '--motion-index': i }"
+                    class="group motion-fade-up relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-onda-blue-500/40 hover:shadow-xl hover:shadow-onda-blue-600/5 dark:bg-card/90 dark:hover:border-onda-blue-400/40"
                 >
                     <!-- Top Card Bar: Category & Status Badge -->
                     <div>

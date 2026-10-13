@@ -68,7 +68,9 @@ function onLoaded(): void {
         class="relative flex h-full flex-col items-center justify-center bg-black"
         @contextmenu.prevent
     >
-        <div class="relative flex min-h-0 flex-1 items-center justify-center">
+        <div
+            class="relative flex min-h-0 w-full flex-1 items-center justify-center"
+        >
             <video
                 v-if="src"
                 ref="player"
@@ -79,7 +81,7 @@ function onLoaded(): void {
                 controlslist="nodownload noplaybackrate"
                 disablepictureinpicture
                 preload="metadata"
-                class="max-h-full max-w-full"
+                class="size-full object-contain"
                 @error="onError"
                 @loadedmetadata="onLoaded"
             />

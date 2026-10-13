@@ -10,16 +10,10 @@ import LockedField from '@/components/admin/LockedField.vue';
 import Pagination from '@/components/admin/Pagination.vue';
 import ReferentielShell from '@/components/admin/ReferentielShell.vue';
 import { ActionButton } from '@/components/ui/action';
+import { AppDialog } from '@/components/ui/app-dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { TableScroll } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -321,7 +315,7 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
             v-else
             class="overflow-hidden rounded-lg border border-border bg-card"
         >
-            <div class="overflow-x-auto">
+            <TableScroll>
                 <table class="w-full border-collapse text-xs">
                     <thead>
                         <tr
@@ -492,7 +486,7 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
                         </tr>
                     </tbody>
                 </table>
-            </div>
+            </TableScroll>
 
             <div class="px-3 pb-3">
                 <Pagination
@@ -505,20 +499,17 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
             </div>
         </div>
 
-        <Dialog
+        <AppDialog
             :open="editing !== null"
             @update:open="(o) => !o && (editing = null)"
+            size="lg"
+            :busy="saving"
         >
-            <DialogContent class="sm:max-w-xl">
-                <DialogHeader>
-                    <DialogTitle>{{
-                        t('admin.referentiel.editCollege')
-                    }}</DialogTitle>
-                    <DialogDescription>
-                        <bdi>{{ editing?.name }}</bdi>
-                    </DialogDescription>
-                </DialogHeader>
-
+            <template #title>{{ t('admin.referentiel.editCollege') }}</template>
+            <template #description
+                ><bdi>{{ editing?.name }}</bdi></template
+            >
+            <div class="grid gap-4">
                 <div class="grid gap-4 sm:grid-cols-2">
                     <LockedField
                         :label="t('admin.referentiel.col.code')"
@@ -685,24 +676,23 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
                         {{ t('admin.referentiel.disableWarning.safe') }}
                     </p>
                 </div>
-
-                <DialogFooter class="gap-2 sm:gap-2">
-                    <Button
-                        variant="outline"
-                        class="cursor-pointer"
-                        :disabled="saving"
-                        @click="editing = null"
-                        >{{ t('admin.referentiel.cancel') }}</Button
-                    >
-                    <Button
-                        class="cursor-pointer"
-                        :disabled="saving"
-                        @click="save"
-                        >{{ t('admin.referentiel.save') }}</Button
-                    >
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            </div>
+            <template #footer
+                ><Button
+                    variant="outline"
+                    class="cursor-pointer"
+                    :disabled="saving"
+                    @click="editing = null"
+                    >{{ t('admin.referentiel.cancel') }}</Button
+                >
+                <Button
+                    class="cursor-pointer"
+                    :disabled="saving"
+                    @click="save"
+                    >{{ t('admin.referentiel.save') }}</Button
+                ></template
+            >
+        </AppDialog>
 
         <!-- Create -->
         <CreateDialog

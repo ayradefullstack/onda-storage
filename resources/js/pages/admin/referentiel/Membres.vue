@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
 import { AlertTriangle, Plus } from '@lucide/vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import CreateDialog from '@/components/admin/CreateDialog.vue';
 import EmptyState from '@/components/admin/EmptyState.vue';
@@ -10,25 +10,14 @@ import LockedField from '@/components/admin/LockedField.vue';
 import Pagination from '@/components/admin/Pagination.vue';
 import ReferentielShell from '@/components/admin/ReferentielShell.vue';
 import { ActionButton } from '@/components/ui/action';
+import { AppCombobox } from '@/components/ui/app-combobox';
+import type { ComboboxOption } from '@/components/ui/app-combobox';
+import { AppDialog } from '@/components/ui/app-dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { TableScroll } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { membres as membresRoute } from '@/routes/admin/referentiel';
 import { store, update } from '@/routes/admin/referentiel/membres';
 
@@ -60,6 +49,14 @@ const props = defineProps<{
     filters: { search: string; college: string | null };
     colleges: Array<{ uuid: string; name: string }>;
 }>();
+
+// Colleges are a long list: a searchable combobox, not a plain select.
+const collegeOptions = computed<ComboboxOption[]>(() =>
+    props.colleges.map((college) => ({
+        value: college.uuid,
+        label: college.name,
+    })),
+);
 
 const { t } = useI18n();
 
@@ -204,27 +201,18 @@ const applyCollege = (value: string) => {
         </template>
 
         <template #filters>
-            <Select
-                :model-value="String(filters.college ?? 'all')"
-                @update:model-value="applyCollege(String($event))"
-            >
-                <SelectTrigger class="h-9 w-56 text-sm">
-                    <SelectValue
-                        :placeholder="t('admin.referentiel.allColleges')"
-                    />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="all">{{
-                        t('admin.referentiel.allColleges')
-                    }}</SelectItem>
-                    <SelectItem
-                        v-for="college in colleges"
-                        :key="college.uuid"
-                        :value="college.uuid"
-                        >{{ college.name }}</SelectItem
-                    >
-                </SelectContent>
-            </Select>
+            <div class="w-64">
+                <AppCombobox
+                    size="sm"
+                    :model-value="filters.college ?? null"
+                    :options="collegeOptions"
+                    :placeholder="t('admin.referentiel.allColleges')"
+                    @update:model-value="
+                        (value) =>
+                            applyCollege(value === null ? 'all' : String(value))
+                    "
+                />
+            </div>
         </template>
 
         <EmptyState
@@ -237,7 +225,7 @@ const applyCollege = (value: string) => {
             v-else
             class="overflow-hidden rounded-lg border border-border bg-card"
         >
-            <div class="overflow-x-auto">
+            <TableScroll>
                 <table class="w-full border-collapse text-xs">
                     <thead>
                         <tr
@@ -351,7 +339,7 @@ const applyCollege = (value: string) => {
                         </tr>
                     </tbody>
                 </table>
-            </div>
+            </TableScroll>
 
             <div class="px-3 pb-3">
                 <Pagination
@@ -364,20 +352,17 @@ const applyCollege = (value: string) => {
             </div>
         </div>
 
-        <Dialog
+        <AppDialog
             :open="editing !== null"
             @update:open="(o) => !o && (editing = null)"
+            size="md"
+            :busy="saving"
         >
-            <DialogContent class="sm:max-w-lg">
-                <DialogHeader>
-                    <DialogTitle>{{
-                        t('admin.referentiel.editMember')
-                    }}</DialogTitle>
-                    <DialogDescription>
-                        <bdi>{{ editing?.name }}</bdi>
-                    </DialogDescription>
-                </DialogHeader>
-
+            <template #title>{{ t('admin.referentiel.editMember') }}</template>
+            <template #description
+                ><bdi>{{ editing?.name }}</bdi></template
+            >
+            <div class="grid gap-4">
                 <div class="grid gap-4 sm:grid-cols-2">
                     <LockedField
                         :label="t('admin.referentiel.col.codeQlt')"
@@ -502,24 +487,23 @@ const applyCollege = (value: string) => {
                         {{ t('admin.referentiel.blast.safe') }}
                     </p>
                 </div>
-
-                <DialogFooter class="gap-2 sm:gap-2">
-                    <Button
-                        variant="outline"
-                        class="cursor-pointer"
-                        :disabled="saving"
-                        @click="editing = null"
-                        >{{ t('admin.referentiel.cancel') }}</Button
-                    >
-                    <Button
-                        class="cursor-pointer"
-                        :disabled="saving"
-                        @click="save"
-                        >{{ t('admin.referentiel.save') }}</Button
-                    >
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            </div>
+            <template #footer
+                ><Button
+                    variant="outline"
+                    class="cursor-pointer"
+                    :disabled="saving"
+                    @click="editing = null"
+                    >{{ t('admin.referentiel.cancel') }}</Button
+                >
+                <Button
+                    class="cursor-pointer"
+                    :disabled="saving"
+                    @click="save"
+                    >{{ t('admin.referentiel.save') }}</Button
+                ></template
+            >
+        </AppDialog>
 
         <!-- Create -->
         <CreateDialog
@@ -532,22 +516,17 @@ const applyCollege = (value: string) => {
                 <Label for="new_member_college" class="text-xs">{{
                     t('admin.referentiel.form.parentCollege')
                 }}</Label>
-                <select
+                <AppCombobox
                     id="new_member_college"
-                    v-model="createForm.college"
-                    class="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-                >
-                    <option value="" disabled>
-                        {{ t('admin.referentiel.form.choose') }}
-                    </option>
-                    <option
-                        v-for="college in colleges"
-                        :key="college.uuid"
-                        :value="college.uuid"
-                    >
-                        {{ college.name }}
-                    </option>
-                </select>
+                    size="sm"
+                    :model-value="createForm.college || null"
+                    :options="collegeOptions"
+                    :placeholder="t('admin.referentiel.form.choose')"
+                    :clearable="false"
+                    @update:model-value="
+                        (value) => (createForm.college = String(value ?? ''))
+                    "
+                />
                 <FieldError :error="errors.college" />
             </div>
 
