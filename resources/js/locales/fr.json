@@ -468,8 +468,6 @@
     "oeuvres.show.depositedOn": "Déposé le {date}",
     "oeuvres.show.auditNotice": "Enregistré dans le journal d'audit du dépôt.",
     "oeuvres.show.view": "Voir",
-    "media.preview.error": "Impossible de charger cet aperçu — réessayez dans un instant.",
-    "media.preview.unsupported": "L'aperçu n'est pas encore disponible pour ce type de fichier.",
     "oeuvres.show.stage.queued": "En attente — démarrera automatiquement.",
     "oeuvres.show.stage.finishing": "Finalisation — presque terminé.",
     "oeuvres.show.stage.checking": "Vérification du fichier avant son dépôt.",
@@ -837,5 +835,13 @@
     "consult.pptx.notes": "Notes du présentateur",
     "consult.reason.format_unavailable": "Aperçu indisponible pour ce format.",
     "consult.reason.docx_too_large": "Document trop volumineux pour l'aperçu.",
-    "upload.hint.videoMp4": "Pour une consultation fluide, privilégiez le format MP4 (H.264)."
+    "upload.hint.videoMp4": "Pour une consultation fluide, privilégiez le format MP4 (H.264).",
+    "consult.tab.preview": "Aperçu",
+    "consult.tab.details": "Détails",
+    "consult.meta.slot": "Pièce demandée",
+    "consult.meta.format": "Format",
+    "consult.meta.previewStatus": "État de l’aperçu",
+    "oeuvres.show.preview": "Aperçu",
+    "oeuvres.show.previewing": "Aperçu en cours",
+    "consult.closePreview": "Fermer l’aperçu"
 }

@@ -17,8 +17,9 @@ use Illuminate\Support\Facades\Cache;
  * (`vault.consult.audit_window_minutes`, default 10): re-renders, polling
  * and page changes do not spam the chain. Written through the existing
  * hash-chained AccessLogger — no hand-written rows. Individual Range fetches
- * are NOT logged. A row for a file delivered `original_inline` carries
- * `mode=original_inline`, so original exposures stand out in the trail.
+ * are NOT logged. A file delivered `original_inline` is logged as
+ * `consult_original` instead of `admin_consult`, so original exposures stand
+ * out in the trail.
  *
  * `$moment` is `open` (the review page was opened) or `issue` (descriptors /
  * signed URLs were issued again), each windowed on its own.
@@ -36,17 +37,23 @@ final class AuditConsultation
             return false;
         }
 
+        // An ORIGINAL exposure is its own action, so the ledger tells it
+        // apart from a derivative consultation. `range_header` stays for
+        // real Range data only (it is null here).
+        $original = $this->resolver->modeFor($mediaFile) === DeliveryMode::OriginalInline;
+
+        // The owner previewing their own file is recorded the way the owner's
+        // media.stream access already is: action `stream`.
+        $action = ! $admin->hasRole('admin')
+            ? 'stream'
+            : ($original ? 'consult_original' : 'admin_consult');
+
         AccessLogger::record(
             $mediaFile,
             $admin->id,
-            'admin_consult',
+            $action,
             $request->ip() ?? 'unknown',
             $request->userAgent(),
-            null,
-            // The ledger has no context column (and `action` is an enum), so
-            // an ORIGINAL exposure is marked in `range_header`, which is
-            // hash-chained with the row: `mode=original_inline`.
-            $this->resolver->modeFor($mediaFile) === DeliveryMode::OriginalInline ? 'mode=original_inline' : null,
         );
 
         return true;

@@ -209,6 +209,9 @@ return [
         'url_ttl_minutes' => (int) env('VAULT_CONSULT_URL_TTL', 30),
         'audit_window_minutes' => (int) env('VAULT_CONSULT_AUDIT_WINDOW', 10),
         'watermark' => (bool) env('VAULT_CONSULT_WATERMARK', true),
+        // The author previewing their OWN deposit: off by default (the mark
+        // exists to make an admin's leak attributable).
+        'watermark_for_owner' => (bool) env('VAULT_CONSULT_WATERMARK_FOR_OWNER', false),
         'pdf_max_pages' => (int) env('VAULT_CONSULT_PDF_MAX_PAGES', 300),
         'page_max_edge' => (int) env('VAULT_CONSULT_PAGE_MAX_EDGE', 1600),
         'image_max_edge' => (int) env('VAULT_CONSULT_IMAGE_MAX_EDGE', 2000),

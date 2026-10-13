@@ -16,12 +16,15 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Gate for a signed consultation-asset URL. By the time this runs the route
- * group has already required: authenticated, verified, role admin; and the
- * `signed` middleware has verified the signature and expiry. Left to check:
+ * group has already required: authenticated, verified, role admin (or role
+ * author on the owner's routes); and the `signed` middleware has verified the
+ * signature and expiry. Left to check:
  *
- *  - the `admin` parameter inside the signature is THIS session's user (a URL
- *    copied into another admin's session fails),
- *  - the oeuvre is consultable (the same `inspect` rule as the oeuvre page),
+ *  - the `admin` (admin routes) or `u` (the owning author's routes) parameter
+ *    inside the signature is THIS session's user (a URL copied into another
+ *    session fails),
+ *  - the oeuvre is consultable: an admin by the `inspect` rule of the oeuvre
+ *    page, an author only on their OWN oeuvre (`preview`; a 404 otherwise),
  *  - the media file's consultation is `ready`,
  *  - for the consult-ORIGINAL route only: the family's delivery mode is
  *    `original_inline` (404 otherwise — checked before `ready`, so a file
@@ -38,17 +41,28 @@ final class EnsureConsultationAccess
     {
         $user = $request->user();
 
-        abort_unless($user !== null && $user->hasRole('admin'), 403);
-        abort_unless((int) $request->query('admin') === $user->id, 403, 'This link was issued to a different session.');
+        abort_unless($user !== null, 403);
+
+        // The issuing user's id is inside the signature: `admin` on the admin
+        // routes, `u` on the owner's. A URL replayed in another session fails.
+        $admin = $user->hasRole('admin');
+
+        abort_unless((int) $request->query($admin ? 'admin' : 'u') === $user->id, 403, 'This link was issued to a different session.');
 
         $oeuvre = $request->route('oeuvre');
         $mediaFile = $request->route('mediaFile');
 
         abort_unless($oeuvre instanceof Oeuvre && $mediaFile instanceof MediaFile, 404);
 
-        Gate::forUser($user)->authorize('inspect', $oeuvre);
+        if ($admin) {
+            Gate::forUser($user)->authorize('inspect', $oeuvre);
+        } else {
+            // The owner only. Anyone else gets a 404, never a 403, so a probe
+            // cannot confirm that the file exists.
+            abort_unless(Gate::forUser($user)->allows('preview', $oeuvre), 404);
+        }
 
-        if ($request->route()?->getName() === 'admin.oeuvres.files.consult.original') {
+        if (str_ends_with((string) $request->route()?->getName(), 'files.consult.original')) {
             abort_unless($this->resolver->modeFor($mediaFile) === DeliveryMode::OriginalInline, 404);
         }
 

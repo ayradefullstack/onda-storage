@@ -293,6 +293,11 @@ test('no route exists that changes an existing oeuvre\'s classification', functi
         'GET admin.oeuvres.files.review',
         'GET admin.oeuvres.files.review.assets',
         'GET admin.oeuvres.show',
+        // The owner's own read-only preview (same consultation module).
+        'GET oeuvres.files.consult.asset',
+        'GET oeuvres.files.consult.original',
+        'GET oeuvres.files.preview',
+        'GET oeuvres.files.preview.assets',
         'GET oeuvres.show',
         'POST admin.oeuvres.approve',
         'POST admin.oeuvres.reject',

@@ -1,9 +1,13 @@
 <?php
 
+use App\Http\Controllers\Admin\ConsultationAssetController;
+use App\Http\Controllers\Admin\ConsultOriginalController;
 use App\Http\Controllers\Author\MediaFileController;
 use App\Http\Controllers\Author\OeuvreController;
+use App\Http\Controllers\Author\OeuvreFilePreviewController;
 use App\Http\Controllers\Author\OeuvreSubmissionController;
 use App\Http\Controllers\Author\UploadController;
+use App\Http\Middleware\EnsureConsultationAccess;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified', 'role:author'])->prefix('author')->name('author.')->group(function () {
@@ -27,6 +31,24 @@ Route::middleware(['auth', 'verified', 'role:author'])->prefix('author/oeuvres')
     // There is deliberately no counterpart that edits an oeuvre's
     // classification — see OeuvrePolicy::update()'s doc comment.
     Route::delete('/files/{mediaFile:uuid}', [MediaFileController::class, 'destroy'])->name('files.destroy');
+
+    // Preview of the author's OWN files, through the same consultation module
+    // as the admin review. The file is resolved through the oeuvre (scoped
+    // bindings) and ownership is a 404, never a 403. The asset and original
+    // routes reuse the admin controllers; the signed URL carries the issuing
+    // author's id (`u`), checked by EnsureConsultationAccess.
+    Route::scopeBindings()->group(function () {
+        Route::get('/{oeuvre:uuid}/files/{mediaFile:uuid}/preview', [OeuvreFilePreviewController::class, 'show'])
+            ->name('files.preview');
+        Route::get('/{oeuvre:uuid}/files/{mediaFile:uuid}/preview/assets', [OeuvreFilePreviewController::class, 'assets'])
+            ->name('files.preview.assets');
+        Route::get('/{oeuvre:uuid}/files/{mediaFile:uuid}/consult/{asset}', ConsultationAssetController::class)
+            ->middleware(['signed', EnsureConsultationAccess::class])
+            ->name('files.consult.asset');
+        Route::get('/{oeuvre:uuid}/files/{mediaFile:uuid}/original', ConsultOriginalController::class)
+            ->middleware(['signed', EnsureConsultationAccess::class])
+            ->name('files.consult.original');
+    });
 });
 
 // Named `author.oeuvres.submit` as the deposit brief specifies, which is

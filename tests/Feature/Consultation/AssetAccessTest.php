@@ -157,7 +157,15 @@ test('a URL is refused when the consultation is not ready', function () {
 });
 
 test('an author, even the owner, cannot use a consultation URL', function () {
-    $url = consultUrl($this, $this->author);
+    // An ADMIN-route URL, signed with the author's own id: the admin group
+    // still refuses the author. (The owner's own preview routes are covered
+    // in AuthorFilePreviewTest.)
+    $url = URL::temporarySignedRoute('admin.oeuvres.files.consult.asset', now()->addMinutes(5), [
+        'oeuvre' => $this->oeuvre->uuid,
+        'mediaFile' => $this->file->uuid,
+        'asset' => $this->asset->uuid,
+        'admin' => $this->author->id,
+    ]);
 
     $this->actingAs($this->author)->get($url)->assertForbidden();
 });

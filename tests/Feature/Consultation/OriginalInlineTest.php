@@ -6,6 +6,7 @@ use App\Actions\Consultation\ConsultationDescriptor;
 use App\Actions\Consultation\GenerateDerivative;
 use App\Actions\Consultation\IssueOriginalUrl;
 use App\Domain\Access\SignedMediaUrl;
+use App\Domain\Deposit\Value\RowHash;
 use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Value\UploadIntent;
 use App\Infrastructure\Render\DeliveryMode;
@@ -16,6 +17,7 @@ use App\Models\FileAccessLog;
 use App\Models\MediaConsultation;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
@@ -184,16 +186,72 @@ test('a docx above docx_max_bytes gets a too-large card and no original url', fu
     $this->actingAs($this->admin)->get(originalUrl($this, file: $file))->assertNotFound();
 });
 
-test('descriptor issuance for an original_inline file is audited once per window with the mode in the row', function () {
+test('descriptor issuance for an original_inline file is one consult_original row per window, and range_header stays empty', function () {
     $json = fn () => $this->actingAs($this->admin)->getJson(route('admin.oeuvres.files.review.assets', [$this->oeuvre, $this->file]));
 
     $json()->assertOk();
     $json()->assertOk();
 
-    $rows = FileAccessLog::where('media_file_id', $this->file->id)->where('action', 'admin_consult')->get();
+    $rows = FileAccessLog::where('media_file_id', $this->file->id)->get();
 
     expect($rows)->toHaveCount(1)
-        ->and($rows[0]->range_header)->toBe('mode=original_inline');
+        ->and($rows[0]->action)->toBe('consult_original')
+        ->and($rows[0]->user_id)->toBe($this->admin->id)
+        ->and($rows[0]->range_header)->toBeNull();
+});
+
+test('a derivative file is still logged as admin_consult', function () {
+    $text = consultFile($this->author, $this->oeuvre, 'notes', 'notes.txt', 'text/plain');
+    $this->files[] = $text;
+    consultGenerate($text);
+
+    $this->actingAs($this->admin)->getJson(route('admin.oeuvres.files.review.assets', [$this->oeuvre, $text]))->assertOk();
+
+    expect(FileAccessLog::where('media_file_id', $text->id)->pluck('action')->all())->toBe(['admin_consult']);
+});
+
+test('the hash chain stays valid across consult_original rows', function () {
+    Carbon::setTestNow('2026-10-13 10:00:00.123');
+
+    $text = consultFile($this->author, $this->oeuvre, 'notes', 'notes.txt', 'text/plain');
+    $this->files[] = $text;
+    consultGenerate($text);
+
+    $get = fn ($file) => $this->actingAs($this->admin)->getJson(route('admin.oeuvres.files.review.assets', [$this->oeuvre, $file]))->assertOk();
+    $get($this->file); // consult_original
+    $get($text);       // admin_consult
+    $other = consultAdmin();
+    $this->actingAs($other)->getJson(route('admin.oeuvres.files.review.assets', [$this->oeuvre, $this->file]))->assertOk(); // consult_original
+
+    $rows = FileAccessLog::orderBy('id')->get();
+
+    expect($rows->pluck('action')->all())->toBe(['consult_original', 'admin_consult', 'consult_original']);
+
+    $previous = null;
+
+    foreach ($rows as $row) {
+        $payload = [
+            'action' => $row->action,
+            'media_file_uuid' => MediaFile::find($row->media_file_id)->uuid,
+            'user_id' => $row->user_id,
+            'ip' => $row->ip,
+            'range_header' => $row->range_header,
+            'logged_at' => now()->toISOString(),
+        ];
+
+        expect($row->prev_hash)->toBe($previous)
+            ->and(RowHash::verify($previous, $payload, $row->row_hash))->toBeTrue();
+
+        $previous = $row->row_hash;
+    }
+
+    // Changing the action of a stored row breaks its own hash.
+    $first = $rows[0];
+    $forged = ['action' => 'admin_consult', 'media_file_uuid' => $this->file->uuid, 'user_id' => $first->user_id, 'ip' => $first->ip, 'range_header' => null, 'logged_at' => now()->toISOString()];
+
+    expect(RowHash::verify(null, $forged, $first->row_hash))->toBeFalse();
+
+    Carbon::setTestNow();
 });
 
 // --- the endpoint -------------------------------------------------------------
@@ -405,7 +463,14 @@ test('a family configured derivative or unsupported is a 404', function (string 
 })->with(['derivative', 'unsupported']);
 
 test('a non-admin, even the owner, is denied', function () {
-    $this->actingAs($this->author)->get(originalUrl($this, $this->author))->assertForbidden();
+    // An ADMIN-route URL signed with the author's id: the admin group refuses.
+    $url = URL::temporarySignedRoute('admin.oeuvres.files.consult.original', now()->addMinutes(5), [
+        'oeuvre' => $this->oeuvre->uuid,
+        'mediaFile' => $this->file->uuid,
+        'admin' => $this->author->id,
+    ]);
+
+    $this->actingAs($this->author)->get($url)->assertForbidden();
 });
 
 test('a guest is sent away', function () {

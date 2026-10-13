@@ -6,6 +6,7 @@ import {
     CheckCircle2,
     CodeXml,
     Copy,
+    ExternalLink,
     Eye,
     File,
     FileText,
@@ -19,9 +20,9 @@ import {
     Trash2,
     TriangleAlert,
 } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
+import { computed, inject, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import MediaPreviewDialog from '@/components/media/MediaPreviewDialog.vue';
+import { FILE_PREVIEW } from '@/components/consult/previewContext';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -49,6 +50,7 @@ import {
     formatSpeed,
     truncateFilenameMiddle,
 } from '@/lib/format';
+import { preview } from '@/routes/oeuvres/files';
 
 const props = defineProps<{
     entry: DepositEntry;
@@ -167,17 +169,27 @@ const fileDetails = computed(() => {
     return { icon: File, color: 'text-muted-foreground', bg: 'bg-muted/40' };
 });
 
-const isPreviewable = computed(() => {
-    const mime = mediaFile.value?.mime ?? '';
+// The oeuvre page provides the side Viewer; a card outside it has no preview.
+const previewContext = inject(FILE_PREVIEW, null);
+const selected = computed(
+    () =>
+        previewContext !== null &&
+        mediaFile.value?.uuid === previewContext.selectedUuid.value,
+);
 
-    return (
-        mime.startsWith('image/') ||
-        mime.startsWith('video/') ||
-        mime.startsWith('audio/') ||
-        mime === 'application/pdf'
-    );
-});
-const previewOpen = ref(false);
+// Any deposited file that finished processing can be previewed: the
+// consultation module itself says, per format, what it can show.
+const isPreviewable = computed(
+    () => mediaFile.value?.status === 'ready' && previewContext !== null,
+);
+const previewHref = computed(() =>
+    mediaFile.value && previewContext
+        ? preview({
+              oeuvre: previewContext.oeuvreUuid,
+              mediaFile: mediaFile.value.uuid,
+          }).url
+        : null,
+);
 
 const dimensions = computed(() => {
     const m = mediaFile.value;
@@ -336,7 +348,9 @@ async function copyFingerprint(): Promise<void> {
                     : uploadFile?.status === 'uploading'
                       ? 'border-onda-blue-500/50 bg-card shadow-sm ring-1 ring-onda-blue-500/20'
                       : 'border-border/80 bg-card/60',
+            selected ? 'ring-2 ring-primary' : '',
         ]"
+        :data-selected="selected ? 'true' : undefined"
     >
         <!-- File Header Row -->
         <div class="flex items-center justify-between gap-3">
@@ -689,16 +703,29 @@ async function copyFingerprint(): Promise<void> {
                 <div
                     class="flex shrink-0 items-center gap-2 self-end sm:self-center"
                 >
-                    <Button
-                        v-if="isPreviewable"
-                        size="sm"
-                        variant="outline"
-                        class="h-8 cursor-pointer gap-1.5 border-border text-xs font-semibold shadow-xs hover:border-onda-blue-500/50"
-                        @click="previewOpen = true"
-                    >
-                        <Eye class="size-3.5" />
-                        <span>{{ t('oeuvres.show.view') }}</span>
-                    </Button>
+                    <template v-if="isPreviewable && mediaFile">
+                        <Button
+                            size="sm"
+                            :variant="selected ? 'default' : 'outline'"
+                            :aria-pressed="selected ? 'true' : 'false'"
+                            class="h-8 cursor-pointer gap-1.5 text-xs font-semibold shadow-xs"
+                            @click="previewContext?.open(mediaFile.uuid)"
+                        >
+                            <Eye class="size-3.5" />
+                            <span>{{ t('oeuvres.show.preview') }}</span>
+                        </Button>
+                        <a
+                            v-if="previewHref"
+                            :href="previewHref"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground shadow-xs hover:text-foreground"
+                            :title="t('consult.openInNewTab')"
+                            :aria-label="t('consult.openInNewTab')"
+                        >
+                            <ExternalLink class="size-3.5" />
+                        </a>
+                    </template>
                 </div>
             </div>
         </template>
@@ -837,14 +864,6 @@ async function copyFingerprint(): Promise<void> {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-
-        <!-- PREVIEW MODAL -->
-        <MediaPreviewDialog
-            v-if="mediaFile"
-            :open="previewOpen"
-            :media-file="mediaFile"
-            @update:open="previewOpen = $event"
-        />
     </div>
 </template>
 

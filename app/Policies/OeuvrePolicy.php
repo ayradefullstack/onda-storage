@@ -20,6 +20,16 @@ final class OeuvrePolicy
     }
 
     /**
+     * Read-only preview of the author's own files, in every status. Owner
+     * only; the preview routes turn a refusal into a 404 so a probe cannot
+     * tell that another author's file exists.
+     */
+    public function preview(User $user, Oeuvre $oeuvre): bool
+    {
+        return $user->id === $oeuvre->author_id;
+    }
+
+    /**
      * Governs editing the deposit: adding files, and removing them.
      *
      * Two conditions, not one: the author must own it, AND the deposit

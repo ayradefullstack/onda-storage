@@ -468,8 +468,6 @@
     "oeuvres.show.depositedOn": "تم الإيداع في {date}",
     "oeuvres.show.auditNotice": "مُسجَّل في سجل تدقيق هذا الإيداع.",
     "oeuvres.show.view": "معاينة",
-    "media.preview.error": "تعذّر تحميل هذه المعاينة — أعيدوا المحاولة بعد قليل.",
-    "media.preview.unsupported": "المعاينة غير متاحة بعد لهذا النوع من الملفات.",
     "oeuvres.show.stage.queued": "في الانتظار — سيبدأ تلقائيًا.",
     "oeuvres.show.stage.finishing": "جارٍ الإنهاء — كدنا ننتهي.",
     "oeuvres.show.stage.checking": "جارٍ فحص الملف قبل إيداعه.",
@@ -837,5 +835,13 @@
     "consult.pptx.notes": "ملاحظات المقدّم",
     "consult.reason.format_unavailable": "المعاينة غير متاحة لهذه الصيغة.",
     "consult.reason.docx_too_large": "المستند كبير جدًا للمعاينة.",
-    "upload.hint.videoMp4": "لمعاينة سلسة، يُفضَّل صيغة MP4 (H.264)."
+    "upload.hint.videoMp4": "لمعاينة سلسة، يُفضَّل صيغة MP4 (H.264).",
+    "consult.tab.preview": "معاينة",
+    "consult.tab.details": "التفاصيل",
+    "consult.meta.slot": "الوثيقة المطلوبة",
+    "consult.meta.format": "الصيغة",
+    "consult.meta.previewStatus": "حالة المعاينة",
+    "oeuvres.show.preview": "معاينة",
+    "oeuvres.show.previewing": "قيد المعاينة",
+    "consult.closePreview": "إغلاق المعاينة"
 }

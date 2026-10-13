@@ -468,8 +468,6 @@
     "oeuvres.show.depositedOn": "Deposited {date}",
     "oeuvres.show.auditNotice": "Recorded in the deposit's audit trail.",
     "oeuvres.show.view": "View",
-    "media.preview.error": "Couldn't load this preview — try again in a moment.",
-    "media.preview.unsupported": "Preview isn't available yet for this file type.",
     "oeuvres.show.stage.queued": "Queued — will start automatically.",
     "oeuvres.show.stage.finishing": "Finishing up — almost there.",
     "oeuvres.show.stage.checking": "Checking the file before it's deposited.",
@@ -837,5 +835,13 @@
     "consult.pptx.notes": "Speaker notes",
     "consult.reason.format_unavailable": "Preview unavailable for this format.",
     "consult.reason.docx_too_large": "Document too large for the preview.",
-    "upload.hint.videoMp4": "For smooth review, prefer the MP4 (H.264) format."
+    "upload.hint.videoMp4": "For smooth review, prefer the MP4 (H.264) format.",
+    "consult.tab.preview": "Preview",
+    "consult.tab.details": "Details",
+    "consult.meta.slot": "Required document",
+    "consult.meta.format": "Format",
+    "consult.meta.previewStatus": "Preview status",
+    "oeuvres.show.preview": "Preview",
+    "oeuvres.show.previewing": "Previewing",
+    "consult.closePreview": "Close preview"
 }

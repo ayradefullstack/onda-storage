@@ -103,7 +103,7 @@ final class ConsultationDescriptor
             'assets' => $assets,
             'pageCount' => $consultation?->page_count,
             // Label for the CSS watermark overlay; null turns it off.
-            'watermark' => config('vault.consult.watermark') ? $viewer->email : null,
+            'watermark' => config($viewer->hasRole('admin') ? 'vault.consult.watermark' : 'vault.consult.watermark_for_owner') ? $viewer->email : null,
             'meta' => [
                 'filename' => $mediaFile->original_name,
                 'sizeBytes' => $mediaFile->size_bytes,

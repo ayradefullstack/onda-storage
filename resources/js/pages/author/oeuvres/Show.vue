@@ -7,9 +7,14 @@ import {
     Send,
     ShieldCheck,
     Sparkles,
+    X,
+    ExternalLink,
 } from '@lucide/vue';
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import ConsultViewer from '@/components/consult/ConsultViewer.vue';
+import { FILE_PREVIEW } from '@/components/consult/previewContext';
+import { useSideViewer } from '@/components/consult/useSideViewer';
 import ClassificationCard from '@/components/oeuvre/ClassificationCard.vue';
 import type { OeuvreClassification } from '@/components/oeuvre/ClassificationCard.vue';
 import { oeuvreLabel } from '@/components/oeuvre/label';
@@ -29,13 +34,15 @@ import type { RequirementSlot } from '@/components/upload/requirement';
 import RequirementSlotCard from '@/components/upload/RequirementSlotCard.vue';
 import ResumeBanner from '@/components/upload/ResumeBanner.vue';
 import { useUploadQueue } from '@/composables/useUploadQueue';
-import { formatBytes, formatDate } from '@/lib/format';
+import { formatBytes, formatDate, truncateFilenameMiddle } from '@/lib/format';
 import {
     allowedExtensionList,
     MAX_FILE_SIZE_BYTES,
 } from '@/lib/uploadValidation';
 import { index } from '@/routes/oeuvres';
-import { destroy as destroyFile } from '@/routes/oeuvres/files';
+import { destroy as destroyFile, preview } from '@/routes/oeuvres/files';
+import { assets as previewAssets } from '@/routes/oeuvres/files/preview';
+import type { ConsultationDescriptor } from '@/types/consultation';
 import type { MediaFileStatus, MediaFileSummary } from '@/types/upload';
 
 interface OeuvreDetail {
@@ -94,6 +101,65 @@ defineOptions({
 });
 
 const editable = computed(() => props.oeuvre.can.edit);
+
+// The side Viewer: the same ConsultViewer as the full preview page. The
+// selection state (and the stale-reply guard) lives in useSideViewer; this
+// only supplies how an owner's descriptor is fetched.
+async function loadDescriptor(
+    uuid: string,
+): Promise<ConsultationDescriptor | null> {
+    try {
+        const response = await fetch(
+            previewAssets({ oeuvre: props.oeuvre.uuid, mediaFile: uuid }).url,
+            {
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json' },
+            },
+        );
+
+        if (!response.ok) {
+            return null;
+        }
+
+        return (
+            (await response.json()) as { consultation: ConsultationDescriptor }
+        ).consultation;
+    } catch {
+        return null;
+    }
+}
+
+const {
+    selectedUuid,
+    descriptor: viewerDescriptor,
+    select: selectFile,
+    refresh: refreshViewer,
+} = useSideViewer(null, loadDescriptor);
+
+const selectedFile = computed(
+    () => props.mediaFiles.find((m) => m.uuid === selectedUuid.value) ?? null,
+);
+
+function openPreview(uuid: string): void {
+    if (uuid === selectedUuid.value) {
+        void refreshViewer();
+
+        return;
+    }
+
+    selectFile(uuid);
+}
+
+provide(FILE_PREVIEW, {
+    oeuvreUuid: props.oeuvre.uuid,
+    selectedUuid,
+    open: openPreview,
+});
+
+function closePreview(): void {
+    selectedUuid.value = null;
+    viewerDescriptor.value = null;
+}
 
 const submitDialogFor = ref<{ uuid: string; label: string } | null>(null);
 
@@ -273,7 +339,10 @@ const statusBadge = computed(() => {
 <template>
     <Head :title="label" />
 
-    <div class="mx-auto w-full max-w-5xl space-y-8 p-4 sm:p-6 lg:p-8">
+    <div
+        class="mx-auto w-full max-w-5xl space-y-8 p-4 sm:p-6 lg:p-8"
+        :class="selectedFile ? 'lg:pe-[30rem]' : ''"
+    >
         <!-- Top Hero Navigation & Meta Header -->
         <div class="space-y-4">
             <div class="flex flex-wrap items-center justify-between gap-3">
@@ -694,6 +763,52 @@ const statusBadge = computed(() => {
                 />
             </div>
         </template>
+
+        <!-- The side Viewer: the owner's own file, read-only. -->
+        <aside
+            v-if="selectedFile"
+            data-testid="side-viewer"
+            class="fixed inset-y-0 end-0 z-40 flex w-full flex-col gap-2 border-s bg-background p-3 shadow-xl sm:w-[28rem]"
+        >
+            <div class="flex items-center gap-2">
+                <h2 class="min-w-0 flex-1 truncate text-sm font-semibold">
+                    <bdi dir="ltr">{{
+                        truncateFilenameMiddle(selectedFile.original_name, 40)
+                    }}</bdi>
+                </h2>
+                <a
+                    :href="
+                        preview({
+                            oeuvre: oeuvre.uuid,
+                            mediaFile: selectedFile.uuid,
+                        }).url
+                    "
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="p-2 text-muted-foreground hover:text-foreground"
+                    :title="t('consult.openInNewTab')"
+                    :aria-label="t('consult.openInNewTab')"
+                >
+                    <ExternalLink class="size-4" />
+                </a>
+                <button
+                    type="button"
+                    class="cursor-pointer p-2 text-muted-foreground hover:text-foreground"
+                    :aria-label="t('consult.closePreview')"
+                    @click="closePreview"
+                >
+                    <X class="size-4" />
+                </button>
+            </div>
+            <div class="min-h-0 flex-1">
+                <ConsultViewer
+                    :descriptor="viewerDescriptor"
+                    :file-key="selectedUuid ?? ''"
+                    compact
+                    @refresh="refreshViewer"
+                />
+            </div>
+        </aside>
 
         <!-- Official Submission Confirmation Dialog -->
         <OeuvreSubmitDialog
