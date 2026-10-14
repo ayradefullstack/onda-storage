@@ -1,39 +1,24 @@
 /**
- * The officer's decisions, as the pages see them: which actions a deposit
- * offers right now, why "Accepter" is greyed, and one function that posts a
- * decision and tells its four outcomes apart.
+ * The officer's decisions, as the review dialog sees them: the server's
+ * summary of a deposit (which decisions it offers right now, and why
+ * "Accepter" is greyed), and one function that posts a decision and tells
+ * its outcomes apart.
  *
- * Everything here is ADVISORY. The server re-decides every time — under a
- * row lock, with the same gate — so a button this file offers can still be
- * refused, and that refusal is one of the outcomes below, never an error.
+ * The page never decides which buttons to show: `allowed` comes from
+ * GET admin/oeuvres/{oeuvre}/decision, computed with the same rules the
+ * POST routes enforce. Even so it is advisory — the server re-decides every
+ * time, under a row lock — so a decision it offered can still be refused,
+ * and that refusal is one of the outcomes below, never an error.
  */
 
 export type OeuvreStatus =
     'draft' | 'submitted' | 'under_review' | 'registered' | 'rejected';
-
-export interface Holder {
-    uuid: string;
-    name: string;
-    is_you: boolean;
-}
 
 /** One reason a registration is refused: a code and what it is about. */
 export interface Problem {
     code: string;
     params: Record<string, string | number | null>;
     message: string;
-}
-
-export interface Checks {
-    files: number;
-    /** Files the pipeline has not finished with. */
-    pending: number;
-    /** Files that failed or were quarantined. */
-    blocked: number;
-    /** Unconditional required documents with no ready file. */
-    missing_required: number;
-    /** The same problems by name, when the page has them. */
-    problems?: Problem[];
 }
 
 export interface Conflict {
@@ -53,99 +38,67 @@ export type Outcome =
     | { kind: 'invalid'; errors: Record<string, string[]> }
     | { kind: 'failed' };
 
+export type AllowedDecision =
+    'open_review' | 'take_over' | 'approve' | 'reject';
+
+/** GET admin/oeuvres/{oeuvre}/decision. */
+export interface DecisionSummary {
+    uuid: string;
+    status: OeuvreStatus;
+    reference: string;
+    title: string | null;
+    author: { name: string } | null;
+    college: string | null;
+    createdAt: string | null;
+    submittedAt: string | null;
+    /** Only while under review: who has it open. */
+    holder: { id: string; name: string } | null;
+    heldByMe: boolean;
+    checklist: {
+        noFiles: boolean;
+        /** Unconditional required documents with no ready file. */
+        requiredMissing: string[];
+        /** Every file the pipeline has not finished with, or gave up on. */
+        filesNotReady: { name: string; status: string }[];
+        /** Advisory: documents that may not apply to this deposit. */
+        conditionalMissing: string[];
+    };
+    allowed: AllowedDecision[];
+    /** Permitted by status and holder, refused by the checklist. */
+    blocked: AllowedDecision[];
+    lastDecision: { to: string; by: string | null; at: string | null } | null;
+}
+
+export type SummaryResult =
+    | { kind: 'ok'; summary: DecisionSummary }
+    | { kind: 'failed'; status: number | null };
+
+/** Never throws: a network failure or a refusal is `failed`. */
+export async function fetchSummary(url: string): Promise<SummaryResult> {
+    try {
+        const response = await fetch(url, {
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            return { kind: 'failed', status: response.status };
+        }
+
+        return {
+            kind: 'ok',
+            summary: (await response.json()) as DecisionSummary,
+        };
+    } catch {
+        return { kind: 'failed', status: null };
+    }
+}
+
 export const REASON_MIN = 20;
 export const REASON_MAX = 2000;
-
-export interface Actions {
-    start: boolean;
-    accept: boolean;
-    reject: boolean;
-    /** Another officer holds it: nothing but an explicit take-over. */
-    takeOver: boolean;
-}
-
-const NONE: Actions = {
-    start: false,
-    accept: false,
-    reject: false,
-    takeOver: false,
-};
-
-/**
- * The transitions the status machine has for this deposit, for this
- * officer. `submitted` can only be opened; a decision needs it open first.
- */
-export function availableActions(
-    status: string,
-    holder: Holder | null,
-    canDecide: boolean,
-): Actions {
-    if (!canDecide) {
-        return NONE;
-    }
-
-    if (status === 'submitted') {
-        return { ...NONE, start: true };
-    }
-
-    if (status !== 'under_review') {
-        return NONE;
-    }
-
-    if (holder !== null && !holder.is_you) {
-        return { ...NONE, takeOver: true };
-    }
-
-    return { ...NONE, accept: true, reject: true };
-}
-
-export type BlockerKey =
-    'noFiles' | 'pendingFiles' | 'blockedFiles' | 'missingRequired';
-
-export interface Blocker {
-    key: BlockerKey;
-    count: number;
-}
-
-/** Why "Accepter" is disabled — empty when it is not. */
-export function acceptBlockers(checks: Checks): Blocker[] {
-    const blockers: Blocker[] = [];
-
-    if (checks.files === 0) {
-        blockers.push({ key: 'noFiles', count: 0 });
-    }
-
-    if (checks.pending > 0) {
-        blockers.push({ key: 'pendingFiles', count: checks.pending });
-    }
-
-    if (checks.blocked > 0) {
-        blockers.push({ key: 'blockedFiles', count: checks.blocked });
-    }
-
-    if (checks.missing_required > 0) {
-        blockers.push({
-            key: 'missingRequired',
-            count: checks.missing_required,
-        });
-    }
-
-    return blockers;
-}
-
-/** The server's problem list as the same counts the checklist shows. */
-export function checksFromProblems(problems: Problem[], files: number): Checks {
-    const count = (...codes: string[]): number =>
-        problems.filter((problem) => codes.includes(problem.code)).length;
-
-    return {
-        files: count('no_files') > 0 ? 0 : files,
-        pending: count('file_in_pipeline'),
-        blocked: count('file_failed', 'file_quarantined'),
-        missing_required: count('slot_empty'),
-        problems,
-    };
-}
 
 export type ReasonState = 'empty' | 'short' | 'ok' | 'long';
 

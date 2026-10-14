@@ -12,6 +12,10 @@ use App\Domain\Deposit\Exceptions\IllegalTransition;
 use App\Domain\Deposit\Exceptions\ReasonRequired;
 use App\Domain\Deposit\Exceptions\ReviewConflict;
 use App\Domain\Deposit\OeuvreStatus;
+use App\Domain\Deposit\OeuvreStatusMachine;
+use App\Domain\Deposit\SubmissionGate;
+use App\Domain\Deposit\Value\SubmissionReason;
+use App\Http\Controllers\Author\OeuvreController as AuthorOeuvreController;
 use App\Http\Controllers\Controller;
 use App\Models\Oeuvre;
 use App\Models\User;
@@ -56,6 +60,127 @@ final class OeuvreReviewController extends Controller
     private const REASON_MIN = 20;
 
     private const REASON_MAX = 2000;
+
+    /** The decisions a summary can offer, in the order the dialog shows them. */
+    private const OPEN_REVIEW = 'open_review';
+
+    private const TAKE_OVER = 'take_over';
+
+    private const APPROVE = 'approve';
+
+    private const REJECT = 'reject';
+
+    /**
+     * Everything the review dialog shows, and the only place it learns
+     * which decisions to offer.
+     *
+     * `allowed` is computed with the same rules the three POST routes
+     * enforce: the policy, the status machine's transition table, the
+     * holder model, and — for `approve` — SubmissionGate. A decision the
+     * status and holder would permit but the gate refuses is listed in
+     * `blocked` instead, so the dialog can show "Accepter" greyed with the
+     * checklist as its reason rather than not at all.
+     *
+     * Advisory like every read: the POST re-decides under a row lock, and
+     * the dialog refetches this after any refusal.
+     */
+    public function summary(Request $request, Oeuvre $oeuvre, SubmissionGate $gate, OeuvreStatusMachine $machine): JsonResponse
+    {
+        /** @var User $officer */
+        $officer = $request->user();
+
+        Gate::forUser($officer)->authorize('inspect', $oeuvre);
+
+        $oeuvre->load([
+            'author:id,name',
+            'registerTypeCollege',
+            'reviewer' => fn ($query) => $query->withTrashed()->select(['id', 'uuid', 'name']),
+        ]);
+
+        $verdict = $gate->evaluate($oeuvre);
+        $underReview = $oeuvre->status === OeuvreStatus::UNDER_REVIEW;
+        // `reviewed_by` outlives the review (it names the decider of a
+        // registered or rejected deposit); it is a *holder* only while the
+        // deposit is open.
+        $holder = $underReview ? $oeuvre->reviewer : null;
+        $heldByOther = $underReview && $oeuvre->reviewed_by !== null && $oeuvre->reviewed_by !== $officer->id;
+
+        $allowed = [];
+        $blocked = [];
+
+        if ($officer->can('decide', $oeuvre)) {
+            if ($machine->can($oeuvre, OeuvreStatus::UNDER_REVIEW, $officer)) {
+                $allowed[] = self::OPEN_REVIEW;
+            } elseif ($heldByOther) {
+                $allowed[] = self::TAKE_OVER;
+            } else {
+                if ($machine->can($oeuvre, OeuvreStatus::REGISTERED, $officer)) {
+                    if ($verdict->passes()) {
+                        $allowed[] = self::APPROVE;
+                    } else {
+                        $blocked[] = self::APPROVE;
+                    }
+                }
+
+                if ($machine->can($oeuvre, OeuvreStatus::REJECTED, $officer)) {
+                    $allowed[] = self::REJECT;
+                }
+            }
+        }
+
+        $names = fn (array $reasons, string ...$codes): array => array_values(array_map(
+            fn (SubmissionReason $reason): string => (string) ($reason->params['name'] ?? ''),
+            array_filter($reasons, fn (SubmissionReason $reason): bool => in_array($reason->code, $codes, true)),
+        ));
+
+        $notReady = [];
+
+        foreach ($verdict->blockers as $reason) {
+            $status = match ($reason->code) {
+                SubmissionReason::FILE_IN_PIPELINE => (string) ($reason->params['status'] ?? ''),
+                SubmissionReason::FILE_FAILED => 'failed',
+                SubmissionReason::FILE_QUARANTINED => 'quarantined',
+                default => null,
+            };
+
+            if ($status !== null) {
+                $notReady[] = ['name' => (string) ($reason->params['name'] ?? ''), 'status' => $status];
+            }
+        }
+
+        $lastDecision = $oeuvre->oeuvreReviews()
+            ->whereIn('to_status', [OeuvreStatus::REGISTERED, OeuvreStatus::REJECTED])
+            ->reorder()
+            ->latest('id')
+            ->with(['actor' => fn ($query) => $query->withTrashed()->select(['id', 'name'])])
+            ->first();
+
+        return response()->json([
+            'uuid' => $oeuvre->uuid,
+            'status' => $oeuvre->status,
+            'reference' => $oeuvre->uuid,
+            'title' => $oeuvre->title,
+            'author' => $oeuvre->author === null ? null : ['name' => $oeuvre->author->name],
+            'college' => AuthorOeuvreController::collegeName($oeuvre),
+            'createdAt' => $oeuvre->created_at?->toIso8601String(),
+            'submittedAt' => $oeuvre->submitted_at?->toIso8601String(),
+            'holder' => $holder === null ? null : ['id' => $holder->uuid, 'name' => $holder->name],
+            'heldByMe' => $underReview && $oeuvre->reviewed_by === $officer->id,
+            'checklist' => [
+                'noFiles' => $names($verdict->blockers, SubmissionReason::NO_FILES) !== [],
+                'requiredMissing' => $names($verdict->blockers, SubmissionReason::SLOT_EMPTY),
+                'filesNotReady' => $notReady,
+                'conditionalMissing' => $names($verdict->advisories, SubmissionReason::SLOT_EMPTY_CONDITIONAL),
+            ],
+            'allowed' => $allowed,
+            'blocked' => $blocked,
+            'lastDecision' => $lastDecision === null ? null : [
+                'to' => $lastDecision->to_status,
+                'by' => $lastDecision->actor?->name,
+                'at' => $lastDecision->created_at?->toIso8601String(),
+            ],
+        ]);
+    }
 
     public function review(Request $request, Oeuvre $oeuvre, OpenReview $open): RedirectResponse|JsonResponse
     {

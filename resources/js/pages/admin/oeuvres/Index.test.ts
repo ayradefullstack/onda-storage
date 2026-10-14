@@ -36,6 +36,9 @@ vi.mock('@/routes/admin/oeuvres', () => {
         review: (uuid: string) => ({ url: `/admin/oeuvres/${uuid}/review` }),
         approve: (uuid: string) => ({ url: `/admin/oeuvres/${uuid}/approve` }),
         reject: (uuid: string) => ({ url: `/admin/oeuvres/${uuid}/reject` }),
+        decision: (uuid: string) => ({
+            url: `/admin/oeuvres/${uuid}/decision`,
+        }),
     };
 });
 
@@ -216,34 +219,60 @@ describe('admin/oeuvres/Index', () => {
         expect(active).toContain(fr['admin.oeuvres.resetFilters']);
     });
 
-    it('puts a decision menu next to View only on rows with a valid transition', async () => {
-        const html = await render({
+    it('has a visible "Examiner" button only on submitted and under-review rows, and no menu', async () => {
+        const html = await render(
+            {
+                ...base,
+                oeuvres: {
+                    ...emptyPaginator,
+                    data: [
+                        row('s1', 'submitted'),
+                        row('r1', 'under_review'),
+                        row('g1', 'registered'),
+                        row('j1', 'rejected'),
+                        row('d1', 'draft', { can_decide: false }),
+                    ],
+                    from: 1,
+                    to: 5,
+                    total: 5,
+                },
+                filters: noFilters,
+                counts: { to_review: 2 },
+            },
+            'fr',
+        );
+
+        // Regression: the decisions used to hide in a dropdown whose menu
+        // rendered off-screen and froze the page. No menu of any kind now.
+        expect(html).not.toContain('decision-menu');
+        expect(html).not.toContain('aria-haspopup="menu"');
+        expect(html).not.toContain('role="menu"');
+
+        const examine = html.match(/<button[^>]*data-testid="examine"[^>]*>/g);
+        expect(examine).toHaveLength(2);
+        expect(examine?.[0]).toContain('aria-label="Examiner : Work s1"');
+        expect(examine?.[1]).toContain('aria-label="Examiner : Work r1"');
+        expect(html.match(/>\s*Examiner\s*</g)).toHaveLength(2);
+
+        // "Voir" stays on every row, whatever its status — a real link.
+        expect(html.match(/data-testid="view"/g)).toHaveLength(5);
+    });
+
+    it('labels the button in Arabic and English', async () => {
+        const props = {
             ...base,
             oeuvres: {
                 ...emptyPaginator,
-                data: [
-                    row('s1', 'submitted'),
-                    row('r1', 'under_review'),
-                    row('g1', 'registered'),
-                    row('j1', 'rejected'),
-                    row('d1', 'draft', { can_decide: false }),
-                ],
+                data: [row('s1', 'submitted')],
                 from: 1,
-                to: 5,
-                total: 5,
+                to: 1,
+                total: 1,
             },
             filters: noFilters,
-            counts: { to_review: 2 },
-        });
+        };
 
-        expect(html.match(/data-testid="decision-menu"/g)).toHaveLength(2);
-        expect(html.match(/data-status="submitted"/g)).toHaveLength(1);
-        expect(html.match(/data-status="under_review"/g)).toHaveLength(1);
-        expect(html).not.toContain('data-status="registered"');
-        expect(html).not.toContain('data-status="rejected"');
-        // "View" stays on every row, whatever its status.
-        expect(
-            html.match(/font-medium text-primary hover:underline/g),
-        ).toHaveLength(5);
+        expect(await render(props, 'ar')).toContain(ar['review.examine']);
+        expect(ar['review.examine']).toBe('مراجعة');
+        expect(await render(props, 'en')).toContain('Review');
     });
 });

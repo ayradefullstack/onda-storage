@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { ExternalLink, FileEdit, MessageSquareWarning } from '@lucide/vue';
+import {
+    ExternalLink,
+    FileEdit,
+    MessageSquareWarning,
+    UserCheck,
+} from '@lucide/vue';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import EmptyState from '@/components/admin/EmptyState.vue';
@@ -10,8 +15,9 @@ import ConsultViewer from '@/components/consult/ConsultViewer.vue';
 import SideViewerLayout from '@/components/consult/SideViewerLayout.vue';
 import { useSideViewer } from '@/components/consult/useSideViewer';
 import { oeuvreLabel } from '@/components/oeuvre/label';
-import type { Checks, Holder, Problem } from '@/components/review/decisions';
-import OeuvreDecisions from '@/components/review/OeuvreDecisions.vue';
+import type { Problem } from '@/components/review/decisions';
+import ExamineButton from '@/components/review/ExamineButton.vue';
+import ReviewDecisionDialog from '@/components/review/ReviewDecisionDialog.vue';
 import ReviewTimeline from '@/components/review/ReviewTimeline.vue';
 import type { ReviewEntry } from '@/components/review/ReviewTimeline.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -55,9 +61,10 @@ const props = defineProps<{
         is_draft?: boolean;
     };
     files: MediaFileDetail[];
-    holder: Holder | null;
+    holder: { uuid: string; name: string; is_you: boolean } | null;
     can_decide: boolean;
-    checks: Checks;
+    /** The dialog fetches its own checklist; kept for the props contract. */
+    checks: Record<string, unknown>;
     advisories: Problem[];
     reviews: ReviewEntry[];
 }>();
@@ -145,6 +152,15 @@ function onDecision(): void {
     router.reload(silent({ only: DECISION_PROPS }));
 }
 
+// "Examiner" opens the same dialog as the table row's: decisions happen
+// there, against the server's own summary, and nowhere else.
+const dialogOpen = ref(false);
+const examinable = computed(
+    () =>
+        props.can_decide &&
+        ['submitted', 'under_review'].includes(props.oeuvre.status),
+);
+
 // An officer opening a resubmission needs last round's reason before
 // reading a single file.
 const previousRejection = computed(() =>
@@ -206,21 +222,37 @@ const previousRejection = computed(() =>
                 </p>
             </div>
 
-            <OeuvreDecisions
-                class="shrink-0"
-                :oeuvre="{
-                    uuid: oeuvre.uuid,
-                    label,
-                    author: oeuvre.author?.name ?? null,
-                    status: oeuvre.status,
-                }"
-                :holder="holder"
-                :checks="checks"
-                :can-decide="can_decide"
-                :advisories="advisories.length"
-                @changed="onDecision"
-            />
+            <div
+                v-if="examinable"
+                class="flex shrink-0 flex-col items-start gap-1.5 sm:items-end"
+                data-testid="decision-bar"
+            >
+                <ExamineButton size="default" @click="dialogOpen = true" />
+                <p
+                    v-if="oeuvre.status === 'under_review' && holder"
+                    class="flex items-center gap-1.5 text-xs text-muted-foreground"
+                    data-testid="holder-notice"
+                >
+                    <UserCheck class="size-3.5 shrink-0" />
+                    <span v-if="holder.is_you">{{
+                        t('review.dialog.heldByYou')
+                    }}</span>
+                    <i18n-t v-else keypath="review.held.other" tag="span">
+                        <template #name>
+                            <bdi class="font-medium text-foreground">{{
+                                holder.name
+                            }}</bdi>
+                        </template>
+                    </i18n-t>
+                </p>
+            </div>
         </div>
+
+        <ReviewDecisionDialog
+            v-model:open="dialogOpen"
+            :oeuvre="oeuvre.uuid"
+            @changed="onDecision"
+        />
 
         <Alert
             v-if="previousRejection?.reason"

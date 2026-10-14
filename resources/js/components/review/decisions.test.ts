@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-    acceptBlockers,
-    availableActions,
-    checksFromProblems,
+    fetchSummary,
     insertAtCursor,
     postDecision,
     REASON_MAX,
@@ -10,102 +8,7 @@ import {
     reasonLength,
     reasonState,
 } from './decisions';
-import type { Checks, Holder } from './decisions';
 import { relativeTime } from './relativeTime';
-
-const me: Holder = { uuid: 'u1', name: 'Amina', is_you: true };
-const other: Holder = { uuid: 'u2', name: 'Karim', is_you: false };
-const clean: Checks = { files: 3, pending: 0, blocked: 0, missing_required: 0 };
-
-const on = (actions: ReturnType<typeof availableActions>): string[] =>
-    Object.entries(actions)
-        .filter(([, offered]) => offered)
-        .map(([name]) => name);
-
-describe('availableActions follows the status machine', () => {
-    it('a submitted deposit can only be opened', () => {
-        expect(on(availableActions('submitted', null, true))).toEqual([
-            'start',
-        ]);
-    });
-
-    it('a deposit you hold (or nobody holds) can be accepted or rejected', () => {
-        expect(on(availableActions('under_review', me, true))).toEqual([
-            'accept',
-            'reject',
-        ]);
-        expect(on(availableActions('under_review', null, true))).toEqual([
-            'accept',
-            'reject',
-        ]);
-    });
-
-    it('a deposit another officer holds offers nothing but a take-over', () => {
-        expect(on(availableActions('under_review', other, true))).toEqual([
-            'takeOver',
-        ]);
-    });
-
-    it.each(['registered', 'rejected', 'draft'])(
-        'a %s deposit offers nothing',
-        (status) => {
-            expect(on(availableActions(status, me, true))).toEqual([]);
-        },
-    );
-
-    it('offers nothing to someone who may not decide', () => {
-        expect(on(availableActions('submitted', null, false))).toEqual([]);
-        expect(on(availableActions('under_review', me, false))).toEqual([]);
-    });
-});
-
-describe('acceptBlockers', () => {
-    it('is empty for a complete deposit', () => {
-        expect(acceptBlockers(clean)).toEqual([]);
-    });
-
-    it('names every reason, with its count', () => {
-        expect(
-            acceptBlockers({
-                files: 4,
-                pending: 2,
-                blocked: 1,
-                missing_required: 1,
-            }),
-        ).toEqual([
-            { key: 'pendingFiles', count: 2 },
-            { key: 'blockedFiles', count: 1 },
-            { key: 'missingRequired', count: 1 },
-        ]);
-    });
-
-    it('blocks a deposit with no file at all', () => {
-        expect(acceptBlockers({ ...clean, files: 0 })).toEqual([
-            { key: 'noFiles', count: 0 },
-        ]);
-    });
-
-    it('rebuilds the same counts from the server problem list', () => {
-        const problem = (code: string) => ({ code, params: {}, message: '' });
-        const checks = checksFromProblems(
-            [
-                problem('file_in_pipeline'),
-                problem('file_failed'),
-                problem('file_quarantined'),
-                problem('slot_empty'),
-            ],
-            5,
-        );
-
-        expect(checks).toMatchObject({
-            files: 5,
-            pending: 1,
-            blocked: 2,
-            missing_required: 1,
-        });
-        expect(checksFromProblems([problem('no_files')], 2).files).toBe(0);
-    });
-});
 
 describe('the rejection reason', () => {
     it('is counted trimmed, like the server counts it', () => {
@@ -276,6 +179,63 @@ describe('postDecision tells the outcomes apart', () => {
             })),
         );
         expect(await postDecision('/x')).toEqual({ kind: 'failed' });
+    });
+});
+
+describe('fetchSummary', () => {
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it('asks for JSON on the same origin and returns the summary', async () => {
+        const summary = { uuid: 'o1', allowed: ['open_review'] };
+        const mock = vi.fn(async () => ({
+            ok: true,
+            status: 200,
+            json: async () => summary,
+        }));
+        vi.stubGlobal('fetch', mock);
+
+        await expect(
+            fetchSummary('/admin/oeuvres/o1/decision'),
+        ).resolves.toEqual({ kind: 'ok', summary });
+
+        const [url, init] = mock.mock.calls[0] as unknown as [
+            string,
+            RequestInit,
+        ];
+        expect(url).toBe('/admin/oeuvres/o1/decision');
+        expect(init.method ?? 'GET').toBe('GET');
+        expect(init.credentials).toBe('same-origin');
+        expect((init.headers as Record<string, string>).Accept).toBe(
+            'application/json',
+        );
+    });
+
+    it('reports a refusal with its status, and a network error without one', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async () => ({
+                ok: false,
+                status: 403,
+                json: async () => ({}),
+            })),
+        );
+        await expect(fetchSummary('/x')).resolves.toEqual({
+            kind: 'failed',
+            status: 403,
+        });
+
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async () => {
+                throw new TypeError('offline');
+            }),
+        );
+        await expect(fetchSummary('/x')).resolves.toEqual({
+            kind: 'failed',
+            status: null,
+        });
     });
 });
 

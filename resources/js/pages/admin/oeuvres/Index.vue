@@ -3,7 +3,7 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import {
     AlertTriangle,
     CheckCircle2,
-    ClipboardCheck,
+    Eye,
     FileText,
     FolderArchive,
     Inbox,
@@ -14,8 +14,8 @@ import {
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { oeuvreLabel } from '@/components/oeuvre/label';
-import type { Checks, Holder } from '@/components/review/decisions';
-import OeuvreDecisions from '@/components/review/OeuvreDecisions.vue';
+import ExamineButton from '@/components/review/ExamineButton.vue';
+import ReviewDecisionDialog from '@/components/review/ReviewDecisionDialog.vue';
 import { Button } from '@/components/ui/button';
 import {
     DataTableFilterPills,
@@ -59,20 +59,13 @@ interface OeuvreRow {
     has_blocking_file: boolean;
     created_at: string;
     submitted_at: string | null;
-    holder?: Holder | null;
-    checks?: Checks;
-    can_decide?: boolean;
 }
 
 /** The officers' queue as one filter value: submitted + under review. */
 const TO_REVIEW = 'to_review';
 
-const NO_CHECKS: Checks = {
-    files: 0,
-    pending: 0,
-    blocked: 0,
-    missing_required: 0,
-};
+/** The statuses a decision can still be taken on: "Examiner" shows. */
+const EXAMINABLE = ['submitted', 'under_review'];
 
 const props = defineProps<{
     oeuvres: {
@@ -140,8 +133,19 @@ function toggleToReview(): void {
     applyFilters({ status: toReviewActive.value ? '' : TO_REVIEW });
 }
 
+// One dialog for the whole table: "Examiner" on a row points it at that
+// oeuvre. It fetches its own summary, so the rows carry nothing for it.
+const examining = ref<string | null>(null);
+const dialogOpen = ref(false);
+
+function examine(uuid: string): void {
+    examining.value = uuid;
+    dialogOpen.value = true;
+}
+
 // After a decision the rows and the queue count are stale; the filters,
-// the page and the scroll position are not.
+// the page and the scroll position are not. The row's badge pulses because
+// its status prop changes under it.
 function onDecision(): void {
     router.reload(silent({ only: ['oeuvres', 'counts'] }));
 }
@@ -734,79 +738,32 @@ function clearFilters(): void {
                                 <div
                                     class="flex items-center justify-end gap-1.5"
                                 >
-                                    <!-- Primary Action: Standalone Review Icon Button -->
-                                    <TooltipProvider :delay-duration="150">
-                                        <Tooltip>
-                                            <TooltipTrigger as-child>
-                                                <Link
-                                                    :href="
-                                                        oeuvreShow(oeuvre.uuid)
-                                                    "
-                                                    class="inline-flex size-8 cursor-pointer items-center justify-center rounded-lg border border-primary/25 bg-primary/10 text-primary shadow-2xs transition-all duration-150 hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none active:scale-95"
-                                                    :aria-label="
-                                                        t(
-                                                            'admin.oeuvres.reviewWork',
-                                                            'مراجعة العمل',
-                                                        ) +
-                                                        ': ' +
-                                                        oeuvreLabel(
-                                                            oeuvre,
-                                                            locale,
-                                                            t(
-                                                                'oeuvres.untitled',
-                                                            ),
-                                                        )
-                                                    "
-                                                >
-                                                    <ClipboardCheck
-                                                        class="size-4 shrink-0"
-                                                    />
-                                                    <span
-                                                        class="sr-only font-medium text-primary hover:underline"
-                                                    >
-                                                        {{
-                                                            t(
-                                                                'admin.oeuvres.view',
-                                                            )
-                                                        }}
-                                                    </span>
-                                                </Link>
-                                            </TooltipTrigger>
-                                            <TooltipContent side="top">
-                                                <p>
-                                                    {{
-                                                        t(
-                                                            'admin.oeuvres.reviewWork',
-                                                            locale === 'ar'
-                                                                ? 'مراجعة العمل'
-                                                                : locale ===
-                                                                    'fr'
-                                                                  ? 'Examiner l’œuvre'
-                                                                  : 'Review work',
-                                                        )
-                                                    }}
-                                                </p>
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
-
-                                    <!-- Secondary Actions: Decisions Overflow Menu -->
-                                    <OeuvreDecisions
-                                        variant="menu"
-                                        :oeuvre="{
-                                            uuid: oeuvre.uuid,
-                                            label: oeuvreLabel(
+                                    <Button
+                                        as-child
+                                        variant="outline"
+                                        size="sm"
+                                    >
+                                        <Link
+                                            :href="oeuvreShow(oeuvre.uuid)"
+                                            data-testid="view"
+                                            :aria-label="`${t('admin.oeuvres.view')} : ${oeuvreLabel(oeuvre, locale, t('oeuvres.untitled'))}`"
+                                        >
+                                            <Eye class="size-4" />
+                                            {{ t('admin.oeuvres.view') }}
+                                        </Link>
+                                    </Button>
+                                    <ExamineButton
+                                        v-if="
+                                            EXAMINABLE.includes(oeuvre.status)
+                                        "
+                                        :label="
+                                            oeuvreLabel(
                                                 oeuvre,
                                                 locale,
                                                 t('oeuvres.untitled'),
-                                            ),
-                                            author: oeuvre.author?.name ?? null,
-                                            status: oeuvre.status,
-                                        }"
-                                        :holder="oeuvre.holder ?? null"
-                                        :checks="oeuvre.checks ?? NO_CHECKS"
-                                        :can-decide="oeuvre.can_decide ?? false"
-                                        @changed="onDecision"
+                                            )
+                                        "
+                                        @click="examine(oeuvre.uuid)"
                                     />
                                 </div>
                             </td>
@@ -818,5 +775,11 @@ function clearFilters(): void {
             <!-- Table Pagination Footer -->
             <DataTablePagination :paginated="oeuvres" show-page-size />
         </section>
+
+        <ReviewDecisionDialog
+            v-model:open="dialogOpen"
+            :oeuvre="examining"
+            @changed="onDecision"
+        />
     </div>
 </template>

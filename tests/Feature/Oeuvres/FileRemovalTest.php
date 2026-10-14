@@ -286,6 +286,9 @@ test('no route exists that changes an existing oeuvre\'s classification', functi
 
     expect($oeuvreRoutes)->toBe([
         'DELETE oeuvres.destroy',
+        // Read-only: the review dialog's summary (status, checklist, the
+        // decisions on offer). Writes nothing.
+        'GET admin.oeuvres.decision',
         // Read-only file review (derivative viewing); none of them writes.
         'GET admin.oeuvres.files.consult.asset',
         // Browser-native preview: the decrypted original, inline, read-only.

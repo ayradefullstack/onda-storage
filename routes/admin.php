@@ -48,6 +48,10 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         Route::post('/{oeuvre:uuid}/approve', [OeuvreReviewController::class, 'approve'])->name('approve');
         Route::post('/{oeuvre:uuid}/reject', [OeuvreReviewController::class, 'reject'])->name('reject');
 
+        // What the review dialog shows, and which of the three it may
+        // offer — computed from those same rules (JSON only).
+        Route::get('/{oeuvre:uuid}/decision', [OeuvreReviewController::class, 'summary'])->name('decision');
+
         // File review: a deposited file shown through server-generated
         // DERIVATIVES only. The media file is resolved through the oeuvre
         // (scoped bindings), so a file of another oeuvre is a 404. The asset
