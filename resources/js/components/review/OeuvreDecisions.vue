@@ -277,17 +277,29 @@ function later(action: () => void): void {
 
                     <!-- Table-row form -->
                     <DropdownMenu v-else>
-                        <DropdownMenuTrigger as-child>
-                            <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                data-testid="decision-menu"
-                                :aria-label="t('review.actions.menu')"
-                                :title="t('review.actions.menu')"
-                            >
-                                <MoreHorizontal class="size-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
+                        <TooltipProvider :delay-duration="150">
+                            <Tooltip>
+                                <TooltipTrigger as-child>
+                                    <DropdownMenuTrigger as-child>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon-sm"
+                                            data-testid="decision-menu"
+                                            class="size-8 rounded-lg border border-border/60 bg-background/60 text-muted-foreground shadow-2xs transition-all duration-150 hover:border-border hover:bg-muted hover:text-foreground active:scale-95"
+                                            :aria-label="
+                                                t('review.actions.menu')
+                                            "
+                                            :title="t('review.actions.menu')"
+                                        >
+                                            <MoreHorizontal class="size-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                    <p>{{ t('review.actions.menu') }}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                         <DropdownMenuContent align="end" class="min-w-52">
                             <DropdownMenuItem
                                 v-if="actions.start"
