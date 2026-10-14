@@ -60,7 +60,7 @@ test('a second officer cannot decide on a deposit another officer holds', functi
 
     // The exact double-decision case: Amina holds it, Karim rejects.
     $this->actingAs($karim)
-        ->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Dossier incomplet.'])
+        ->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Dossier incomplet : le contrat signé manque.'])
         ->assertStatus(Response::HTTP_CONFLICT);
 
     // And the opposite decision is refused just the same.

@@ -9,6 +9,7 @@ use App\Domain\Deposit\OeuvreStatus;
 use App\Domain\Deposit\OeuvreStatusMachine;
 use App\Models\Oeuvre;
 use App\Models\User;
+use App\Notifications\OeuvreUnderReviewNotification;
 
 /**
  * An officer opens a submitted deposit for review, taking hold of it.
@@ -21,8 +22,9 @@ use App\Models\User;
  *    holder, which is what the UI turns into "Amina is reviewing this —
  *    take over?".
  *
- * No notification: the author does not need to know an officer opened
- * their file, only what was decided.
+ * The author is told once, when the deposit really moves to
+ * `under_review`. Re-opening a held deposit and taking one over move
+ * nothing, so they say nothing.
  *
  * @throws ReviewConflict
  */
@@ -36,6 +38,9 @@ final class OpenReview
     {
         if ($oeuvre->status !== OeuvreStatus::UNDER_REVIEW) {
             $this->machine->transition($oeuvre, OeuvreStatus::UNDER_REVIEW, $officer);
+
+            $oeuvre->loadMissing(['author', 'registerTypeCollege']);
+            $oeuvre->author?->notify(new OeuvreUnderReviewNotification($oeuvre));
 
             return;
         }

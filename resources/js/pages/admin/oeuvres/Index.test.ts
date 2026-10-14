@@ -33,6 +33,9 @@ vi.mock('@/routes/admin/oeuvres', () => {
     return {
         index,
         show: (uuid: string) => ({ url: `/admin/oeuvres/${uuid}` }),
+        review: (uuid: string) => ({ url: `/admin/oeuvres/${uuid}/review` }),
+        approve: (uuid: string) => ({ url: `/admin/oeuvres/${uuid}/approve` }),
+        reject: (uuid: string) => ({ url: `/admin/oeuvres/${uuid}/reject` }),
     };
 });
 
@@ -159,5 +162,88 @@ describe('admin/oeuvres/Index', () => {
         expect(html).toContain(en['admin.oeuvres.view']);
         expect(html).not.toContain('NaN');
         expect(html).not.toContain('No oeuvre matches');
+    });
+
+    const row = (uuid: string, status: string, extra = {}) => ({
+        uuid,
+        title: `Work ${uuid}`,
+        college_name: null,
+        status,
+        author: { uuid: 'a1', name: 'Lina Haddad' },
+        files_count: 2,
+        files_size_bytes: 10,
+        all_ready: true,
+        has_blocking_file: false,
+        created_at: '2026-10-01T10:00:00Z',
+        submitted_at: '2026-10-02T10:00:00Z',
+        holder: null,
+        checks: { files: 2, pending: 0, blocked: 0, missing_required: 0 },
+        can_decide: true,
+        ...extra,
+    });
+
+    it('has an "À examiner" chip with the queue count, pressed when active', async () => {
+        const idle = await render(
+            {
+                ...base,
+                oeuvres: emptyPaginator,
+                filters: noFilters,
+                counts: { to_review: 7 },
+            },
+            'fr',
+        );
+
+        expect(idle).toMatch(
+            /data-testid="to-review-chip"[^>]*aria-pressed="false"/,
+        );
+        expect(idle).toContain('À examiner');
+        expect(idle).toMatch(/<bdi dir="ltr">7<\/bdi>/);
+
+        const active = await render(
+            {
+                ...base,
+                oeuvres: emptyPaginator,
+                filters: { ...noFilters, status: 'to_review' },
+                counts: { to_review: 7 },
+            },
+            'fr',
+        );
+
+        expect(active).toMatch(
+            /data-testid="to-review-chip"[^>]*aria-pressed="true"/,
+        );
+        // It is an active filter like any other: the reset is offered.
+        expect(active).toContain(fr['admin.oeuvres.resetFilters']);
+    });
+
+    it('puts a decision menu next to View only on rows with a valid transition', async () => {
+        const html = await render({
+            ...base,
+            oeuvres: {
+                ...emptyPaginator,
+                data: [
+                    row('s1', 'submitted'),
+                    row('r1', 'under_review'),
+                    row('g1', 'registered'),
+                    row('j1', 'rejected'),
+                    row('d1', 'draft', { can_decide: false }),
+                ],
+                from: 1,
+                to: 5,
+                total: 5,
+            },
+            filters: noFilters,
+            counts: { to_review: 2 },
+        });
+
+        expect(html.match(/data-testid="decision-menu"/g)).toHaveLength(2);
+        expect(html.match(/data-status="submitted"/g)).toHaveLength(1);
+        expect(html.match(/data-status="under_review"/g)).toHaveLength(1);
+        expect(html).not.toContain('data-status="registered"');
+        expect(html).not.toContain('data-status="rejected"');
+        // "View" stays on every row, whatever its status.
+        expect(
+            html.match(/font-medium text-primary hover:underline/g),
+        ).toHaveLength(5);
     });
 });

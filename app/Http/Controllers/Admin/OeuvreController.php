@@ -6,7 +6,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Domain\Access\AccessLogger;
 use App\Domain\Deposit\OeuvreStatus;
+use App\Domain\Deposit\SlotProgressQuery;
 use App\Domain\Deposit\SubmissionGate;
+use App\Domain\Deposit\Value\SubmissionReason;
 use App\Http\Controllers\Author\OeuvreController as AuthorOeuvreController;
 use App\Http\Controllers\Concerns\ResolvesPerPage;
 use App\Http\Controllers\Controller;
@@ -49,8 +51,21 @@ final class OeuvreController extends Controller
         OeuvreStatus::DRAFT,
     ];
 
-    public function index(Request $request): Response
+    /**
+     * The officers' queue as one filter value: everything waiting on a
+     * decision, whether or not someone has opened it yet. Not a status —
+     * it never reaches the `status` column.
+     */
+    private const TO_REVIEW = 'to_review';
+
+    /** @var list<string> */
+    private const TO_REVIEW_STATUSES = [OeuvreStatus::SUBMITTED, OeuvreStatus::UNDER_REVIEW];
+
+    public function index(Request $request, SlotProgressQuery $slotProgress): Response
     {
+        /** @var User $admin */
+        $admin = $request->user();
+
         $search = trim((string) $request->string('search'));
         $status = (string) $request->string('status');
         $author = trim((string) $request->string('author'));
@@ -59,7 +74,7 @@ final class OeuvreController extends Controller
 
         $oeuvres = Oeuvre::query()
             ->when($status !== OeuvreStatus::DRAFT, fn ($query) => $query->excludingDrafts())
-            ->with(['author:id,uuid,name', 'registerTypeCollege'])
+            ->with(['author:id,uuid,name', 'registerTypeCollege', 'reviewer:id,uuid,name'])
             ->withCount('mediaFiles')
             ->selectRaw('(select coalesce(sum(mf.size_bytes), 0) from media_files mf where mf.oeuvre_id = oeuvres.id and mf.deleted_at is null) as files_size_bytes')
             ->selectRaw(
@@ -70,7 +85,18 @@ final class OeuvreController extends Controller
                 '(select case when count(*) > 0 then 1 else 0 end from media_files mf '.
                 "where mf.oeuvre_id = oeuvres.id and mf.deleted_at is null and mf.status in ('failed', 'quarantined')) as has_blocking_file"
             )
+            // The two numbers behind a disabled "Accepter": files the
+            // pipeline has not finished with, and files it gave up on.
+            ->selectRaw(
+                '(select count(*) from media_files mf where mf.oeuvre_id = oeuvres.id and mf.deleted_at is null '.
+                "and mf.status not in ('ready', 'failed', 'quarantined')) as pending_files_count"
+            )
+            ->selectRaw(
+                '(select count(*) from media_files mf where mf.oeuvre_id = oeuvres.id and mf.deleted_at is null '.
+                "and mf.status in ('failed', 'quarantined')) as blocked_files_count"
+            )
             ->when($search !== '', fn ($query) => $query->where('title', 'like', "%{$search}%"))
+            ->when($status === self::TO_REVIEW, fn ($query) => $query->whereIn('oeuvres.status', self::TO_REVIEW_STATUSES))
             ->when($status !== '' && in_array($status, self::FILTERABLE_STATUSES, true), fn ($query) => $query->where('status', $status))
             ->when($author !== '', fn ($query) => $query->whereHas(
                 'author',
@@ -89,6 +115,9 @@ final class OeuvreController extends Controller
             ->paginate($this->perPage($request, self::PER_PAGE))
             ->withQueryString();
 
+        // Two queries for the whole page, not two per row.
+        $progress = $slotProgress->forPage($oeuvres->getCollection());
+
         return Inertia::render('admin/oeuvres/Index', [
             'oeuvres' => $oeuvres->through(fn (Oeuvre $oeuvre) => [
                 'uuid' => $oeuvre->uuid,
@@ -102,6 +131,17 @@ final class OeuvreController extends Controller
                 'all_ready' => (bool) $oeuvre['all_ready'],
                 'has_blocking_file' => (bool) $oeuvre['has_blocking_file'],
                 'created_at' => $oeuvre->created_at,
+                'holder' => self::holder($oeuvre, $admin),
+                // ADVISORY, like the author table's `can.submit`: enough to
+                // grey "Accepter" and say why without running the gate once
+                // per row. ApproveOeuvre re-decides on POST.
+                'checks' => [
+                    'files' => (int) $oeuvre['media_files_count'],
+                    'pending' => (int) $oeuvre['pending_files_count'],
+                    'blocked' => (int) $oeuvre['blocked_files_count'],
+                    'missing_required' => max(0, $progress[$oeuvre->id]['total'] - $progress[$oeuvre->id]['satisfied'] - $progress[$oeuvre->id]['conditional']),
+                ],
+                'can_decide' => $admin->can('decide', $oeuvre),
             ]),
             'filters' => [
                 'search' => $search,
@@ -111,6 +151,11 @@ final class OeuvreController extends Controller
                 'to' => $to,
             ],
             'statuses' => self::FILTERABLE_STATUSES,
+            // Counted over the whole queue, not this page or these filters:
+            // the chip reads the same wherever the officer is in the list.
+            'counts' => [
+                self::TO_REVIEW => Oeuvre::query()->whereIn('status', self::TO_REVIEW_STATUSES)->count(),
+            ],
         ]);
     }
 
@@ -159,6 +204,8 @@ final class OeuvreController extends Controller
             ));
         }
 
+        $verdict = $gate->evaluate($oeuvre)->toArray();
+
         return Inertia::render('admin/oeuvres/Show', [
             'oeuvre' => [
                 'uuid' => $oeuvre->uuid,
@@ -178,20 +225,58 @@ final class OeuvreController extends Controller
             // officer reading the page. The page offers an explicit
             // take-over rather than silently letting a second officer
             // decide — see OeuvreStatusMachine's concurrency note.
-            'holder' => $oeuvre->reviewer === null ? null : [
-                'uuid' => $oeuvre->reviewer->uuid,
-                'name' => $oeuvre->reviewer->name,
-                'is_you' => $oeuvre->reviewed_by === $request->user()->id,
-            ],
+            'holder' => self::holder($oeuvre, $admin),
+            'can_decide' => $admin->can('decide', $oeuvre),
+            // What stands between this deposit and a registration, with
+            // names: the accept dialog's checklist. Advisory here —
+            // ApproveOeuvre asks the same gate again under a lock.
+            'checks' => self::checks($verdict['blockers'], $files->count()),
             // The officer's call: these are the required documents whose
             // `conditions` were never evaluated, so the author was told
             // they might not apply and was allowed to submit without them.
             // See SubmissionGate.
-            'advisories' => $gate->evaluate($oeuvre)->toArray()['advisories'],
+            'advisories' => $verdict['advisories'],
             // Why it was rejected last time. An officer looking at a
             // resubmission needs that before reading a single file.
-            'reviews' => AuthorOeuvreController::reviewHistory($oeuvre),
+            'reviews' => AuthorOeuvreController::reviewHistory($oeuvre, withActor: true),
         ]);
+    }
+
+    /**
+     * @return array{uuid: string, name: string, is_you: bool}|null
+     */
+    private static function holder(Oeuvre $oeuvre, User $admin): ?array
+    {
+        $reviewer = $oeuvre->reviewer;
+
+        return $reviewer === null ? null : [
+            'uuid' => $reviewer->uuid,
+            'name' => $reviewer->name,
+            'is_you' => $oeuvre->reviewed_by === $admin->id,
+        ];
+    }
+
+    /**
+     * The gate's blockers, counted by kind for the checklist and kept
+     * whole for the list of names.
+     *
+     * @param  list<array{code: string, params: array<string, string|int|null>, message: string}>  $blockers
+     * @return array{files: int, pending: int, blocked: int, missing_required: int, problems: list<array{code: string, params: array<string, string|int|null>, message: string}>}
+     */
+    private static function checks(array $blockers, int $files): array
+    {
+        $count = fn (string ...$codes): int => count(array_filter(
+            $blockers,
+            fn (array $blocker): bool => in_array($blocker['code'], $codes, true),
+        ));
+
+        return [
+            'files' => $files,
+            'pending' => $count(SubmissionReason::FILE_IN_PIPELINE),
+            'blocked' => $count(SubmissionReason::FILE_FAILED, SubmissionReason::FILE_QUARANTINED),
+            'missing_required' => $count(SubmissionReason::SLOT_EMPTY),
+            'problems' => $blockers,
+        ];
     }
 
     /**

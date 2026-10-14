@@ -19,6 +19,9 @@ import type { OeuvreClassification } from '@/components/oeuvre/ClassificationCar
 import { oeuvreLabel } from '@/components/oeuvre/label';
 import OeuvreSubmitDialog from '@/components/oeuvre/OeuvreSubmitDialog.vue';
 import SubmitArea from '@/components/oeuvre/SubmitArea.vue';
+import DepositStatusBanner from '@/components/review/DepositStatusBanner.vue';
+import ReviewTimeline from '@/components/review/ReviewTimeline.vue';
+import type { ReviewEntry } from '@/components/review/ReviewTimeline.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import DepositCard from '@/components/upload/DepositCard.vue';
@@ -33,6 +36,7 @@ import type { RequirementSlot } from '@/components/upload/requirement';
 import RequirementSlotCard from '@/components/upload/RequirementSlotCard.vue';
 import ResumeBanner from '@/components/upload/ResumeBanner.vue';
 import { silent } from '@/composables/useGlobalLoader';
+import { prefersReducedMotion } from '@/composables/useReducedMotion';
 import { useUploadQueue } from '@/composables/useUploadQueue';
 import { formatBytes, formatDate } from '@/lib/format';
 import {
@@ -55,6 +59,7 @@ interface OeuvreDetail {
     status: string;
     created_at: string;
     submitted_at: string | null;
+    registered_at: string | null;
     can: { edit: boolean; delete: boolean };
 }
 
@@ -90,6 +95,8 @@ const props = defineProps<{
     requirements: RequirementSlot[];
     progress: RequiredDocumentsProgress;
     submission: Submission;
+    /** The decision history. Carries no officer identity — see the controller. */
+    reviews: ReviewEntry[];
 }>();
 
 const { t, locale } = useI18n();
@@ -306,36 +313,48 @@ const reasonText = (reason: SubmissionReason) =>
         status: t(`media.status.${String(reason.params.status ?? 'failed')}`),
     });
 
+// "Modifier et soumettre à nouveau": a rejected deposit is edited on this
+// very page, so the action takes the author to their files. Submitting is
+// the existing flow, further down, once the gate passes again.
+const filesAnchor = ref<HTMLElement | null>(null);
+
+function goToFiles(): void {
+    filesAnchor.value?.scrollIntoView({
+        behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+        block: 'start',
+    });
+}
+
 const statusBadge = computed(() => {
     switch (props.oeuvre.status) {
         case 'registered':
             return {
-                label: 'Enregistré & Protégé',
+                label: t('oeuvres.show.status.registered'),
                 class: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
                 dotClass: 'bg-emerald-500',
             };
         case 'submitted':
             return {
-                label: 'Soumis pour examen',
+                label: t('oeuvres.show.status.submitted'),
                 class: 'bg-onda-blue-500/10 text-onda-blue-700 dark:text-onda-blue-300 border-onda-blue-500/30',
                 dotClass: 'bg-onda-blue-500 animate-pulse',
             };
         case 'under_review':
             return {
-                label: "En cours d'examen",
+                label: t('oeuvres.show.status.under_review'),
                 class: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30',
                 dotClass: 'bg-purple-500 animate-pulse',
             };
         case 'rejected':
             return {
-                label: 'Rejeté',
+                label: t('oeuvres.show.status.rejected'),
                 class: 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30',
                 dotClass: 'bg-rose-500',
             };
         case 'draft':
         default:
             return {
-                label: 'Brouillon (Dépôt des pièces)',
+                label: t('oeuvres.show.status.draft'),
                 class: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30',
                 dotClass: 'bg-amber-500 animate-pulse',
             };
@@ -449,10 +468,25 @@ const statusBadge = computed(() => {
                     </div>
                 </div>
 
+                <!-- Where the deposit stands, and why if it came back. -->
+                <DepositStatusBanner
+                    :status="oeuvre.status"
+                    :registered-at="oeuvre.registered_at"
+                    :reviews="reviews"
+                    :editable="editable"
+                    @resubmit="goToFiles"
+                />
+
                 <!-- Official Classification Card -->
                 <ClassificationCard
                     v-if="classification"
                     :classification="classification"
+                />
+
+                <div
+                    ref="filesAnchor"
+                    class="pointer-events-none absolute size-0 scroll-mt-24"
+                    aria-hidden="true"
                 />
 
                 <!-- STEP 2: DOCUMENTS DEPOSIT JOURNEY -->
@@ -835,6 +869,13 @@ const statusBadge = computed(() => {
                         />
                     </div>
                 </template>
+
+                <!-- Read-only, and signed "ONDA": no officer is named. -->
+                <ReviewTimeline
+                    v-if="reviews.length > 0"
+                    :reviews="reviews"
+                    anonymous
+                />
             </div>
 
             <!-- The side Viewer: the owner's own file, read-only. -->

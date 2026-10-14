@@ -87,7 +87,7 @@ test('a first submission and a resubmission are visibly different notifications'
     expect(notifyKeys($admin))->toBe(['notifications.oeuvre.submitted']);
 
     $this->actingAs($admin)->post(route('admin.oeuvres.review', $oeuvre));
-    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Scan illisible.']);
+    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Scan illisible, merci de le redéposer.']);
     $this->actingAs($author)->post(route('author.oeuvres.submit', $oeuvre));
 
     // Asserted as a set rather than "the newest one": both rows land in the
@@ -208,7 +208,7 @@ test('the notifications endpoint returns only the reader\'s own rows', function 
     $admin = notifyAdmin();
     $oeuvre = notifyOeuvre($author, OeuvreStatus::UNDER_REVIEW, holder: $admin);
 
-    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Scan illisible.']);
+    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Scan illisible, merci de le redéposer.']);
 
     $this->actingAs($author)
         ->getJson(route('notifications.index'))
@@ -230,7 +230,7 @@ test('marking one notification read leaves the others alone', function () {
     $first = notifyOeuvre($author, OeuvreStatus::UNDER_REVIEW, holder: $admin);
     $second = notifyOeuvre($author, OeuvreStatus::UNDER_REVIEW, holder: $admin);
 
-    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $first), ['reason' => 'Scan illisible.']);
+    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $first), ['reason' => 'Scan illisible, merci de le redéposer.']);
     $this->actingAs($admin)->post(route('admin.oeuvres.approve', $second));
 
     $one = $author->notifications()->latest()->first();

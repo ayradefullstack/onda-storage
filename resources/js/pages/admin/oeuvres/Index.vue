@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { AlertTriangle, CheckCircle2 } from '@lucide/vue';
+import { AlertTriangle, CheckCircle2, Inbox } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { oeuvreLabel } from '@/components/oeuvre/label';
+import type { Checks, Holder } from '@/components/review/decisions';
+import OeuvreDecisions from '@/components/review/OeuvreDecisions.vue';
 import { Button } from '@/components/ui/button';
 import {
     DataTable,
@@ -21,6 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { silent } from '@/composables/useGlobalLoader';
 import { formatBytes, formatDate } from '@/lib/format';
 import { dashboard } from '@/routes/admin';
 import { show as authorShow } from '@/routes/admin/authors';
@@ -41,7 +44,20 @@ interface OeuvreRow {
     has_blocking_file: boolean;
     created_at: string;
     submitted_at: string | null;
+    holder?: Holder | null;
+    checks?: Checks;
+    can_decide?: boolean;
 }
+
+/** The officers' queue as one filter value: submitted + under review. */
+const TO_REVIEW = 'to_review';
+
+const NO_CHECKS: Checks = {
+    files: 0,
+    pending: 0,
+    blocked: 0,
+    missing_required: 0,
+};
 
 const props = defineProps<{
     oeuvres: {
@@ -59,6 +75,7 @@ const props = defineProps<{
         to: string;
     };
     statuses: string[];
+    counts?: { to_review: number };
 }>();
 
 const { t, locale } = useI18n();
@@ -100,6 +117,18 @@ function applyFilters(overrides: Record<string, string> = {}): void {
         {},
         { preserveState: true, replace: true },
     );
+}
+
+const toReviewActive = computed(() => props.filters.status === TO_REVIEW);
+
+function toggleToReview(): void {
+    applyFilters({ status: toReviewActive.value ? '' : TO_REVIEW });
+}
+
+// After a decision the rows and the queue count are stale; the filters,
+// the page and the scroll position are not.
+function onDecision(): void {
+    router.reload(silent({ only: ['oeuvres', 'counts'] }));
 }
 
 const hasActiveFilters = computed(() =>
@@ -205,6 +234,33 @@ function clearFilters(): void {
                     </template>
 
                     <template #filters>
+                        <button
+                            type="button"
+                            data-testid="to-review-chip"
+                            :aria-pressed="toReviewActive"
+                            class="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                            :class="
+                                toReviewActive
+                                    ? 'border-primary bg-primary text-primary-foreground'
+                                    : 'border-border bg-background hover:bg-accent'
+                            "
+                            @click="toggleToReview"
+                        >
+                            <Inbox class="size-3.5" />
+                            {{ t('oeuvres.status.to_review') }}
+                            <span
+                                class="rounded-full px-1.5 py-px text-[11px] tabular-nums"
+                                :class="
+                                    toReviewActive
+                                        ? 'bg-primary-foreground/20'
+                                        : 'bg-muted text-muted-foreground'
+                                "
+                                ><bdi dir="ltr">{{
+                                    counts?.to_review ?? 0
+                                }}</bdi></span
+                            >
+                        </button>
+
                         <Input
                             v-model="author"
                             class="h-9 w-40 text-xs"
@@ -415,12 +471,31 @@ function clearFilters(): void {
                             <span v-else class="text-muted-foreground">—</span>
                         </td>
                         <td class="px-4 py-3">
-                            <Link
-                                :href="oeuvreShow(oeuvre.uuid)"
-                                class="font-medium text-primary hover:underline"
-                            >
-                                {{ t('admin.oeuvres.view') }}
-                            </Link>
+                            <div class="flex items-center gap-1">
+                                <Link
+                                    :href="oeuvreShow(oeuvre.uuid)"
+                                    class="font-medium text-primary hover:underline"
+                                >
+                                    {{ t('admin.oeuvres.view') }}
+                                </Link>
+                                <OeuvreDecisions
+                                    variant="menu"
+                                    :oeuvre="{
+                                        uuid: oeuvre.uuid,
+                                        label: oeuvreLabel(
+                                            oeuvre,
+                                            locale,
+                                            t('oeuvres.untitled'),
+                                        ),
+                                        author: oeuvre.author?.name ?? null,
+                                        status: oeuvre.status,
+                                    }"
+                                    :holder="oeuvre.holder ?? null"
+                                    :checks="oeuvre.checks ?? NO_CHECKS"
+                                    :can-decide="oeuvre.can_decide ?? false"
+                                    @changed="onDecision"
+                                />
+                            </div>
                         </td>
                     </tr>
                 </tbody>

@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use Illuminate\Contracts\Queue\ShouldQueue;
+
 /**
  * Sent to the author when an officer registers their deposit.
  * See OeuvreNotification for the payload and channel rationale.
  */
-final class OeuvreRegisteredNotification extends OeuvreNotification
+final class OeuvreRegisteredNotification extends OeuvreNotification implements ShouldQueue
 {
+    use QueuedForAuthor;
+
     /**
      * @return array<string, mixed>
      */

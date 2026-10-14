@@ -335,28 +335,39 @@ final class OeuvreController extends Controller
     }
 
     /**
-     * The append-only decision history, oldest first. The officer's name is
-     * included for the admin console; the author's page shows only the
-     * decision and its reason.
+     * The append-only decision history, oldest first.
+     *
+     * Who decided is the office's business, not the author's: the author is
+     * answered by ONDA, never by a named officer. So the `actor` key exists
+     * only when the admin console asks for it (`withActor`) — it is absent
+     * from the author's page props, not merely unrendered, and the relation
+     * is not even loaded.
      *
      * `withTrashed` on the actor: `users` is soft-deleted, and a decision
      * must still name its officer after that account is retired.
      *
-     * @return array<int, array{uuid: string, from_status: string, to_status: string, reason: string|null, actor: string|null, created_at: string|null}>
+     * @return array<int, array{uuid: string, from_status: string, to_status: string, reason: string|null, created_at: string|null, actor?: string|null}>
      */
-    public static function reviewHistory(Oeuvre $oeuvre): array
+    public static function reviewHistory(Oeuvre $oeuvre, bool $withActor = false): array
     {
         return $oeuvre->oeuvreReviews()
-            ->with(['actor' => fn ($query) => $query->withTrashed()])
+            ->when($withActor, fn ($query) => $query->with(['actor' => fn ($actor) => $actor->withTrashed()]))
             ->get()
-            ->map(fn (OeuvreReview $review): array => [
-                'uuid' => $review->uuid,
-                'from_status' => $review->from_status,
-                'to_status' => $review->to_status,
-                'reason' => $review->reason,
-                'actor' => $review->actor?->name,
-                'created_at' => $review->created_at?->toIso8601String(),
-            ])
+            ->map(function (OeuvreReview $review) use ($withActor): array {
+                $entry = [
+                    'uuid' => $review->uuid,
+                    'from_status' => $review->from_status,
+                    'to_status' => $review->to_status,
+                    'reason' => $review->reason,
+                    'created_at' => $review->created_at?->toIso8601String(),
+                ];
+
+                if ($withActor) {
+                    $entry['actor'] = $review->actor?->name;
+                }
+
+                return $entry;
+            })
             ->values()
             ->all();
     }

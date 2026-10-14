@@ -146,7 +146,7 @@ test('no transition out of registered succeeds, for any actor', function () {
 
     // Including through the HTTP endpoints, where the take-over flag exists.
     $this->actingAs($admin)
-        ->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'changed my mind', 'take_over' => true])
+        ->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'changed my mind about this deposit', 'take_over' => true])
         ->assertInvalid('status');
 
     $this->actingAs($admin)
@@ -195,7 +195,7 @@ test('a rejected deposit can be resubmitted, producing a second review row', fun
     $admin = reviewAdmin();
     $oeuvre = reviewOeuvre($author, OeuvreStatus::UNDER_REVIEW, holder: $admin);
 
-    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Scan illisible.']);
+    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Scan illisible, merci de le redéposer.']);
 
     expect($oeuvre->fresh()->status)->toBe(OeuvreStatus::REJECTED);
 
@@ -219,7 +219,7 @@ test('the history survives: an approved resubmission keeps every earlier row', f
     $admin = reviewAdmin();
     $oeuvre = reviewOeuvre($author, OeuvreStatus::UNDER_REVIEW, holder: $admin);
 
-    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Scan illisible.']);
+    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Scan illisible, merci de le redéposer.']);
     $this->actingAs($author)->post(route('author.oeuvres.submit', $oeuvre));
     $this->actingAs($admin)->post(route('admin.oeuvres.review', $oeuvre));
     $this->actingAs($admin)->post(route('admin.oeuvres.approve', $oeuvre));
