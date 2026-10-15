@@ -58,6 +58,18 @@ final class OeuvreController extends Controller
         OeuvreStatus::REJECTED,
     ];
 
+    /**
+     * The `pending` listing filter: every deposit waiting on an ONDA
+     * decision, whether or not an officer has opened it yet. A filter value,
+     * not a status — nothing is ever stored as `pending`. The dashboard's
+     * "awaiting decision" card counts exactly this set (`counts.pending`),
+     * so the card and the list it links to cannot disagree.
+     */
+    public const FILTER_PENDING = 'pending';
+
+    /** @var list<string> */
+    public const PENDING_STATUSES = [OeuvreStatus::SUBMITTED, OeuvreStatus::UNDER_REVIEW];
+
     /** @var list<string> */
     private const SORTS = ['newest', 'oldest', 'title', 'files'];
 
@@ -105,6 +117,7 @@ final class OeuvreController extends Controller
                         ->orWhere('name_en', 'like', "%{$search}%"))
             ))
             ->when(in_array($status, self::STATUSES, true), fn ($query) => $query->where('status', $status))
+            ->when($status === self::FILTER_PENDING, fn ($query) => $query->whereIn('status', self::PENDING_STATUSES))
             ->tap(fn (Builder $query) => $this->applySort($query, $sort))
             ->paginate($this->perPage($request, self::PER_PAGE))
             ->withQueryString();
@@ -143,7 +156,7 @@ final class OeuvreController extends Controller
             ]),
             'filters' => [
                 'search' => $search,
-                'status' => in_array($status, self::STATUSES, true) ? $status : '',
+                'status' => in_array($status, self::STATUSES, true) || $status === self::FILTER_PENDING ? $status : '',
                 'sort' => in_array($sort, self::SORTS, true) ? $sort : self::SORTS[0],
             ],
             'statuses' => self::STATUSES,
@@ -195,9 +208,14 @@ final class OeuvreController extends Controller
     }
 
     /**
+     * One count per status over the author's whole shelf (soft-deleted
+     * oeuvres excluded by the model scope), plus `all` and the `pending`
+     * filter's total. Shared with the dashboard, which must show the same
+     * numbers as the filter tabs it links to.
+     *
      * @return array<string, int>
      */
-    private static function statusCounts(int $authorId): array
+    public static function statusCounts(int $authorId): array
     {
         $counts = Oeuvre::query()
             ->where('author_id', $authorId)
@@ -212,6 +230,10 @@ final class OeuvreController extends Controller
         }
 
         $byStatus['all'] = array_sum($byStatus);
+        $byStatus[self::FILTER_PENDING] = array_sum(array_map(
+            fn (string $status): int => $byStatus[$status],
+            self::PENDING_STATUSES,
+        ));
 
         return $byStatus;
     }

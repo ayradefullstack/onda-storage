@@ -2,7 +2,7 @@
 import { Check } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { RAIL_LENGTH } from '@/components/upload/depositJourney';
+import { RAIL_LENGTH, RAIL_STAGES } from '@/components/upload/depositJourney';
 import type { RailTone } from '@/components/upload/depositJourney';
 
 const props = withDefaults(
@@ -20,14 +20,7 @@ const props = withDefaults(
 const { t } = useI18n();
 
 const stepLabels = computed(() =>
-    [
-        'initialisation',
-        'upload',
-        'assembly',
-        'antivirus',
-        'processing',
-        'sealed',
-    ].map((step) => t(`upload.step.${step}`)),
+    RAIL_STAGES.map((step) => t(`upload.step.${step}`)),
 );
 
 const steps = computed(() => Array.from({ length: RAIL_LENGTH }, (_, i) => i));

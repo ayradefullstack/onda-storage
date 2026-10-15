@@ -301,6 +301,8 @@ test('no route exists that changes an existing oeuvre\'s classification', functi
         'GET oeuvres.files.consult.original',
         'GET oeuvres.files.preview',
         'GET oeuvres.files.preview.assets',
+        // Read-only: the pipeline status of the files, polled by the page.
+        'GET oeuvres.files.status',
         'GET oeuvres.show',
         'POST admin.oeuvres.approve',
         'POST admin.oeuvres.reject',

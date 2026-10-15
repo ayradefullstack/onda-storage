@@ -8,7 +8,7 @@ import {
     ShieldCheck,
     Sparkles,
 } from '@lucide/vue';
-import { computed, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue';
+import { computed, provide, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ConsultViewer from '@/components/consult/ConsultViewer.vue';
 import { FILE_PREVIEW } from '@/components/consult/previewContext';
@@ -32,9 +32,11 @@ import {
     mergeDepositEntries,
 } from '@/components/upload/depositJourney';
 import Dropzone from '@/components/upload/Dropzone.vue';
+import FileStatusPollNotice from '@/components/upload/FileStatusPollNotice.vue';
 import type { RequirementSlot } from '@/components/upload/requirement';
 import RequirementSlotCard from '@/components/upload/RequirementSlotCard.vue';
 import ResumeBanner from '@/components/upload/ResumeBanner.vue';
+import { useFileStatusPoll } from '@/composables/useFileStatusPoll';
 import { silent } from '@/composables/useGlobalLoader';
 import { prefersReducedMotion } from '@/composables/useReducedMotion';
 import { useUploadQueue } from '@/composables/useUploadQueue';
@@ -44,10 +46,14 @@ import {
     MAX_FILE_SIZE_BYTES,
 } from '@/lib/uploadValidation';
 import { index } from '@/routes/oeuvres';
-import { destroy as destroyFile, preview } from '@/routes/oeuvres/files';
+import {
+    destroy as destroyFile,
+    preview,
+    status as fileStatus,
+} from '@/routes/oeuvres/files';
 import { assets as previewAssets } from '@/routes/oeuvres/files/preview';
 import type { ConsultationDescriptor } from '@/types/consultation';
-import type { MediaFileStatus, MediaFileSummary } from '@/types/upload';
+import type { MediaFileSummary } from '@/types/upload';
 
 interface OeuvreDetail {
     id: number;
@@ -189,50 +195,28 @@ const readyAtLoadUuids = new Set(
         .map((mediaFile) => mediaFile.uuid),
 );
 
-const RELOAD_PROPS = ['mediaFiles', 'quota', 'progress'] as const;
-const TERMINAL_STATUSES: MediaFileStatus[] = ['ready', 'failed', 'quarantined'];
-const POLL_INTERVALS_MS = [2000, 5000, 15000];
+// What depends on a file's status: the list itself, the quota, the slot
+// completeness, and the submission gate (a file reaching `ready` is exactly
+// what can unblock "Soumettre").
+const RELOAD_PROPS = ['mediaFiles', 'quota', 'progress', 'submission'] as const;
 
-let pollTimer: ReturnType<typeof setTimeout> | null = null;
-let pollAttempt = 0;
+const reloadFileProps = (): void => {
+    router.reload(silent({ only: [...RELOAD_PROPS] }));
+};
 
-function hasNonTerminalFiles(): boolean {
-    return props.mediaFiles.some(
-        (mediaFile) => !TERMINAL_STATUSES.includes(mediaFile.status),
-    );
-}
-
-function schedulePoll(): void {
-    if (!hasNonTerminalFiles()) {
-        return;
-    }
-
-    const delay =
-        POLL_INTERVALS_MS[Math.min(pollAttempt, POLL_INTERVALS_MS.length - 1)];
-
-    pollTimer = setTimeout(() => {
-        router.reload(
-            silent({
-                only: [...RELOAD_PROPS],
-                onFinish: () => {
-                    pollAttempt++;
-                    schedulePoll();
-                },
-            }),
-        );
-    }, delay);
-}
-
-onMounted(() => {
-    pollAttempt = 0;
-    schedulePoll();
+// Follows every file of this page through the server pipeline, live: from
+// the upload's `complete` to ready / failed / quarantined. One silent
+// partial reload when a file gets there.
+const statusPoll = useFileStatusPoll({
+    url: () => fileStatus(props.oeuvre.uuid).url,
+    files: () => props.mediaFiles,
+    onSettled: reloadFileProps,
 });
 
-onBeforeUnmount(() => {
-    if (pollTimer) {
-        clearTimeout(pollTimer);
-    }
-});
+function refreshPage(): void {
+    router.reload();
+    statusPoll.pollNow();
+}
 
 const queue = useUploadQueue();
 const completedForThisOeuvre = computed(
@@ -242,9 +226,11 @@ const completedForThisOeuvre = computed(
         ).length,
 );
 
+// An upload just completed: fetch its row, and follow it from now on.
 watch(completedForThisOeuvre, (next, previous) => {
     if (next > previous) {
-        router.reload(silent({ only: [...RELOAD_PROPS] }));
+        reloadFileProps();
+        statusPoll.kick();
     }
 });
 
@@ -254,6 +240,7 @@ const entries = computed<DepositEntry[]>(() =>
         props.oeuvre.id,
         props.mediaFiles,
         readyAtLoadUuids,
+        statusPoll.live.value,
     ),
 );
 
@@ -667,6 +654,11 @@ const statusBadge = computed(() => {
                         </Card>
                     </div>
 
+                    <FileStatusPollNotice
+                        :phase="statusPoll.phase.value"
+                        @refresh="refreshPage"
+                    />
+
                     <!-- Resume Banner (when interrupted uploads can be recovered) -->
                     <ResumeBanner
                         :files="pendingResumesForOeuvre"
@@ -814,6 +806,11 @@ const statusBadge = computed(() => {
                         <ResumeBanner
                             :files="pendingResumesForOeuvre"
                             @reselect="onReselect"
+                        />
+
+                        <FileStatusPollNotice
+                            :phase="statusPoll.phase.value"
+                            @refresh="refreshPage"
                         />
 
                         <Card

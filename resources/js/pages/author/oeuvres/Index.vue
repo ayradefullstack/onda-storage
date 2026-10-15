@@ -399,7 +399,12 @@ const activeFilters = computed(() => {
         pills.push({
             key: 'status',
             label: t('oeuvres.table.colStatus') || 'Statut',
-            value: getStatusMeta(selectedStatus.value).label,
+            // `pending` is a filter (submitted + under review, the
+            // dashboard's "awaiting decision" card), not a status a row has.
+            value:
+                selectedStatus.value === 'pending'
+                    ? t('oeuvres.index.filterPending')
+                    : getStatusMeta(selectedStatus.value).label,
         });
     }
 

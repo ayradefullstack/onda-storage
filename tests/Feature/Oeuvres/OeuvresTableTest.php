@@ -100,6 +100,32 @@ test('an unknown status filter is ignored rather than returning nothing', functi
         );
 });
 
+test('the pending filter returns submitted and under-review deposits, counted the same way', function () {
+    $author = tableAuthor();
+    $stranger = tableAuthor();
+
+    $submitted = tableOeuvre($author, OeuvreStatus::SUBMITTED);
+    $underReview = tableOeuvre($author, OeuvreStatus::UNDER_REVIEW);
+    tableOeuvre($author, OeuvreStatus::DRAFT);
+    tableOeuvre($author, OeuvreStatus::REGISTERED);
+    tableOeuvre($author, OeuvreStatus::REJECTED);
+    tableOeuvre($stranger, OeuvreStatus::SUBMITTED);
+
+    $this->actingAs($author)
+        ->get(route('oeuvres.index', ['status' => 'pending']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('oeuvres.data', 2)
+            ->where('oeuvres.data', fn ($rows) => collect($rows)->pluck('uuid')->sort()->values()->all()
+                === collect([$submitted->uuid, $underReview->uuid])->sort()->values()->all())
+            ->where('filters.status', 'pending')
+            // The dashboard card reads this same number.
+            ->where('counts.pending', 2)
+            ->where('counts.submitted', 1)
+            ->where('counts.under_review', 1)
+            ->where('counts.all', 5)
+        );
+});
+
 test('search matches the title, and never another author\'s row', function () {
     $author = tableAuthor();
     $stranger = tableAuthor();

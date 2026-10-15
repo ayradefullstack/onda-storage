@@ -1,111 +1,122 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import { useEventListener } from '@vueuse/core';
-import { ref } from 'vue';
-import CertificateModal from '@/components/dashboard/CertificateModal.vue';
-import DashboardHero from '@/components/dashboard/DashboardHero.vue';
-import DashboardQuickActions from '@/components/dashboard/DashboardQuickActions.vue';
-import DashboardRoyaltiesChart from '@/components/dashboard/DashboardRoyaltiesChart.vue';
-import DashboardStats from '@/components/dashboard/DashboardStats.vue';
-import DashboardWorksTable from '@/components/dashboard/DashboardWorksTable.vue';
-import type { Work } from '@/components/dashboard/DashboardWorksTable.vue';
-import NewDepositModal from '@/components/dashboard/NewDepositModal.vue';
-import { useDashboardModal } from '@/composables/useDashboardModal';
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import { PlusCircle } from '@lucide/vue';
+import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import DashboardActions from '@/components/dashboard/DashboardActions.vue';
+import DashboardDecisions from '@/components/dashboard/DashboardDecisions.vue';
+import DashboardFirstRun from '@/components/dashboard/DashboardFirstRun.vue';
+import DashboardRecentWorks from '@/components/dashboard/DashboardRecentWorks.vue';
+import DashboardStatusCards from '@/components/dashboard/DashboardStatusCards.vue';
+import DashboardStorage from '@/components/dashboard/DashboardStorage.vue';
+import type {
+    DashboardActions as Actions,
+    DashboardCounts,
+    DashboardDecision,
+    DashboardQuota,
+    DashboardRecent,
+} from '@/components/dashboard/types';
+import { Button } from '@/components/ui/button';
 import { vReveal } from '@/composables/useReveal';
 import { dashboard } from '@/routes/author';
+import { create } from '@/routes/oeuvres';
 
-const { isDepositOpen, initialDepositCategory, openDeposit } =
-    useDashboardModal();
+/**
+ * The author's home. Everything below comes from Author\DashboardController,
+ * scoped to the signed-in author; a block with nothing real to show is not
+ * rendered at all, rather than padded with placeholders.
+ */
+const props = defineProps<{
+    counts: DashboardCounts;
+    actions: Actions;
+    recent: DashboardRecent[];
+    quota: DashboardQuota | null;
+    decisions: DashboardDecision[];
+}>();
 
 defineOptions({
     layout: {
-        breadcrumbs: [
-            {
-                title: 'Dashboard',
-                href: dashboard(),
-            },
-        ],
+        // Untranslated like every other page's: Breadcrumbs.vue prints the
+        // title as given, and defineOptions cannot reach vue-i18n.
+        breadcrumbs: [{ title: 'Dashboard', href: dashboard() }],
     },
 });
 
-const selectedWorkForCert = ref<Work | null>(null);
-const isCertModalOpen = ref(false);
+const { t } = useI18n();
+const page = usePage();
 
-const handleViewCertificate = (work: Work) => {
-    selectedWorkForCert.value = work;
-    isCertModalOpen.value = true;
-};
+const name = computed(() => page.props.auth.user?.name ?? '');
 
-const handleSelectCategory = (category: string) => {
-    openDeposit(category);
-};
-
-const handleOpenStatement = () => {
-    // Smooth scroll down to Royalties breakdown
-    const el = document.getElementById('royalties-section');
-
-    if (el) {
-        el.scrollIntoView({ behavior: 'smooth' });
-    }
-};
-
-const handleDepositCreated = () => {
-    // Show instant toast or reactive update
-};
-
-// Global Hotkey (⌘K / Ctrl+K)
-useEventListener('keydown', (e: KeyboardEvent) => {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        openDeposit('music');
-    }
-});
+// A first-time author has no oeuvre at all — soft-deleted ones do not
+// count. One who has only drafts is already under way, and the actions
+// block guides them better than the three-step introduction.
+const firstRun = computed(() => (props.counts.all ?? 0) === 0);
 </script>
 
 <template>
-    <Head title="Tableau de bord — Espace Auteur ONDA" />
+    <Head :title="t('dashboard.title')" />
 
     <div class="mx-auto w-full max-w-7xl flex-1 space-y-6 p-4 sm:p-6 lg:p-8">
-        <!-- 1. Hero Identity & Member Tier Header -->
-        <DashboardHero
-            @open-deposit="openDeposit('music')"
-            @open-statement="handleOpenStatement"
-        />
+        <header
+            class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+            <div class="min-w-0 space-y-1">
+                <h1
+                    class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
+                    data-testid="dashboard-greeting"
+                >
+                    <template v-if="name">
+                        {{ t('dashboard.welcome', { name }) }}
+                    </template>
+                    <template v-else>{{ t('dashboard.title') }}</template>
+                </h1>
+                <p class="text-sm leading-relaxed text-muted-foreground">
+                    {{ t('dashboard.intro') }}
+                </p>
+            </div>
+            <Button v-if="!firstRun" as-child class="w-full shrink-0 sm:w-auto">
+                <Link :href="create()" data-testid="new-deposit">
+                    <PlusCircle class="size-4" />
+                    {{ t('dashboard.newDepositBtn') }}
+                </Link>
+            </Button>
+        </header>
 
-        <!-- 2. Real-Time KPI Stats & Progress Sparklines -->
-        <DashboardStats />
+        <DashboardFirstRun v-if="firstRun" />
 
-        <!-- 3. Quick Multi-Domain Deposit Launchpad -->
-        <DashboardQuickActions
-            v-reveal
-            @select-category="handleSelectCategory"
-        />
+        <template v-else>
+            <DashboardStatusCards :counts="counts" />
 
-        <!-- 4. Works & Declarations Registry Table -->
-        <DashboardWorksTable
-            v-reveal
-            @view-certificate="handleViewCertificate"
-            @open-deposit="openDeposit('music')"
-        />
+            <DashboardActions
+                v-if="actions.items.length > 0"
+                v-reveal
+                :actions="actions"
+            />
 
-        <!-- 5. Royalties Distribution Analytics & Payout History -->
-        <div id="royalties-section" v-reveal data-anchor class="pt-2">
-            <DashboardRoyaltiesChart />
-        </div>
+            <div
+                :class="[
+                    'grid grid-cols-1 gap-6',
+                    quota !== null && 'lg:grid-cols-3',
+                ]"
+            >
+                <DashboardRecentWorks
+                    v-reveal
+                    :recent="recent"
+                    :class="quota !== null && 'lg:col-span-2'"
+                />
+                <DashboardStorage
+                    v-if="quota !== null"
+                    v-reveal
+                    :quota="quota"
+                    class="self-start"
+                />
+            </div>
+
+            <DashboardDecisions
+                v-if="decisions.length > 0"
+                v-reveal
+                :decisions="decisions"
+            />
+        </template>
     </div>
-
-    <!-- Official Digital Certificate Modal Dialog -->
-    <CertificateModal
-        :work="selectedWorkForCert"
-        :open="isCertModalOpen"
-        @update:open="isCertModalOpen = $event"
-    />
-
-    <!-- New Work Deposit Multi-step Modal -->
-    <NewDepositModal
-        :open="isDepositOpen"
-        :initial-category="initialDepositCategory"
-        @update:open="isDepositOpen = $event"
-        @deposit-created="handleDepositCreated"
-    />
 </template>

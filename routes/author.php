@@ -2,16 +2,18 @@
 
 use App\Http\Controllers\Admin\ConsultationAssetController;
 use App\Http\Controllers\Admin\ConsultOriginalController;
+use App\Http\Controllers\Author\DashboardController;
 use App\Http\Controllers\Author\MediaFileController;
 use App\Http\Controllers\Author\OeuvreController;
 use App\Http\Controllers\Author\OeuvreFilePreviewController;
+use App\Http\Controllers\Author\OeuvreFileStatusController;
 use App\Http\Controllers\Author\OeuvreSubmissionController;
 use App\Http\Controllers\Author\UploadController;
 use App\Http\Middleware\EnsureConsultationAccess;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified', 'role:author'])->prefix('author')->name('author.')->group(function () {
-    Route::inertia('dashboard', 'author/Dashboard')->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
 });
 
 // `oeuvres.*` deliberately has no `author.` name prefix even though its
@@ -24,6 +26,10 @@ Route::middleware(['auth', 'verified', 'role:author'])->prefix('author/oeuvres')
     Route::post('/', [OeuvreController::class, 'store'])->name('store');
     Route::get('/{oeuvre:uuid}', [OeuvreController::class, 'show'])->name('show');
     Route::delete('/{oeuvre:uuid}', [OeuvreController::class, 'destroy'])->name('destroy');
+
+    // Pipeline status of the oeuvre's files, polled by its page while a file
+    // is between `complete` and a terminal status. Owner only (404 otherwise).
+    Route::get('/{oeuvre:uuid}/files/status', OeuvreFileStatusController::class)->name('files.status');
 
     // Removing a file from a deposit. Under /author/oeuvres because that
     // is the only place it is ever reached from; the binding is the file's
