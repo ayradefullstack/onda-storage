@@ -16,7 +16,31 @@ const HIDDEN = 'motion-reveal';
 const SHOWN = 'is-revealed';
 
 /**
- * Fade an element up the first time it enters the viewport, once.
+ * Whether the element starts out below the visible part of the page. An
+ * element with no layout box (not rendered yet, inside a collapsed panel)
+ * does not count: there is no way to know when it will be seen.
+ */
+function startsBelowFold(element: Element): boolean {
+    const rect = element.getBoundingClientRect();
+
+    if (rect.width === 0 && rect.height === 0) {
+        return false;
+    }
+
+    const viewport =
+        window.innerHeight || document.documentElement.clientHeight;
+
+    return rect.top >= viewport;
+}
+
+/**
+ * Fade an element up the first time it is scrolled into view, once.
+ *
+ * Only an element that starts BELOW the fold is ever hidden. One that is
+ * already on screen when it mounts — the first rows of a page, a row a
+ * filter just brought in, the result of any re-render — is left exactly as
+ * it is: an animation must never be able to hide data, and the observer
+ * was the only thing standing between a freshly inserted row and opacity 0.
  *
  * Does nothing under prefers-reduced-motion, when disabled, or where
  * IntersectionObserver is missing: the element is then never hidden, so
@@ -29,7 +53,8 @@ export function observeReveal(
     if (
         options.disabled === true ||
         prefersReducedMotion() ||
-        typeof IntersectionObserver === 'undefined'
+        typeof IntersectionObserver === 'undefined' ||
+        !startsBelowFold(element)
     ) {
         return () => {};
     }

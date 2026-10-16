@@ -23,6 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useListFilters } from '@/composables/useListFilters';
 import {
     colleges as collegesRoute,
     documents,
@@ -79,6 +80,16 @@ const props = defineProps<{
     types: TypeOption[];
     gestions: GestionOption[];
 }>();
+
+// The controls of this tab's list (search in the shell, selects below);
+// the rows are read straight from `props.rows`.
+const list = useListFilters({
+    url: () => collegesRoute().url,
+    filters: () => props.filters,
+    defaults: { search: '', type: '', gestion: '' },
+    only: ['rows'],
+});
+const { values: filterValues } = list;
 
 const { t } = useI18n();
 
@@ -226,30 +237,16 @@ const draftWarning = computed(() => {
     return (by.draft ?? 0) + (by.submitted ?? 0) + (by.under_review ?? 0);
 });
 
-const applyFilter = (key: 'type' | 'gestion', value: string) => {
-    router.get(
-        collegesRoute().url,
-        {
-            ...(props.filters.search ? { search: props.filters.search } : {}),
-            ...(props.filters.type && key !== 'type'
-                ? { type: props.filters.type }
-                : {}),
-            ...(props.filters.gestion && key !== 'gestion'
-                ? { gestion: props.filters.gestion }
-                : {}),
-            ...(value !== 'all' ? { [key]: value } : {}),
-        },
-        { preserveState: true, preserveScroll: true, replace: true },
-    );
-};
+// "all" is the select's own sentinel (reka-ui refuses an empty value).
+const setFilter = (key: 'type' | 'gestion', value: string) =>
+    list.set({ [key]: value === 'all' ? '' : value });
 </script>
 
 <template>
     <ReferentielShell
         :tabs="tabs"
         active="colleges"
-        :index-url="collegesRoute().url"
-        :search="filters.search"
+        :list="list"
         :legend="['status', 'is_disabled']"
     >
         <template #actions>
@@ -261,8 +258,8 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
 
         <template #filters>
             <Select
-                :model-value="String(filters.type ?? 'all')"
-                @update:model-value="applyFilter('type', String($event))"
+                :model-value="filterValues.type || 'all'"
+                @update:model-value="setFilter('type', String($event))"
             >
                 <SelectTrigger class="h-9 w-48 text-sm">
                     <SelectValue
@@ -283,8 +280,8 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
             </Select>
 
             <Select
-                :model-value="String(filters.gestion ?? 'all')"
-                @update:model-value="applyFilter('gestion', String($event))"
+                :model-value="filterValues.gestion || 'all'"
+                @update:model-value="setFilter('gestion', String($event))"
             >
                 <SelectTrigger class="h-9 w-48 text-sm">
                     <SelectValue
@@ -306,10 +303,22 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
         </template>
 
         <EmptyState
+            data-test="list-empty"
             v-if="rows.data.length === 0"
             :title="t('admin.referentiel.empty')"
             :description="t('admin.referentiel.emptyDescription')"
-        />
+        >
+            <Button
+                v-if="list.isActive.value"
+                variant="outline"
+                size="sm"
+                class="h-8 cursor-pointer text-xs"
+                data-test="list-empty-clear"
+                @click="list.clear()"
+            >
+                {{ t('common.clearFilters') }}
+            </Button>
+        </EmptyState>
 
         <div
             v-else

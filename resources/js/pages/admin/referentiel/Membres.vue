@@ -18,6 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { TableScroll } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useListFilters } from '@/composables/useListFilters';
 import { membres as membresRoute } from '@/routes/admin/referentiel';
 import { store, update } from '@/routes/admin/referentiel/membres';
 
@@ -49,6 +50,16 @@ const props = defineProps<{
     filters: { search: string; college: string | null };
     colleges: Array<{ uuid: string; name: string }>;
 }>();
+
+// The controls of this tab's list (search in the shell, selects below);
+// the rows are read straight from `props.rows`.
+const list = useListFilters({
+    url: () => membresRoute().url,
+    filters: () => props.filters,
+    defaults: { search: '', college: '' },
+    only: ['rows'],
+});
+const { values: filterValues } = list;
 
 // Colleges are a long list: a searchable combobox, not a plain select.
 const collegeOptions = computed<ComboboxOption[]>(() =>
@@ -172,25 +183,13 @@ const hidesMember = () =>
         (form.value.status !== 1 && editing.value.status === 1) ||
         (!form.value.available_in_registration &&
             editing.value.available_in_registration));
-
-const applyCollege = (value: string) => {
-    router.get(
-        membresRoute().url,
-        {
-            ...(props.filters.search ? { search: props.filters.search } : {}),
-            ...(value !== 'all' ? { college: value } : {}),
-        },
-        { preserveState: true, preserveScroll: true, replace: true },
-    );
-};
 </script>
 
 <template>
     <ReferentielShell
         :tabs="tabs"
         active="membres"
-        :index-url="membresRoute().url"
-        :search="filters.search"
+        :list="list"
         :legend="['status', 'is_disabled', 'available_in_registration']"
     >
         <template #actions>
@@ -204,22 +203,36 @@ const applyCollege = (value: string) => {
             <div class="w-64">
                 <AppCombobox
                     size="sm"
-                    :model-value="filters.college ?? null"
+                    :model-value="filterValues.college || null"
                     :options="collegeOptions"
                     :placeholder="t('admin.referentiel.allColleges')"
                     @update:model-value="
                         (value) =>
-                            applyCollege(value === null ? 'all' : String(value))
+                            list.set({
+                                college: value === null ? '' : String(value),
+                            })
                     "
                 />
             </div>
         </template>
 
         <EmptyState
+            data-test="list-empty"
             v-if="rows.data.length === 0"
             :title="t('admin.referentiel.empty')"
             :description="t('admin.referentiel.emptyDescription')"
-        />
+        >
+            <Button
+                v-if="list.isActive.value"
+                variant="outline"
+                size="sm"
+                class="h-8 cursor-pointer text-xs"
+                data-test="list-empty-clear"
+                @click="list.clear()"
+            >
+                {{ t('common.clearFilters') }}
+            </Button>
+        </EmptyState>
 
         <div
             v-else

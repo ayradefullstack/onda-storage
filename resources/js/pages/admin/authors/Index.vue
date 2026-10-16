@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { ArrowDown, ArrowUp, ArrowUpDown } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import QuotaBar from '@/components/admin/QuotaBar.vue';
 import {
@@ -19,6 +19,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useListFilters } from '@/composables/useListFilters';
 import { formatDate } from '@/lib/format';
 import { dashboard } from '@/routes/admin';
 import {
@@ -72,27 +73,25 @@ defineOptions({
     },
 });
 
-const search = ref(props.filters.search);
-const wilayaFilter = ref(props.filters.wilaya);
+// The controls; the rows are read straight from `props.authors`.
+const list = useListFilters({
+    url: () => authorsIndex().url,
+    filters: () => props.filters,
+    defaults: { search: '', wilaya: '', sort: 'activity', direction: 'desc' },
+    only: ['authors'],
+});
+const {
+    values: filterValues,
+    isActive: hasActiveFilters,
+    loading: filtering,
+} = list;
+
+// reka-ui refuses an empty-string SelectItem value, so "every wilaya"
+// travels as this sentinel and is mapped back to '' at the boundary.
+const ALL_WILAYAS = '__all';
 
 function wilayaLabel(w: { name_fr: string; name_ar: string }): string {
     return locale.value === 'ar' ? w.name_ar : w.name_fr;
-}
-
-function applyFilters(overrides: Record<string, string> = {}): void {
-    router.get(
-        authorsIndex.url({
-            query: {
-                search: search.value,
-                wilaya: wilayaFilter.value,
-                sort: props.filters.sort,
-                direction: props.filters.direction,
-                ...overrides,
-            },
-        }),
-        {},
-        { preserveState: true, replace: true },
-    );
 }
 
 type SortColumn = 'activity' | 'quota' | 'oeuvres' | 'files' | 'name';
@@ -105,8 +104,12 @@ function sortHref(column: SortColumn): string {
 
     return authorsIndex.url({
         query: {
-            search: search.value,
-            wilaya: wilayaFilter.value,
+            ...(filterValues.search.trim() !== ''
+                ? { search: filterValues.search.trim() }
+                : {}),
+            ...(filterValues.wilaya !== ''
+                ? { wilaya: filterValues.wilaya }
+                : {}),
             sort: column,
             direction,
         },
@@ -123,27 +126,23 @@ function sortIcon(column: SortColumn) {
 
 const hasResults = computed(() => props.authors.data.length > 0);
 
-const hasActiveFilters = computed(() =>
-    Boolean(search.value?.trim() || wilayaFilter.value),
-);
-
 const activeFilters = computed(() => {
     const pills: { key: string; label: string; value: string }[] = [];
 
-    if (search.value?.trim()) {
+    if (filterValues.search.trim()) {
         pills.push({
             key: 'search',
             label: t('common.search', 'Recherche'),
-            value: `"${search.value.trim()}"`,
+            value: `"${filterValues.search.trim()}"`,
         });
     }
 
-    if (wilayaFilter.value) {
-        const found = props.wilayas.find((w) => w.uuid === wilayaFilter.value);
+    if (filterValues.wilaya) {
+        const found = props.wilayas.find((w) => w.uuid === filterValues.wilaya);
         pills.push({
             key: 'wilaya',
             label: t('admin.authors.colWilaya', 'Wilaya'),
-            value: found ? wilayaLabel(found) : wilayaFilter.value,
+            value: found ? wilayaLabel(found) : filterValues.wilaya,
         });
     }
 
@@ -151,19 +150,13 @@ const activeFilters = computed(() => {
 });
 
 function removeFilter(key: string): void {
-    if (key === 'search') {
-        search.value = '';
-        applyFilters({ search: '' });
-    } else if (key === 'wilaya') {
-        wilayaFilter.value = '';
-        applyFilters({ wilaya: '' });
+    if (key === 'search' || key === 'wilaya') {
+        list.set({ [key]: '' });
     }
 }
 
 function clearFilters(): void {
-    search.value = '';
-    wilayaFilter.value = '';
-    applyFilters({ search: '', wilaya: '' });
+    list.clear();
 }
 </script>
 
@@ -180,7 +173,7 @@ function clearFilters(): void {
             </p>
         </div>
 
-        <DataTable>
+        <DataTable :loading="filtering" data-test="authors-list">
             <template #toolbar>
                 <DataTableToolbar
                     :title="t('admin.authors.title')"
@@ -188,22 +181,27 @@ function clearFilters(): void {
                 >
                     <template #search>
                         <DataTableSearch
-                            v-model="search"
+                            v-model="filterValues.search"
                             :placeholder="t('admin.authors.searchPlaceholder')"
+                            :debounce="0"
+                            :loading="filtering"
                             class="w-full sm:w-64"
-                            @submit="applyFilters()"
-                            @clear="applyFilters({ search: '' })"
+                            @submit="list.apply()"
+                            @clear="list.apply()"
                         />
                     </template>
 
                     <template #filters>
                         <Select
-                            :model-value="wilayaFilter"
+                            :model-value="filterValues.wilaya || ALL_WILAYAS"
                             @update:model-value="
-                                (v) => {
-                                    wilayaFilter = String(v ?? '');
-                                    applyFilters();
-                                }
+                                (v) =>
+                                    list.set({
+                                        wilaya:
+                                            !v || v === ALL_WILAYAS
+                                                ? ''
+                                                : String(v),
+                                    })
                             "
                         >
                             <SelectTrigger size="sm" class="h-9 w-44">
@@ -212,7 +210,7 @@ function clearFilters(): void {
                                 />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">{{
+                                <SelectItem :value="ALL_WILAYAS">{{
                                     t('admin.authors.allWilayas')
                                 }}</SelectItem>
                                 <SelectItem
@@ -257,6 +255,10 @@ function clearFilters(): void {
                         <th class="px-4 py-3 text-start font-medium">
                             <Link
                                 :href="sortHref('name')"
+                                :only="['authors', 'filters']"
+                                preserve-state
+                                preserve-scroll
+                                replace
                                 class="inline-flex items-center gap-1 hover:text-foreground"
                             >
                                 {{ t('admin.authors.colName') }}
@@ -273,6 +275,10 @@ function clearFilters(): void {
                         <th class="px-4 py-3 text-start font-medium">
                             <Link
                                 :href="sortHref('oeuvres')"
+                                :only="['authors', 'filters']"
+                                preserve-state
+                                preserve-scroll
+                                replace
                                 class="inline-flex items-center gap-1 hover:text-foreground"
                             >
                                 {{ t('admin.authors.colOeuvres') }}
@@ -286,6 +292,10 @@ function clearFilters(): void {
                         <th class="px-4 py-3 text-start font-medium">
                             <Link
                                 :href="sortHref('files')"
+                                :only="['authors', 'filters']"
+                                preserve-state
+                                preserve-scroll
+                                replace
                                 class="inline-flex items-center gap-1 hover:text-foreground"
                             >
                                 {{ t('admin.authors.colFiles') }}
@@ -299,6 +309,10 @@ function clearFilters(): void {
                         <th class="px-4 py-3 text-start font-medium">
                             <Link
                                 :href="sortHref('quota')"
+                                :only="['authors', 'filters']"
+                                preserve-state
+                                preserve-scroll
+                                replace
                                 class="inline-flex items-center gap-1 hover:text-foreground"
                             >
                                 {{ t('admin.authors.colStorage') }}
@@ -312,6 +326,10 @@ function clearFilters(): void {
                         <th class="px-4 py-3 text-start font-medium">
                             <Link
                                 :href="sortHref('activity')"
+                                :only="['authors', 'filters']"
+                                preserve-state
+                                preserve-scroll
+                                replace
                                 class="inline-flex items-center gap-1 hover:text-foreground"
                             >
                                 {{ t('admin.authors.colLastActivity') }}

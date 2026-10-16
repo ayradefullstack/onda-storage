@@ -20,6 +20,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { TableScroll } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useListFilters } from '@/composables/useListFilters';
 import { documents as documentsRoute } from '@/routes/admin/referentiel';
 import { impact, store, update } from '@/routes/admin/referentiel/documents';
 
@@ -57,6 +58,16 @@ const props = defineProps<{
     /** The file-format registry, grouped by category. Server-owned. */
     formats: FormatGroup[];
 }>();
+
+// The controls of this tab's list (search in the shell, selects below);
+// the rows are read straight from `props.rows`.
+const list = useListFilters({
+    url: () => documentsRoute().url,
+    filters: () => props.filters,
+    defaults: { search: '', college: '', needs_review: '' },
+    only: ['rows'],
+});
+const { values: filterValues } = list;
 
 // Colleges are a long list: a searchable combobox, not a plain select.
 const collegeOptions = computed<ComboboxOption[]>(() =>
@@ -220,32 +231,10 @@ const create = () => {
         },
     );
 };
-
-const applyFilter = (key: 'college' | 'needs_review', value: string) => {
-    router.get(
-        documentsRoute().url,
-        {
-            ...(props.filters.search ? { search: props.filters.search } : {}),
-            ...(props.filters.college && key !== 'college'
-                ? { college: props.filters.college }
-                : {}),
-            ...(props.filters.needs_review && key !== 'needs_review'
-                ? { needs_review: 1 }
-                : {}),
-            ...(value !== 'all' && value !== '0' ? { [key]: value } : {}),
-        },
-        { preserveState: true, preserveScroll: true, replace: true },
-    );
-};
 </script>
 
 <template>
-    <ReferentielShell
-        :tabs="tabs"
-        active="documents"
-        :index-url="documentsRoute().url"
-        :search="filters.search"
-    >
+    <ReferentielShell :tabs="tabs" active="documents" :list="list">
         <template #actions>
             <Button class="cursor-pointer" @click="openCreate">
                 <Plus class="size-4" />
@@ -257,28 +246,26 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
             <div class="w-64">
                 <AppCombobox
                     size="sm"
-                    :model-value="filters.college ?? null"
+                    :model-value="filterValues.college || null"
                     :options="collegeOptions"
                     :placeholder="t('admin.referentiel.allColleges')"
                     @update:model-value="
                         (value) =>
-                            applyFilter(
-                                'college',
-                                value === null ? 'all' : String(value),
-                            )
+                            list.set({
+                                college: value === null ? '' : String(value),
+                            })
                     "
                 />
             </div>
 
             <Button
                 size="sm"
-                :variant="filters.needs_review ? 'default' : 'outline'"
+                :variant="filterValues.needs_review ? 'default' : 'outline'"
                 class="h-9 cursor-pointer gap-1.5 text-xs"
                 @click="
-                    applyFilter(
-                        'needs_review',
-                        filters.needs_review ? '0' : '1',
-                    )
+                    list.set({
+                        needs_review: filterValues.needs_review ? '' : '1',
+                    })
                 "
             >
                 <AlertTriangle class="size-3.5" />
@@ -287,10 +274,22 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
         </template>
 
         <EmptyState
+            data-test="list-empty"
             v-if="rows.data.length === 0"
             :title="t('admin.referentiel.empty')"
             :description="t('admin.referentiel.emptyDescription')"
-        />
+        >
+            <Button
+                v-if="list.isActive.value"
+                variant="outline"
+                size="sm"
+                class="h-8 cursor-pointer text-xs"
+                data-test="list-empty-clear"
+                @click="list.clear()"
+            >
+                {{ t('common.clearFilters') }}
+            </Button>
+        </EmptyState>
 
         <div
             v-else

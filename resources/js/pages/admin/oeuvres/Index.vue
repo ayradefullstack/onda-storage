@@ -39,6 +39,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { silent } from '@/composables/useGlobalLoader';
+import { useListFilters } from '@/composables/useListFilters';
 import { formatBytes, formatDate } from '@/lib/format';
 import { dashboard } from '@/routes/admin';
 import { show as authorShow } from '@/routes/admin/authors';
@@ -105,32 +106,25 @@ defineOptions({
     },
 });
 
-const search = ref(props.filters.search);
-const author = ref(props.filters.author);
-const from = ref(props.filters.from);
-const to = ref(props.filters.to);
+// The controls; the rows are read straight from `props.oeuvres`. Text
+// fields are debounced, the status select and the dates apply at once.
+const list = useListFilters({
+    url: () => oeuvresIndex().url,
+    filters: () => props.filters,
+    defaults: { search: '', author: '', status: '', from: '', to: '' },
+    only: ['oeuvres', 'counts'],
+    debounced: ['search', 'author'],
+});
+const {
+    values: filterValues,
+    isActive: hasActiveFilters,
+    loading: filtering,
+} = list;
 
-function applyFilters(overrides: Record<string, string> = {}): void {
-    router.get(
-        oeuvresIndex.url({
-            query: {
-                search: search.value,
-                author: author.value,
-                from: from.value,
-                to: to.value,
-                status: props.filters.status,
-                ...overrides,
-            },
-        }),
-        {},
-        { preserveState: true, replace: true },
-    );
-}
-
-const toReviewActive = computed(() => props.filters.status === TO_REVIEW);
+const toReviewActive = computed(() => filterValues.status === TO_REVIEW);
 
 function toggleToReview(): void {
-    applyFilters({ status: toReviewActive.value ? '' : TO_REVIEW });
+    list.set({ status: toReviewActive.value ? '' : TO_REVIEW });
 }
 
 // One dialog for the whole table: "Examiner" on a row points it at that
@@ -150,48 +144,38 @@ function onDecision(): void {
     router.reload(silent({ only: ['oeuvres', 'counts'] }));
 }
 
-const hasActiveFilters = computed(() =>
-    Boolean(
-        search.value?.trim() ||
-        author.value?.trim() ||
-        props.filters.status ||
-        from.value ||
-        to.value,
-    ),
-);
-
 const activeFilters = computed(() => {
     const pills: { key: string; label: string; value: string }[] = [];
 
-    if (search.value?.trim()) {
+    if (filterValues.search.trim()) {
         pills.push({
             key: 'search',
             label: t('common.search', 'Recherche'),
-            value: `"${search.value.trim()}"`,
+            value: `"${filterValues.search.trim()}"`,
         });
     }
 
-    if (author.value?.trim()) {
+    if (filterValues.author.trim()) {
         pills.push({
             key: 'author',
             label: t('admin.oeuvres.colAuthor', 'Auteur'),
-            value: author.value.trim(),
+            value: filterValues.author.trim(),
         });
     }
 
-    if (props.filters.status) {
+    if (filterValues.status) {
         pills.push({
             key: 'status',
             label: t('admin.oeuvres.colStatus', 'Statut'),
-            value: t(`oeuvres.status.${props.filters.status}`),
+            value: t(`oeuvres.status.${filterValues.status}`),
         });
     }
 
-    if (from.value || to.value) {
+    if (filterValues.from || filterValues.to) {
         pills.push({
             key: 'date',
             label: t('common.date', 'Date'),
-            value: `${from.value || '...'} → ${to.value || '...'}`,
+            value: `${filterValues.from || '...'} → ${filterValues.to || '...'}`,
         });
     }
 
@@ -199,27 +183,15 @@ const activeFilters = computed(() => {
 });
 
 function removeFilter(key: string): void {
-    if (key === 'search') {
-        search.value = '';
-        applyFilters({ search: '' });
-    } else if (key === 'author') {
-        author.value = '';
-        applyFilters({ author: '' });
-    } else if (key === 'status') {
-        applyFilters({ status: '' });
-    } else if (key === 'date') {
-        from.value = '';
-        to.value = '';
-        applyFilters({ from: '', to: '' });
+    if (key === 'date') {
+        list.set({ from: '', to: '' });
+    } else if (key === 'search' || key === 'author' || key === 'status') {
+        list.set({ [key]: '' });
     }
 }
 
 function clearFilters(): void {
-    search.value = '';
-    author.value = '';
-    from.value = '';
-    to.value = '';
-    applyFilters({ search: '', author: '', status: '', from: '', to: '' });
+    list.clear();
 }
 </script>
 
@@ -356,11 +328,13 @@ function clearFilters(): void {
                 <!-- Search by title -->
                 <div class="sm:col-span-2 lg:col-span-4">
                     <DataTableSearch
-                        v-model="search"
+                        v-model="filterValues.search"
                         :placeholder="t('admin.oeuvres.searchPlaceholder')"
+                        :debounce="0"
+                        :loading="filtering"
                         class="w-full max-w-none"
-                        @submit="applyFilters()"
-                        @clear="applyFilters({ search: '' })"
+                        @submit="list.apply()"
+                        @clear="list.apply()"
                     />
                 </div>
 
@@ -373,21 +347,20 @@ function clearFilters(): void {
                         <User class="size-3.5" />
                     </span>
                     <Input
-                        v-model="author"
+                        v-model="filterValues.author"
                         class="h-9 w-full ps-9 text-xs transition-colors focus:border-ring"
                         :placeholder="t('admin.oeuvres.authorPlaceholder')"
-                        @keyup.enter="applyFilters()"
-                        @blur="applyFilters()"
+                        @keyup.enter="list.apply()"
                     />
                 </div>
 
                 <!-- Status Filter -->
                 <div class="sm:col-span-1 lg:col-span-2">
                     <Select
-                        :model-value="filters.status || ALL_STATUSES"
+                        :model-value="filterValues.status || ALL_STATUSES"
                         @update:model-value="
                             (v) =>
-                                applyFilters({
+                                list.set({
                                     status:
                                         !v || v === ALL_STATUSES
                                             ? ''
@@ -421,11 +394,10 @@ function clearFilters(): void {
                 >
                     <div class="relative w-full">
                         <Input
-                            v-model="from"
+                            v-model="filterValues.from"
                             type="date"
                             class="h-9 w-full text-xs"
                             :title="t('admin.oeuvres.dateRangeFrom')"
-                            @change="applyFilters()"
                         />
                     </div>
                     <span class="shrink-0 px-0.5 text-xs text-muted-foreground">
@@ -433,11 +405,10 @@ function clearFilters(): void {
                     </span>
                     <div class="relative w-full">
                         <Input
-                            v-model="to"
+                            v-model="filterValues.to"
                             type="date"
                             class="h-9 w-full text-xs"
                             :title="t('admin.oeuvres.dateRangeTo')"
-                            @change="applyFilters()"
                         />
                     </div>
                 </div>
@@ -515,7 +486,14 @@ function clearFilters(): void {
             </div>
 
             <!-- Table Viewport with Horizontal Scroll & Sticky Header -->
-            <TableScroll>
+            <TableScroll
+                data-test="oeuvres-list"
+                :aria-busy="filtering ? 'true' : undefined"
+                :class="[
+                    'transition-opacity duration-150',
+                    filtering && 'pointer-events-none opacity-60',
+                ]"
+            >
                 <table class="w-full border-collapse text-xs">
                     <thead>
                         <tr
@@ -552,7 +530,10 @@ function clearFilters(): void {
                     </thead>
                     <tbody class="divide-y divide-border/50">
                         <!-- Empty State Row (Colspan 9) -->
-                        <tr v-if="oeuvres.data.length === 0">
+                        <tr
+                            v-if="oeuvres.data.length === 0"
+                            data-test="list-empty"
+                        >
                             <td
                                 :colspan="COLUMN_COUNT"
                                 class="px-4 py-16 text-center"
@@ -587,6 +568,7 @@ function clearFilters(): void {
                                         variant="outline"
                                         size="sm"
                                         class="mt-4 h-8 gap-1.5 text-xs shadow-2xs"
+                                        data-test="list-empty-clear"
                                         @click="clearFilters"
                                     >
                                         <RotateCcw class="size-3" />

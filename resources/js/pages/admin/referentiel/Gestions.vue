@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { TableScroll } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useListFilters } from '@/composables/useListFilters';
 import { gestions as gestionsRoute } from '@/routes/admin/referentiel';
 import { store, update } from '@/routes/admin/referentiel/gestions';
 
@@ -52,6 +53,15 @@ const props = defineProps<{
     filters: { search: string };
     types: TypeOption[];
 }>();
+
+// The controls of this tab's list (search in the shell, selects below);
+// the rows are read straight from `props.rows`.
+const list = useListFilters({
+    url: () => gestionsRoute().url,
+    filters: () => props.filters,
+    defaults: { search: '' },
+    only: ['rows'],
+});
 
 const { t } = useI18n();
 
@@ -159,8 +169,7 @@ const hidesColleges = () =>
     <ReferentielShell
         :tabs="tabs"
         active="gestions"
-        :index-url="gestionsRoute().url"
-        :search="filters.search"
+        :list="list"
         :legend="['status']"
     >
         <template #actions>
@@ -171,10 +180,22 @@ const hidesColleges = () =>
         </template>
 
         <EmptyState
+            data-test="list-empty"
             v-if="rows.data.length === 0"
             :title="t('admin.referentiel.empty')"
             :description="t('admin.referentiel.emptyDescription')"
-        />
+        >
+            <Button
+                v-if="list.isActive.value"
+                variant="outline"
+                size="sm"
+                class="h-8 cursor-pointer text-xs"
+                data-test="list-empty-clear"
+                @click="list.clear()"
+            >
+                {{ t('common.clearFilters') }}
+            </Button>
+        </EmptyState>
 
         <div
             v-else

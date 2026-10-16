@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { Info } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
     DataTableFilterPills,
     DataTableSearch,
 } from '@/components/ui/data-table';
 import type { ActiveFilter } from '@/components/ui/data-table';
+import type { ListFilters } from '@/composables/useListFilters';
 
 /**
  * The frame every reference-data tab shares: the tab bar with its row
@@ -29,41 +30,24 @@ interface Tab {
 const props = defineProps<{
     tabs: Tab[];
     active: string;
-    /** The tab's own index URL, for search and filter round-trips. */
-    indexUrl: string;
-    search: string;
+    /**
+     * The page's useListFilters: the search box here and the page's own
+     * selects (#filters slot) write to the same query, so a search keeps
+     * the college/type filter and a select keeps the search.
+     */
+    list: ListFilters<{ search: string }>;
     /** Which of the three flags this tab actually shows. */
     legend?: Array<'status' | 'is_disabled' | 'available_in_registration'>;
 }>();
 
 const { t } = useI18n();
 
-const query = ref(props.search);
-
-// Debounced: a search should not fire a request per keystroke. Only this
-// tab's props are refreshed — the tab counts do not move as you type.
-let timer: ReturnType<typeof setTimeout> | undefined;
-
-watch(query, () => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-        router.get(
-            props.indexUrl,
-            query.value.trim() !== '' ? { search: query.value.trim() } : {},
-            {
-                preserveState: true,
-                preserveScroll: true,
-                replace: true,
-                only: ['rows', 'filters'],
-            },
-        );
-    }, 350);
-});
-
 const tabHref = (tab: Tab) => `/admin/referentiel/${tab.key}`;
 
 const activeFilters = computed<ActiveFilter[]>(() => {
-    if (!query.value || query.value.trim() === '') {
+    const search = props.list.values.search.trim();
+
+    if (search === '') {
         return [];
     }
 
@@ -71,14 +55,12 @@ const activeFilters = computed<ActiveFilter[]>(() => {
         {
             key: 'search',
             label: t('common.search', 'Recherche'),
-            value: `"${query.value.trim()}"`,
+            value: `"${search}"`,
         },
     ];
 });
 
-const clearSearch = () => {
-    query.value = '';
-};
+const clearSearch = () => props.list.set({ search: '' });
 </script>
 
 <template>
@@ -130,9 +112,13 @@ const clearSearch = () => {
         <div class="flex flex-col gap-2.5">
             <div class="flex flex-wrap items-center gap-2.5">
                 <DataTableSearch
-                    v-model="query"
+                    :model-value="list.values.search"
                     :placeholder="t('admin.referentiel.searchPlaceholder')"
+                    :debounce="0"
+                    :loading="list.loading.value"
                     class="w-full sm:max-w-xs"
+                    @update:model-value="(v) => list.input('search', v)"
+                    @submit="list.apply()"
                     @clear="clearSearch"
                 />
                 <slot name="filters" />
@@ -142,7 +128,7 @@ const clearSearch = () => {
                 v-if="activeFilters.length > 0"
                 :filters="activeFilters"
                 @remove="clearSearch"
-                @clear-all="clearSearch"
+                @clear-all="list.clear()"
             />
         </div>
 
@@ -163,6 +149,15 @@ const clearSearch = () => {
             </p>
         </div>
 
-        <slot />
+        <div
+            data-test="referentiel-list"
+            :aria-busy="list.loading.value ? 'true' : undefined"
+            :class="[
+                'transition-opacity duration-150',
+                list.loading.value && 'pointer-events-none opacity-60',
+            ]"
+        >
+            <slot />
+        </div>
     </div>
 </template>

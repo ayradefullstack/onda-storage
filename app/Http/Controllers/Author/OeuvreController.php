@@ -93,9 +93,12 @@ final class OeuvreController extends Controller
     public function index(Request $request, SlotProgressQuery $slotProgress): Response
     {
         $user = $request->user();
-        $search = trim((string) $request->string('search'));
-        $status = (string) $request->string('status');
-        $sort = (string) $request->string('sort');
+        // Query-string filters are scalars or nothing: `?status[]=draft`
+        // made `$request->string()` throw "Array to string conversion" (a
+        // 500). Anything that is not a string is treated as "no filter".
+        $search = trim(self::queryString($request, 'search'));
+        $status = self::queryString($request, 'status');
+        $sort = self::queryString($request, 'sort');
 
         $oeuvres = Oeuvre::query()
             ->where('author_id', $user->id)
@@ -187,6 +190,14 @@ final class OeuvreController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('The work has been deleted.')]);
 
         return to_route('oeuvres.index');
+    }
+
+    /** A query-string filter as a string; arrays and absent values are ''. */
+    private static function queryString(Request $request, string $key): string
+    {
+        $value = $request->query($key);
+
+        return is_string($value) ? $value : '';
     }
 
     /**
