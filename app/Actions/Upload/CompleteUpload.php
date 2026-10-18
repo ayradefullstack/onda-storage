@@ -7,6 +7,7 @@ namespace App\Actions\Upload;
 use App\Domain\Quota\QuotaPolicy;
 use App\Domain\Vault\Contracts\ChunkTracker;
 use App\Domain\Vault\Contracts\VaultContract;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\CollegeOeuvreFile;
 use App\Models\MediaFile;
 use App\Models\StorageQuota;
@@ -71,7 +72,7 @@ final class CompleteUpload
             $mediaFile->dek_wrapped = $object->dekWrapped;
             $mediaFile->nonce = $object->nonce;
             $mediaFile->mac_path = $object->macPath;
-            $mediaFile->status = 'scanning';
+            $mediaFile->status = MediaFileStatus::SCANNING;
             $mediaFile->ref_count = 1;
             $mediaFile->save();
 

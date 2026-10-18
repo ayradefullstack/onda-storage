@@ -29,7 +29,7 @@ interface GestionRow {
     type: string | null;
     colleges_count: number;
     reachable_colleges_count: number;
-    status: number;
+    status: 'active' | 'inactive';
     is_system: boolean;
 }
 
@@ -74,7 +74,7 @@ const form = ref({
     name: '',
     name_ar: '',
     name_en: '',
-    status: 1,
+    status: 'active',
 });
 
 const chosenType = computed(() =>
@@ -95,7 +95,7 @@ const openCreate = () => {
         name: '',
         name_ar: '',
         name_en: '',
-        status: 1,
+        status: 'active',
     };
     errors.value = {};
     creating.value = true;
@@ -161,8 +161,8 @@ const save = () => {
 const hidesColleges = () =>
     editing.value !== null &&
     editing.value.reachable_colleges_count > 0 &&
-    form.value.status !== 1 &&
-    editing.value.status === 1;
+    form.value.status !== 'active' &&
+    editing.value.status === 'active';
 </script>
 
 <template>
@@ -265,12 +265,12 @@ const hidesColleges = () =>
                                     <span
                                         :class="[
                                             'rounded px-1.5 py-0.5 text-[10px] font-medium',
-                                            row.status === 1
+                                            row.status === 'active'
                                                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                                                 : 'bg-muted text-muted-foreground',
                                         ]"
                                         >{{
-                                            row.status === 1
+                                            row.status === 'active'
                                                 ? t(
                                                       'admin.referentiel.flags.statusOn',
                                                   )
@@ -408,8 +408,10 @@ const hidesColleges = () =>
 
             <label class="flex items-start gap-2.5 text-xs">
                 <Checkbox
-                    :model-value="form.status === 1"
-                    @update:model-value="form.status = $event ? 1 : 0"
+                    :model-value="form.status === 'active'"
+                    @update:model-value="
+                        form.status = $event ? 'active' : 'inactive'
+                    "
                 />
                 <span>
                     <span class="block font-medium">{{
@@ -486,8 +488,10 @@ const hidesColleges = () =>
 
                 <label class="flex items-start gap-2.5 text-xs">
                     <Checkbox
-                        :model-value="form.status === 1"
-                        @update:model-value="form.status = $event ? 1 : 0"
+                        :model-value="form.status === 'active'"
+                        @update:model-value="
+                            form.status = $event ? 'active' : 'inactive'
+                        "
                     />
                     <span>
                         <span class="block font-medium">{{

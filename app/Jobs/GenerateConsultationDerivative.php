@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Actions\Consultation\GenerateDerivative;
+use App\Enums\MediaConsultation\StatusEnum as ConsultationStatus;
 use App\Infrastructure\Render\PreviewFamilyResolver;
 use App\Models\MediaConsultation;
 use App\Models\MediaFile;
@@ -70,7 +71,7 @@ final class GenerateConsultationDerivative extends PipelineJob
 
         $consultation = MediaConsultation::forFile($mediaFile);
         $consultation->family = $consultation->family ?: app(PreviewFamilyResolver::class)->resolve($mediaFile)->value;
-        $consultation->status = MediaConsultation::FAILED;
+        $consultation->status = ConsultationStatus::FAILED;
         $consultation->reason = 'render_timeout';
         $consultation->save();
     }

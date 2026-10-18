@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Render;
 
+use App\Enums\MediaVariant\KindEnum;
 use App\Models\MediaFile;
 
 /**
@@ -45,8 +46,8 @@ final class VideoRenderer implements ConsultationRenderer
 
         $assets = [new RenderedAsset('video', 0, $out)];
 
-        if ($mediaFile->variants()->where('kind', 'poster')->exists()) {
-            $assets[] = new RenderedAsset('poster', 0, null, 'poster');
+        if ($mediaFile->variants()->where('kind', KindEnum::POSTER)->exists()) {
+            $assets[] = new RenderedAsset('poster', 0, null, KindEnum::POSTER);
         }
 
         return RenderResult::ready($assets, 1);

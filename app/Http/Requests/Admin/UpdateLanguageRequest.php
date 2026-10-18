@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
-use App\Models\Language;
+use App\Enums\Language\DirectionEnum;
+use App\Http\Requests\Concerns\AcceptsEnumKeys;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -17,6 +18,16 @@ use Illuminate\Validation\Rule;
  */
 final class UpdateLanguageRequest extends FormRequest
 {
+    use AcceptsEnumKeys;
+
+    /**
+     * @return array<string, class-string<DirectionEnum>>
+     */
+    protected function enumFields(): array
+    {
+        return ['direction' => DirectionEnum::class];
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -30,7 +41,7 @@ final class UpdateLanguageRequest extends FormRequest
         return [
             'name' => ['sometimes', 'required', 'string', 'max:100'],
             'native_name' => ['sometimes', 'required', 'string', 'max:100'],
-            'direction' => ['sometimes', 'required', Rule::in(Language::DIRECTIONS)],
+            'direction' => ['sometimes', 'required', Rule::enum(DirectionEnum::class)],
             'is_active' => ['sometimes', 'boolean'],
             'sort_order' => ['sometimes', 'integer', 'min:0', 'max:65535'],
         ];

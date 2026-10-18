@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Domain\Deposit\MediaFileStatus;
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\RegisterTypeCollege;
@@ -28,7 +28,7 @@ function tableAuthor(): User
     return $user;
 }
 
-function tableOeuvre(User $author, string $status = OeuvreStatus::DRAFT, ?string $title = null): Oeuvre
+function tableOeuvre(User $author, OeuvreStatus $status = OeuvreStatus::DRAFT, ?string $title = null): Oeuvre
 {
     return Oeuvre::factory()->create([
         'author_id' => $author->id,
@@ -280,7 +280,7 @@ test('the table paginates instead of returning every row', function () {
         );
 });
 
-test('row abilities mirror the policy for every status', function (string $status, bool $editable) {
+test('row abilities mirror the policy for every status', function (OeuvreStatus $status, bool $editable) {
     $author = tableAuthor();
     tableOeuvre($author, $status);
 

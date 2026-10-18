@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Oeuvre\StatusEnum;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -48,7 +49,9 @@ return new class extends Migration
             // The foreign key gives you joins; the snapshot gives you the
             // truth as of the filing date.
             $table->string('code_college_snapshot')->nullable();
-            $table->enum('status', ['draft', 'submitted', 'under_review', 'registered', 'rejected'])->default('draft');
+            $table->unsignedTinyInteger('status')
+                ->default(StatusEnum::DRAFT->value)
+                ->comment(StatusEnum::dbComment());
             $table->timestamp('submitted_at')->nullable();
             $table->timestamp('reviewed_at')->nullable();
             $table->timestamp('registered_at')->nullable();
@@ -57,6 +60,8 @@ return new class extends Migration
 
             // The admin queue: a status filter ordered by submitted_at.
             $table->index(['status', 'submitted_at']);
+            // An author's oeuvres by status (list filters, dashboard counts).
+            $table->index(['author_id', 'status']);
         });
     }
 

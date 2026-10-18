@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Value\UploadIntent;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Jobs\ProcessMediaFile;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -44,7 +45,7 @@ test('a missing ffprobe still reaches ready with null metadata', function () {
     $mediaFile->dek_wrapped = $object->dekWrapped;
     $mediaFile->nonce = $object->nonce;
     $mediaFile->mac_path = $object->macPath;
-    $mediaFile->status = 'scanning';
+    $mediaFile->status = MediaFileStatus::SCANNING;
     $mediaFile->ref_count = 1;
     $mediaFile->save();
 
@@ -52,7 +53,7 @@ test('a missing ffprobe still reaches ready with null metadata', function () {
 
     $mediaFile->refresh();
 
-    expect($mediaFile->status)->toBe('ready')
+    expect($mediaFile->status)->toBe(MediaFileStatus::READY)
         ->and($mediaFile->sha256_plain)->not->toBeNull()
         ->and($mediaFile->duration_sec)->toBeNull()
         ->and($mediaFile->width)->toBeNull()

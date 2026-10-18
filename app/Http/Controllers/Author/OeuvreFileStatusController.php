@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Author;
 
-use App\Domain\Deposit\MediaFileStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Http\Controllers\Controller;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -34,19 +34,27 @@ final class OeuvreFileStatusController extends Controller
      * only writes again at its end (`ready`, `quarantined` or `failed`). So
      * `processing` is listed for completeness but is never observed.
      */
-    public const STAGES = [
-        MediaFileStatus::UPLOADING => 'upload',
-        MediaFileStatus::ASSEMBLING => 'assembly',
-        MediaFileStatus::SCANNING => 'antivirus',
-        MediaFileStatus::PROCESSING => 'processing',
-        MediaFileStatus::READY => 'sealed',
-    ];
+    public static function stage(MediaFileStatus $status): ?string
+    {
+        return match ($status) {
+            MediaFileStatus::UPLOADING => 'upload',
+            MediaFileStatus::ASSEMBLING => 'assembly',
+            MediaFileStatus::SCANNING => 'antivirus',
+            MediaFileStatus::PROCESSING => 'processing',
+            MediaFileStatus::READY => 'sealed',
+            default => null,
+        };
+    }
 
     /** A terminal failure's message, as a locale key the page already has. */
-    public const ERRORS = [
-        MediaFileStatus::FAILED => 'media.failedWithRef',
-        MediaFileStatus::QUARANTINED => 'media.quarantineWithRef',
-    ];
+    public static function error(MediaFileStatus $status): ?string
+    {
+        return match ($status) {
+            MediaFileStatus::FAILED => 'media.failedWithRef',
+            MediaFileStatus::QUARANTINED => 'media.quarantineWithRef',
+            default => null,
+        };
+    }
 
     public function __invoke(Request $request, Oeuvre $oeuvre): JsonResponse
     {
@@ -59,8 +67,8 @@ final class OeuvreFileStatusController extends Controller
             ->map(fn (MediaFile $file): array => [
                 'id' => $file->uuid,
                 'status' => $file->status,
-                'stage' => self::STAGES[$file->status] ?? null,
-                'error' => self::ERRORS[$file->status] ?? null,
+                'stage' => self::stage($file->status),
+                'error' => self::error($file->status),
             ])
             ->values();
 

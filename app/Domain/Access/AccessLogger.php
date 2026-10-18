@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Access;
 
 use App\Domain\Deposit\Value\RowHash;
+use App\Enums\FileAccessLog\ActionEnum;
 use App\Models\FileAccessLog;
 use App\Models\MediaFile;
 use Illuminate\Support\Facades\Cache;
@@ -24,7 +25,7 @@ final class AccessLogger
     public static function record(
         MediaFile $mediaFile,
         ?int $userId,
-        string $action,
+        ActionEnum $action,
         string $ip,
         ?string $userAgent,
         ?int $bytesSent = null,
@@ -36,7 +37,9 @@ final class AccessLogger
                     $previousRowHash = FileAccessLog::orderByDesc('id')->value('row_hash');
 
                     $payload = [
-                        'action' => $action,
+                        // The key, not the int: exactly the string this column held
+                        // before it became an enum, so the chain's format is unchanged.
+                        'action' => $action->key(),
                         'media_file_uuid' => $mediaFile->uuid,
                         'user_id' => $userId,
                         'ip' => $ip,

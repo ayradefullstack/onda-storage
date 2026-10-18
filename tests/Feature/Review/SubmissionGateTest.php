@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Domain\Deposit\MediaFileStatus;
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\CollegeOeuvreFile;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -36,7 +36,7 @@ function gateAuthor(): User
     return $user;
 }
 
-function gateOeuvre(User $author, string $status = OeuvreStatus::DRAFT): Oeuvre
+function gateOeuvre(User $author, OeuvreStatus $status = OeuvreStatus::DRAFT): Oeuvre
 {
     $college = RegisterTypeCollege::where('code_college', 'MUSIQUE')->firstOrFail();
 
@@ -60,7 +60,7 @@ function gateSlot(string $documentKey): CollegeOeuvreFile
  * A file in the slot that is the only unconditional requirement, so the
  * gate passes unless the test deliberately breaks something else.
  */
-function gateSatisfyRequiredSlot(Oeuvre $oeuvre, string $status = MediaFileStatus::READY): MediaFile
+function gateSatisfyRequiredSlot(Oeuvre $oeuvre, MediaFileStatus $status = MediaFileStatus::READY): MediaFile
 {
     return MediaFile::factory()->create([
         'oeuvre_id' => $oeuvre->id,

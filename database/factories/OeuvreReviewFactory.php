@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\Oeuvre;
 use App\Models\OeuvreReview;
 use App\Models\User;

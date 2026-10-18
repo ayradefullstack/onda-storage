@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Referentiel\StatusEnum;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -28,10 +29,14 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->string('name_ar')->nullable();
             $table->string('name_en')->nullable();
-            // 1 = active — what ONDA's StatusEnum and scopeActive() treat as
-            // active. ONDA's migration comment says "1 = Inactive, 2 = Active",
-            // contradicting its own code; the code wins.
-            $table->unsignedTinyInteger('status')->default(1)->index();
+            // ACTIVE = 1 — what ONDA's code treats as active. ONDA's migration
+            // comment says "1 = Inactive, 2 = Active", contradicting its own
+            // code; the code wins.
+            $table->unsignedTinyInteger('status')
+                ->default(StatusEnum::ACTIVE->value)
+                ->comment(StatusEnum::dbComment())
+                // RegisterType::active() filters on status alone.
+                ->index();
             $table->boolean('is_disabled')->default(false);
             $table->boolean('is_system')->default(false);
             $table->timestamps();

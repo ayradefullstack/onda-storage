@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Referentiel;
 
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
 use App\Models\RegisterType;
 use App\Models\User;
 use Illuminate\Support\Str;
@@ -24,7 +25,7 @@ final class CreateRegisterType extends CreatesReferenceRow
             'slug' => $this->uniqueSlug((string) $data['name']),
             'name_ar' => $data['name_ar'] ?? null,
             'name_en' => $data['name_en'] ?? null,
-            'status' => $data['status'] ?? RegisterType::STATUS_ACTIVE,
+            'status' => $data['status'] ?? ReferentielStatus::ACTIVE,
             'is_disabled' => false,
         ]);
     }

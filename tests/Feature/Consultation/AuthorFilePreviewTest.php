@@ -5,6 +5,9 @@ declare(strict_types=1);
 use App\Actions\Consultation\ConsultationDescriptor;
 use App\Actions\Consultation\IssueAssetUrl;
 use App\Actions\Consultation\IssueOriginalUrl;
+use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaConsultation\StatusEnum as ConsultationStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\FileAccessLog;
 use App\Models\MediaConsultation;
 use App\Models\Oeuvre;
@@ -113,7 +116,7 @@ test('the owner is served derivative assets for a jpg, an xlsx and a pptx', func
     $file = ownerDeposit($this, $bytes(), $name, $mime);
     $descriptor = app(ConsultationDescriptor::class)->handle($this->oeuvre, $file, $this->owner);
 
-    expect($descriptor['status'])->toBe('ready')
+    expect($descriptor['status'])->toBe(ConsultationStatus::READY)
         ->and($descriptor['mode'])->toBe('derivative')
         ->and($descriptor['assets'])->not->toBeEmpty();
 
@@ -206,7 +209,7 @@ test('an owner URL is denied while the consultation is not ready', function () {
     $file = ownerDeposit($this, '%PDF-1.4 hello', 'acte.pdf', 'application/pdf');
     $url = app(IssueOriginalUrl::class)->handle($this->oeuvre, $file, $this->owner);
 
-    MediaConsultation::where('media_file_id', $file->id)->update(['status' => MediaConsultation::PENDING]);
+    MediaConsultation::where('media_file_id', $file->id)->update(['status' => ConsultationStatus::PENDING]);
 
     $this->actingAs($this->owner)->get($url)->assertForbidden();
 });
@@ -229,12 +232,12 @@ test('an admin opening the author routes is refused by role:author with a 403', 
     $this->actingAs($this->admin)->getJson(previewRoute($this, $file, 'oeuvres.files.preview.assets'))->assertForbidden();
 });
 
-test('the preview works in every oeuvre status', function (string $status) {
+test('the preview works in every oeuvre status', function (OeuvreStatus $status) {
     $file = ownerDeposit($this, 'plain text', 'notes.txt', 'text/plain');
     $this->oeuvre->forceFill(['status' => $status])->save();
 
     $this->actingAs($this->owner)->get(previewRoute($this, $file))->assertOk();
-})->with(['draft', 'submitted', 'under_review', 'registered', 'rejected']);
+})->with(OeuvreStatus::cases());
 
 test('an owner preview is audited like the owner stream: one stream row per window, nothing for the rest', function () {
     $file = ownerDeposit($this, 'plain text', 'notes.txt', 'text/plain');
@@ -245,6 +248,6 @@ test('an owner preview is audited like the owner stream: one stream row per wind
     $rows = FileAccessLog::where('media_file_id', $file->id)->get();
 
     expect($rows)->toHaveCount(1)
-        ->and($rows[0]->action)->toBe('stream')
+        ->and($rows[0]->action)->toBe(ActionEnum::STREAM)
         ->and($rows[0]->user_id)->toBe($this->owner->id);
 });

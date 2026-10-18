@@ -33,7 +33,7 @@ final class VaultRecountRefsCommand extends Command
         $this->table(
             ['uuid', 'status', 'ref_count', 'actual', 'path'],
             $mismatches->map(fn (array $m): array => [
-                $m['file']->uuid, $m['file']->status, $m['file']->ref_count, $m['actual'], $m['file']->path,
+                $m['file']->uuid, $m['file']->status->key(), $m['file']->ref_count, $m['actual'], $m['file']->path,
             ])->all(),
         );
 

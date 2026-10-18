@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
+use App\Enums\TypeGestion\TypeGestionEnum;
 use App\Models\CollegeOeuvreFile;
 use App\Models\Oeuvre;
 use App\Models\ReferenceDataChange;
@@ -110,7 +112,7 @@ function refTree($test): array
     return $types;
 }
 
-function refOeuvreUnder(RegisterTypeCollege $college, string $status): Oeuvre
+function refOeuvreUnder(RegisterTypeCollege $college, OeuvreStatus $status): Oeuvre
 {
     return Oeuvre::factory()->create([
         'author_id' => User::factory()->withRole('author')->create(),
@@ -135,7 +137,7 @@ test('a declarant type can be created, with a generated, frozen slug', function 
 
     expect($type->name)->toBe("Sculpteurs d'art")
         ->and($type->is_system)->toBeFalse()
-        ->and($type->status)->toBe(1)
+        ->and($type->status)->toBe(ReferentielStatus::ACTIVE)
         ->and($type->registerTypeColleges()->count())->toBe(0);
 
     $this->actingAs($this->admin)
@@ -151,9 +153,9 @@ test('a type de gestion can be created and takes the next free value', function 
     $first = refCreateGestion($this, $type, 'Première');
     $second = refCreateGestion($this, $type, 'Deuxième');
 
-    expect([$first->type_gestion, $second->type_gestion])->toBe([1, 2])
+    expect([$first->type_gestion, $second->type_gestion])->toBe([TypeGestionEnum::COLLECTIVE, TypeGestionEnum::INDIVIDUAL])
         ->and($first->is_system)->toBeFalse()
-        ->and($first->status)->toBe(1);
+        ->and($first->status)->toBe(ReferentielStatus::ACTIVE);
 
     refCreateGestion($this, $type, 'Troisième');
 
@@ -358,7 +360,7 @@ test('retiring a type\'s only gestion collapses it to three levels', function ()
     expect($type->hasActiveGestions())->toBeTrue();
 
     $this->actingAs($this->admin)
-        ->patch(route('admin.referentiel.gestions.update', $gestion), ['status' => 0])
+        ->patch(route('admin.referentiel.gestions.update', $gestion), ['status' => 'inactive'])
         ->assertSessionHasNoErrors();
 
     expect($type->fresh()->hasActiveGestions())->toBeFalse()
@@ -397,14 +399,14 @@ test('re-enabling by publishing is refused the same way, and a disable is never 
 
     // Disabling and unpublishing are always allowed.
     $this->actingAs($this->admin)
-        ->patch(route('admin.referentiel.colleges.update', $college), ['is_disabled' => true, 'status' => 0])
+        ->patch(route('admin.referentiel.colleges.update', $college), ['is_disabled' => true, 'status' => 'inactive'])
         ->assertSessionHasNoErrors();
 
     // A college whose only document is gone cannot come back.
     $college->collegeOeuvreFiles()->delete();
 
     $this->actingAs($this->admin)
-        ->patch(route('admin.referentiel.colleges.update', $college), ['status' => 1, 'is_disabled' => false])
+        ->patch(route('admin.referentiel.colleges.update', $college), ['status' => 'active', 'is_disabled' => false])
         ->assertSessionHasErrors('is_disabled');
 });
 
@@ -561,7 +563,7 @@ test('disabling a type hides it from step 1 and changes no college row', functio
     expect(collect(refTree($this))->pluck('name'))->toContain($type->name);
 
     $this->actingAs($this->admin)
-        ->patch(route('admin.referentiel.types.update', $type), ['status' => 0])
+        ->patch(route('admin.referentiel.types.update', $type), ['status' => 'inactive'])
         ->assertSessionHasNoErrors();
 
     expect(collect(refTree($this))->pluck('name'))->not->toContain($type->name)
@@ -575,7 +577,7 @@ test('disabling a college does not change the oeuvres classified under it', func
     $before = [$draft->fresh()->getAttributes(), $review->fresh()->getAttributes()];
 
     $this->actingAs($this->admin)
-        ->patch(route('admin.referentiel.colleges.update', $college), ['is_disabled' => true, 'status' => 0])
+        ->patch(route('admin.referentiel.colleges.update', $college), ['is_disabled' => true, 'status' => 'inactive'])
         ->assertSessionHasNoErrors();
 
     expect([$draft->fresh()->getAttributes(), $review->fresh()->getAttributes()])->toBe($before)
@@ -593,9 +595,9 @@ test('a registered oeuvre is unaffected by any change to its classification', fu
     $registered->forceFill(['register_type_member_id' => $member->id])->save();
     $before = $registered->fresh()->getAttributes();
 
-    $this->actingAs($this->admin)->patch(route('admin.referentiel.membres.update', $member), ['is_disabled' => true, 'status' => 0, 'available_in_registration' => false, 'name' => 'Autre nom']);
-    $this->actingAs($this->admin)->patch(route('admin.referentiel.colleges.update', $college), ['is_disabled' => true, 'status' => 0, 'name' => 'Autre collège']);
-    $this->actingAs($this->admin)->patch(route('admin.referentiel.types.update', $type), ['is_disabled' => true, 'status' => 0, 'name' => 'Autre type']);
+    $this->actingAs($this->admin)->patch(route('admin.referentiel.membres.update', $member), ['is_disabled' => true, 'status' => 'inactive', 'available_in_registration' => false, 'name' => 'Autre nom']);
+    $this->actingAs($this->admin)->patch(route('admin.referentiel.colleges.update', $college), ['is_disabled' => true, 'status' => 'inactive', 'name' => 'Autre collège']);
+    $this->actingAs($this->admin)->patch(route('admin.referentiel.types.update', $type), ['is_disabled' => true, 'status' => 'inactive', 'name' => 'Autre type']);
 
     expect($registered->fresh()->getAttributes())->toBe($before);
 });
@@ -670,7 +672,7 @@ test('every update and status change writes an audit row naming the admin', func
 
     $this->actingAs($this->admin)->patch(route('admin.referentiel.colleges.update', $college), ['is_disabled' => true]);
     $this->actingAs($this->admin)->patch(route('admin.referentiel.membres.update', $member), ['name_en' => 'Sculptor']);
-    $this->actingAs($this->admin)->patch(route('admin.referentiel.types.update', $type), ['status' => 0]);
+    $this->actingAs($this->admin)->patch(route('admin.referentiel.types.update', $type), ['status' => 'inactive']);
 
     expect(ReferenceDataChange::where('subject_uuid', $college->uuid)->where('field', 'is_disabled')->exists())->toBeTrue()
         ->and(ReferenceDataChange::where('subject_uuid', $member->uuid)->where('field', 'name_en')->value('new_value'))->toBe('"Sculptor"')
@@ -695,11 +697,11 @@ test('a change is visible in step 1 immediately: there is no tree cache to go st
 
     expect(collect(refTree($this))->firstWhere('name', $type->name)['colleges'])->toHaveCount(1);
 
-    $this->actingAs($this->admin)->patch(route('admin.referentiel.colleges.update', $college), ['name_ar' => 'ورشة', 'status' => 0]);
+    $this->actingAs($this->admin)->patch(route('admin.referentiel.colleges.update', $college), ['name_ar' => 'ورشة', 'status' => 'inactive']);
 
     expect(collect(refTree($this))->firstWhere('name', $type->name)['colleges'])->toHaveCount(0);
 
-    $this->actingAs($this->admin)->patch(route('admin.referentiel.colleges.update', $college), ['status' => 1]);
+    $this->actingAs($this->admin)->patch(route('admin.referentiel.colleges.update', $college), ['status' => 'active']);
 
     expect(collect(refTree($this))->firstWhere('name', $type->name)['colleges'])->toHaveCount(1);
 });

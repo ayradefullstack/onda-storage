@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Domain\Localization\LanguageService;
+use App\Enums\Language\DirectionEnum;
+use App\Models\Concerns\SerializesEnumsAsKeys;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use LogicException;
@@ -17,10 +19,19 @@ use LogicException;
  * Not soft-deleted and never deleted through the app: retiring a language
  * is `is_active = false`. The default language can never be deleted at all
  * (see the `deleting` guard). Keyed by `code` in routes.
+ *
+ * @property int $id
+ * @property string $name
+ * @property string $code
+ * @property string $native_name
+ * @property DirectionEnum $direction
+ * @property bool $is_default
+ * @property bool $is_active
+ * @property int $sort_order
  */
 class Language extends Model
 {
-    public const DIRECTIONS = ['ltr', 'rtl'];
+    use SerializesEnumsAsKeys;
 
     /** Lowercase BCP-47-ish: `ar`, `fr`, `pt-br`. Also the route `{locale}` shape. */
     public const CODE_PATTERN = '[a-z]{2,3}(?:-[a-z0-9]{2,8})?';
@@ -43,6 +54,7 @@ class Language extends Model
     protected function casts(): array
     {
         return [
+            'direction' => DirectionEnum::class,
             'is_default' => 'boolean',
             'is_active' => 'boolean',
             'sort_order' => 'integer',

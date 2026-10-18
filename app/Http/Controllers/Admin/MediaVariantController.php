@@ -8,6 +8,8 @@ use App\Domain\Access\AccessLogger;
 use App\Domain\Vault\Crypto\CtrCipher;
 use App\Domain\Vault\Crypto\HkdfKeys;
 use App\Domain\Vault\Crypto\KeyManager;
+use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaVariant\KindEnum;
 use App\Http\Controllers\Controller;
 use App\Models\MediaFile;
 use App\Models\MediaVariant;
@@ -36,15 +38,27 @@ use RuntimeException;
  */
 final class MediaVariantController extends Controller
 {
-    private const MIME_BY_KIND = [
-        'poster' => 'image/jpeg',
-        'waveform' => 'image/png',
-        'preview' => 'video/mp4',
-    ];
+    /** The kinds this endpoint serves; a thumbnail is never requested here. */
+    private static function mimeFor(KindEnum $kind): ?string
+    {
+        return match ($kind) {
+            KindEnum::POSTER => 'image/jpeg',
+            KindEnum::WAVEFORM => 'image/png',
+            KindEnum::PREVIEW => 'video/mp4',
+            default => null,
+        };
+    }
 
+    /**
+     * `{kind}` is the enum KEY in the URL (`poster`, `waveform`, `preview`);
+     * an unknown key or a kind this endpoint does not serve is a 404.
+     */
     public function show(Request $request, MediaFile $mediaFile, string $kind, KeyManager $keyManager, CtrCipher $cipher): Response
     {
-        abort_unless(array_key_exists($kind, self::MIME_BY_KIND), 404);
+        $variantKind = KindEnum::fromKey($kind);
+        $mime = $variantKind === null ? null : self::mimeFor($variantKind);
+
+        abort_if($variantKind === null || $mime === null, 404);
 
         /** @var User $admin */
         $admin = $request->user();
@@ -52,7 +66,7 @@ final class MediaVariantController extends Controller
         Gate::forUser($admin)->authorize('view', $mediaFile);
 
         $variant = MediaVariant::where('media_file_id', $mediaFile->id)
-            ->where('kind', $kind)
+            ->where('kind', $variantKind)
             ->latest('id')
             ->first();
 
@@ -72,21 +86,21 @@ final class MediaVariantController extends Controller
 
         $watermark = $this->watermarkText($admin);
 
-        $watermarked = $kind === 'preview'
+        $watermarked = $variantKind === KindEnum::PREVIEW
             ? $this->watermarkVideo($plaintext, $mediaFile->uuid, $watermark)
-            : $this->watermarkImage($plaintext, $kind, $watermark);
+            : $this->watermarkImage($plaintext, $variantKind, $watermark);
 
         AccessLogger::record(
             $mediaFile,
             $admin->id,
-            'preview',
+            ActionEnum::PREVIEW,
             $request->ip() ?? 'unknown',
             $request->userAgent(),
             strlen($watermarked),
         );
 
         return response($watermarked, 200, [
-            'Content-Type' => self::MIME_BY_KIND[$kind],
+            'Content-Type' => $mime,
             'Content-Length' => (string) strlen($watermarked),
             // Server-generated preview (poster, waveform, clip): stays inline,
             // but never sniffed into another type.
@@ -108,12 +122,12 @@ final class MediaVariantController extends Controller
         return trim($name).' - '.now()->format('Y-m-d H-i-s');
     }
 
-    private function watermarkImage(string $plaintext, string $kind, string $text): string
+    private function watermarkImage(string $plaintext, KindEnum $kind, string $text): string
     {
         $image = @imagecreatefromstring($plaintext);
 
         if ($image === false) {
-            throw new RuntimeException("Could not decode '{$kind}' variant image for watermarking.");
+            throw new RuntimeException("Could not decode '{$kind->key()}' variant image for watermarking.");
         }
 
         $width = imagesx($image);
@@ -124,7 +138,7 @@ final class MediaVariantController extends Controller
         $white = imagecolorallocate($image, 255, 255, 255);
 
         if ($bar === false || $white === false) {
-            throw new RuntimeException("Could not allocate watermark colors for '{$kind}' variant.");
+            throw new RuntimeException("Could not allocate watermark colors for '{$kind->key()}' variant.");
         }
 
         imagefilledrectangle($image, 0, $height - $barHeight, $width, $height, $bar);
@@ -132,7 +146,7 @@ final class MediaVariantController extends Controller
 
         ob_start();
 
-        if ($kind === 'poster') {
+        if ($kind === KindEnum::POSTER) {
             imagejpeg($image, null, 85);
         } else {
             imagepng($image);

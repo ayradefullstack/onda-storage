@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Media;
 
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Events\MediaFileStatusChanged;
 use App\Models\MediaFile;
 
@@ -13,7 +14,7 @@ use App\Models\MediaFile;
  */
 final class TransitionMediaFileStatus
 {
-    public function handle(MediaFile $mediaFile, string $newStatus): void
+    public function handle(MediaFile $mediaFile, MediaFileStatus $newStatus): void
     {
         $previousStatus = $mediaFile->status;
 

@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Domain\Deposit\MediaFileStatus;
 use App\Domain\Deposit\PipelineWorkspace;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Jobs\ComputeContentHash;
 use App\Jobs\DecryptToTemp;
 use App\Jobs\ProcessMediaFile;

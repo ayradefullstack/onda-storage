@@ -8,6 +8,9 @@ use App\Domain\Vault\Crypto\CtrCipher;
 use App\Domain\Vault\Crypto\HkdfKeys;
 use App\Domain\Vault\Crypto\KeyManager;
 use App\Domain\Vault\Value\UploadIntent;
+use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\MediaVariant\KindEnum;
 use App\Models\FileAccessLog;
 use App\Models\MediaFile;
 use App\Models\MediaVariant;
@@ -21,7 +24,7 @@ function adminMediaTestAuthor(): User
     return User::factory()->withRole('author')->create();
 }
 
-function adminMediaTestFile(User $author, Oeuvre $oeuvre, string $status = 'ready'): MediaFile
+function adminMediaTestFile(User $author, Oeuvre $oeuvre, MediaFileStatus $status = MediaFileStatus::READY): MediaFile
 {
     $vault = app(VaultContract::class);
     $bytes = file_get_contents(base_path('tests/fixtures/sample.mp4'));
@@ -85,7 +88,7 @@ function adminMediaTestPosterVariant(MediaFile $mediaFile): MediaVariant
     $variant = new MediaVariant;
     $variant->uuid = $variantUuid;
     $variant->media_file_id = $mediaFile->id;
-    $variant->kind = 'poster';
+    $variant->kind = KindEnum::POSTER;
     $variant->path = $relativePath;
     $variant->nonce = bin2hex($nonce);
     $variant->size_bytes = strlen($ciphertext);
@@ -140,7 +143,7 @@ test('an admin previewing a variant writes a file_access_logs row naming the adm
     $log = FileAccessLog::where('media_file_id', $mediaFile->id)->latest('id')->first();
 
     expect($log)->not->toBeNull()
-        ->and($log->action)->toBe('preview')
+        ->and($log->action)->toBe(ActionEnum::PREVIEW)
         ->and($log->user_id)->toBe($admin->id);
 
     adminMediaTestCleanup($mediaFile);

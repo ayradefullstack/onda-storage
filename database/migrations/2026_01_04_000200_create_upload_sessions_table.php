@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\UploadSession\StatusEnum;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -33,7 +34,9 @@ return new class extends Migration
             $table->text('dek_wrapped');
             $table->char('nonce', 16);
             $table->string('temp_path');
-            $table->string('status', 32)->default('pending');
+            $table->unsignedTinyInteger('status')
+                ->default(StatusEnum::PENDING->value)
+                ->comment(StatusEnum::dbComment());
             $table->timestamp('expires_at');
             $table->timestamps();
 

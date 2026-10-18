@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use App\Actions\Consultation\DeleteConsultationAssets;
 use App\Actions\Consultation\GenerateDerivative;
+use App\Enums\MediaConsultation\StatusEnum as ConsultationStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\MediaVariant\KindEnum;
 use App\Infrastructure\Render\ConsultationRenderer;
 use App\Infrastructure\Render\OfficeConverter;
 use App\Infrastructure\Render\PreviewFamily;
@@ -50,7 +53,7 @@ test('a csv with Arabic content keeps UTF-8 and parses the delimiter', function 
 
     $consultation = consultGenerate($file);
 
-    expect($consultation->status)->toBe('ready')
+    expect($consultation->status)->toBe(ConsultationStatus::READY)
         ->and($consultation->family)->toBe('csv');
 
     $json = json_decode(consultPlain($file, consultAssetRow($file, 'sheet', 0)), true);
@@ -81,7 +84,7 @@ test('an xlsx keeps cached formula values, drops hyperlinks and obeys the caps',
 
     config(['vault.consult.sheet_max_rows' => 5, 'vault.consult.sheet_max_cols' => 2]);
 
-    expect(consultGenerate($file)->status)->toBe('ready');
+    expect(consultGenerate($file)->status)->toBe(ConsultationStatus::READY);
 
     $raw = consultPlain($file, consultAssetRow($file, 'sheet', 0));
     $json = json_decode($raw, true);
@@ -99,7 +102,7 @@ test('an xlsx keeps cached formula values, drops hyperlinks and obeys the caps',
 test('a png becomes one stripped, valid WebP', function () {
     $file = consultDeposit($this, consultFixture('formats/sample.png'), 'image.png', 'image/png');
 
-    expect(consultGenerate($file)->status)->toBe('ready');
+    expect(consultGenerate($file)->status)->toBe(ConsultationStatus::READY);
 
     $webp = consultPlain($file, consultAssetRow($file, 'image', 0));
 
@@ -113,7 +116,7 @@ test('svg and xml are text source, never markup', function (string $fixture, str
 
     $consultation = consultGenerate($file);
 
-    expect($consultation->status)->toBe('ready')
+    expect($consultation->status)->toBe(ConsultationStatus::READY)
         ->and($consultation->family)->toBe('text');
 
     $asset = consultAssetRow($file, 'text', 0);
@@ -130,7 +133,7 @@ test('derivatives are encrypted at rest, not stored as plaintext', function () {
     $secret = 'TOP-SECRET-DEPOSIT-CONTENT-'.bin2hex(random_bytes(8));
     $file = consultDeposit($this, $secret, 'notes.txt', 'text/plain');
 
-    expect(consultGenerate($file)->status)->toBe('ready');
+    expect(consultGenerate($file)->status)->toBe(ConsultationStatus::READY);
 
     $asset = consultAssetRow($file, 'text', 0);
     $onDisk = (string) file_get_contents(Storage::disk('variants')->path($asset->path));
@@ -175,7 +178,7 @@ test('an archive or unknown format gets a metadata card and no asset', function 
 
     $consultation = consultGenerate($file);
 
-    expect($consultation->status)->toBe('unsupported')
+    expect($consultation->status)->toBe(ConsultationStatus::UNSUPPORTED)
         ->and($consultation->reason)->toBe('unsupported_format')
         ->and(ConsultationAsset::where('media_file_id', $file->id)->count())->toBe(0);
 });
@@ -188,9 +191,9 @@ test('a docx with LibreOffice missing is unsupported with that reason, and the d
 
     $consultation = consultGenerate($file);
 
-    expect($consultation->status)->toBe('unsupported')
+    expect($consultation->status)->toBe(ConsultationStatus::UNSUPPORTED)
         ->and($consultation->reason)->toBe('tool_missing:soffice')
-        ->and($file->fresh()->status)->toBe('ready');
+        ->and($file->fresh()->status)->toBe(MediaFileStatus::READY);
 });
 
 test('a renderer exception becomes failed, never an exception out of the job, and never fails the deposit', function () {
@@ -214,14 +217,14 @@ test('a renderer exception becomes failed, never an exception out of the job, an
 
     $consultation = MediaConsultation::where('media_file_id', $file->id)->first();
 
-    expect($consultation->status)->toBe('failed')
+    expect($consultation->status)->toBe(ConsultationStatus::FAILED)
         ->and($consultation->reason)->toBe('render_failed')
-        ->and($file->fresh()->status)->toBe('ready');
+        ->and($file->fresh()->status)->toBe(MediaFileStatus::READY);
 
     // Even the worker-killed path (failed()) only touches the consultation.
     $job->failed(new RuntimeException('killed'));
 
-    expect($file->fresh()->status)->toBe('ready')
+    expect($file->fresh()->status)->toBe(MediaFileStatus::READY)
         ->and(MediaConsultation::where('media_file_id', $file->id)->value('reason'))->toBe('render_timeout');
 });
 
@@ -259,7 +262,7 @@ test('a pdf becomes page images when a rasterizer exists', function () {
 
     $consultation = consultGenerate($file);
 
-    expect($consultation->status)->toBe('ready')
+    expect($consultation->status)->toBe(ConsultationStatus::READY)
         ->and($consultation->page_count)->toBeGreaterThan(0);
 
     expect(substr(consultPlain($file, consultAssetRow($file, 'page', 0)), 8, 4))->toBe('WEBP');
@@ -277,7 +280,7 @@ test('pdf without a rasterizer is unsupported with the exact tool named', functi
 
     $consultation = consultGenerate($file);
 
-    expect($consultation->status)->toBe('unsupported')
+    expect($consultation->status)->toBe(ConsultationStatus::UNSUPPORTED)
         ->and($consultation->reason)->toBe('tool_missing:pdftoppm');
 });
 
@@ -291,7 +294,7 @@ test('a docx converts through LibreOffice to page images', function () {
 
     $consultation = consultGenerate($file);
 
-    expect($consultation->status)->toBe('ready')
+    expect($consultation->status)->toBe(ConsultationStatus::READY)
         ->and(consultAssetRow($file, 'page', 0))->not->toBeNull();
 });
 
@@ -302,11 +305,11 @@ test('a video keeps the existing poster instead of generating a second one', fun
     }
 
     $file = consultDeposit($this, consultFixture('sample.mp4'), 'clip.mp4', 'video/mp4');
-    $variant = consultVariant($file, 'poster', "\xFF\xD8\xFF\xE0 fake-jpeg");
+    $variant = consultVariant($file, KindEnum::POSTER, "\xFF\xD8\xFF\xE0 fake-jpeg");
 
     $consultation = consultGenerate($file);
 
-    expect($consultation->status)->toBe('ready');
+    expect($consultation->status)->toBe(ConsultationStatus::READY);
 
     $video = consultAssetRow($file, 'video', 0);
     $poster = consultAssetRow($file, 'poster', 0);
@@ -339,9 +342,9 @@ test('an audio file becomes an mp3 and reuses the waveform', function () {
     }
 
     $file = consultDeposit($this, (string) file_get_contents($wav), 'son.wav', 'audio/wav');
-    consultVariant($file, 'waveform', "\x89PNG fake");
+    consultVariant($file, KindEnum::WAVEFORM, "\x89PNG fake");
 
-    expect(consultGenerate($file)->status)->toBe('ready');
+    expect(consultGenerate($file)->status)->toBe(ConsultationStatus::READY);
 
     $mp3 = consultPlain($file, consultAssetRow($file, 'audio', 0));
 

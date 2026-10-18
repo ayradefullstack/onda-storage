@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Media;
 
 use App\Actions\Media\IssueStreamUrl;
-use App\Domain\Deposit\MediaFileStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Http\Controllers\Controller;
 use App\Models\MediaFile;
 use Illuminate\Http\JsonResponse;

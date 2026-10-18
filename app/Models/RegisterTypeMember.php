@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Concerns\HasUuidColumn;
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
+use App\Models\Concerns\SerializesEnumsAsKeys;
 use Database\Factories\RegisterTypeMemberFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -25,7 +27,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $name_ar
  * @property string|null $name_en
  * @property string|null $code_qlt
- * @property int $status
+ * @property ReferentielStatus $status
  * @property bool $is_disabled
  * @property bool $available_in_registration
  * @property bool $is_system
@@ -37,7 +39,7 @@ use Illuminate\Support\Carbon;
 class RegisterTypeMember extends Model
 {
     /** @use HasFactory<RegisterTypeMemberFactory> */
-    use HasFactory, HasUuidColumn, SoftDeletes;
+    use HasFactory, HasUuidColumn, SerializesEnumsAsKeys, SoftDeletes;
 
     protected $fillable = [
         'register_type_college_id',
@@ -53,7 +55,7 @@ class RegisterTypeMember extends Model
     protected function casts(): array
     {
         return [
-            'status' => 'integer',
+            'status' => ReferentielStatus::class,
             'is_disabled' => 'boolean',
             'available_in_registration' => 'boolean',
             'is_system' => 'boolean',

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Render;
 
+use App\Enums\MediaConsultation\StatusEnum as ConsultationStatus;
+
 /**
  * What a renderer hands back. `reason` is a short machine key the UI
  * translates (e.g. `tool_missing:soffice`, `too_large`, `unsupported_format`),
@@ -16,7 +18,7 @@ final readonly class RenderResult
      * @param  list<RenderedAsset>  $assets
      */
     private function __construct(
-        public string $status,
+        public ConsultationStatus $status,
         public ?string $reason,
         public array $assets,
         public ?int $pageCount,
@@ -27,16 +29,16 @@ final readonly class RenderResult
      */
     public static function ready(array $assets, ?int $pageCount = null, ?string $notice = null): self
     {
-        return new self('ready', $notice, $assets, $pageCount);
+        return new self(ConsultationStatus::READY, $notice, $assets, $pageCount);
     }
 
     public static function unsupported(string $reason): self
     {
-        return new self('unsupported', $reason, [], null);
+        return new self(ConsultationStatus::UNSUPPORTED, $reason, [], null);
     }
 
     public static function failed(string $reason): self
     {
-        return new self('failed', $reason, [], null);
+        return new self(ConsultationStatus::FAILED, $reason, [], null);
     }
 }

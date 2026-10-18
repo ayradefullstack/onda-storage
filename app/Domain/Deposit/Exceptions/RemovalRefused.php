@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Deposit\Exceptions;
 
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+
 /**
  * A file or oeuvre cannot be removed right now. Always names the file —
  * "a file is still being processed" is useless when the deposit holds
@@ -28,10 +30,10 @@ final class RemovalRefused extends DepositException
         parent::__construct($message);
     }
 
-    public static function midPipeline(string $fileName, string $status): self
+    public static function midPipeline(string $fileName, MediaFileStatus $status): self
     {
         return new self(
-            "\"{$fileName}\" is still being processed ({$status}). Wait for it to finish, then remove it.",
+            "\"{$fileName}\" is still being processed ({$status->key()}). Wait for it to finish, then remove it.",
             self::MID_PIPELINE,
             $fileName,
         );

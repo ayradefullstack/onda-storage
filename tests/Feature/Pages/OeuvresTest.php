@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\RegisterTypeCollege;
@@ -68,7 +70,7 @@ test('storing a work creates an untitled draft for the authenticated author and 
     ]);
 
     $oeuvre = Oeuvre::where('author_id', $user->id)->firstOrFail();
-    expect($oeuvre->status)->toBe('draft')
+    expect($oeuvre->status)->toBe(OeuvreStatus::DRAFT)
         ->and($oeuvre->title)->toBeNull();
 
     $response->assertRedirect(route('oeuvres.show', $oeuvre));
@@ -89,7 +91,7 @@ test('the show page renders the work and its media files for the owner', functio
     $oeuvre = Oeuvre::factory()->create(['author_id' => $user->id]);
     $mediaFile = MediaFile::factory()->create([
         'oeuvre_id' => $oeuvre->id,
-        'status' => 'ready',
+        'status' => MediaFileStatus::READY,
         'original_name' => 'movie.mp4',
     ]);
 

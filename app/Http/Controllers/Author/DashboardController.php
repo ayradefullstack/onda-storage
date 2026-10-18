@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Author;
 
 use App\Actions\Upload\InitUpload;
-use App\Domain\Deposit\OeuvreStatus;
 use App\Domain\Deposit\SubmissionGate;
 use App\Domain\Deposit\Value\SubmissionReason;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Oeuvre;
 use App\Models\OeuvreReview;
@@ -50,7 +50,7 @@ final class DashboardController extends Controller
      * The transitions an author is told about: the ONDA opened, accepted or
      * refused their deposit. Their own submissions are not decisions.
      *
-     * @var list<string>
+     * @var list<OeuvreStatus>
      */
     private const DECISIONS = [OeuvreStatus::UNDER_REVIEW, OeuvreStatus::REGISTERED, OeuvreStatus::REJECTED];
 
@@ -75,7 +75,7 @@ final class DashboardController extends Controller
             'actions' => [
                 'items' => $this->actions($user, $gate),
                 // Every deposit still in the author's hands, shown or not.
-                'total' => $counts[OeuvreStatus::DRAFT] + $counts[OeuvreStatus::REJECTED],
+                'total' => $counts[OeuvreStatus::DRAFT->key()] + $counts[OeuvreStatus::REJECTED->key()],
             ],
             'recent' => $this->recent($user),
             'quota' => $this->quota($user),
@@ -94,7 +94,7 @@ final class DashboardController extends Controller
     {
         $oeuvres = Oeuvre::query()
             ->where('author_id', $user->id)
-            ->whereIn('status', OeuvreStatus::AUTHOR_EDITABLE)
+            ->whereIn('status', OeuvreStatus::authorEditable())
             ->with('registerTypeCollege')
             ->orderByRaw('status = ? desc', [OeuvreStatus::REJECTED])
             ->orderByDesc('created_at')

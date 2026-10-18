@@ -7,6 +7,7 @@ namespace App\Actions\Consultation;
 use App\Domain\Deposit\PipelineWorkspace;
 use App\Domain\Deposit\Value\StoredObjectMapper;
 use App\Domain\Vault\Contracts\VaultContract;
+use App\Enums\MediaConsultation\StatusEnum as ConsultationStatus;
 use App\Infrastructure\Render\AudioRenderer;
 use App\Infrastructure\Render\ConsultationRenderer;
 use App\Infrastructure\Render\CsvRenderer;
@@ -64,7 +65,7 @@ final class GenerateDerivative
     {
         $consultation = MediaConsultation::forFile($mediaFile);
 
-        if (! $force && $consultation->exists && $consultation->status === MediaConsultation::READY) {
+        if (! $force && $consultation->exists && $consultation->status === ConsultationStatus::READY) {
             return $consultation;
         }
 
@@ -92,7 +93,7 @@ final class GenerateDerivative
             return $consultation;
         }
 
-        $consultation->status = MediaConsultation::PENDING;
+        $consultation->status = ConsultationStatus::PENDING;
         $consultation->reason = null;
         $consultation->save();
 
@@ -121,7 +122,7 @@ final class GenerateDerivative
         } catch (Throwable $e) {
             // Resolve the row FIRST: nothing below (a logger that throws, a
             // full disk on the log file) may leave it `pending`.
-            $consultation->status = MediaConsultation::FAILED;
+            $consultation->status = ConsultationStatus::FAILED;
             $consultation->reason = $this->reasonFrom($e);
             $consultation->generated_at = null;
             $consultation->save();
@@ -148,7 +149,7 @@ final class GenerateDerivative
     {
         $this->delete->handle($mediaFile->consultationAssets()->get());
 
-        $consultation->status = MediaConsultation::READY;
+        $consultation->status = ConsultationStatus::READY;
         $consultation->reason = null;
         $consultation->page_count = null;
         $consultation->generated_at = now();
@@ -161,10 +162,10 @@ final class GenerateDerivative
     {
         $previous = $mediaFile->consultationAssets()->get();
 
-        if ($result->status !== 'ready') {
+        if ($result->status !== ConsultationStatus::READY) {
             // A failed REgeneration keeps the old derivatives; a first
             // attempt has none to keep. unsupported clears them.
-            if ($result->status === 'unsupported') {
+            if ($result->status === ConsultationStatus::UNSUPPORTED) {
                 $this->delete->handle($previous);
             }
 
@@ -205,7 +206,7 @@ final class GenerateDerivative
 
         $this->delete->handle($previous);
 
-        $consultation->status = MediaConsultation::READY;
+        $consultation->status = ConsultationStatus::READY;
         $consultation->reason = $result->reason;
         $consultation->page_count = $result->pageCount;
         $consultation->generated_at = now();

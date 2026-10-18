@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Enums\TypeGestion\TypeGestionEnum;
 use App\Models\RegisterRoleAuteur;
 use App\Models\RegisterType;
 use App\Models\RegisterTypeCollege;
@@ -148,7 +149,7 @@ class MembershipTypeSeeder extends Seeder
                         registerTypeId: $registerType->id,
                         name: $collegeData[0],
                         typeGestion: $collegeData[1],
-                        typeGestionId: $typeGestionIds[$typeId][$collegeData[1]] ?? null,
+                        typeGestionId: $typeGestionIds[$typeId][$collegeData[1]->value] ?? null,
                         code: $code,
                         codeDv: $codeDv,
                         isDisabled: $isDisabled,
@@ -190,7 +191,7 @@ class MembershipTypeSeeder extends Seeder
                         registerTypeId: $registerType->id,
                         name: $collegeData[0],
                         typeGestion: $collegeData[1],
-                        typeGestionId: $typeGestionIds[$typeId][$collegeData[1]] ?? null,
+                        typeGestionId: $typeGestionIds[$typeId][$collegeData[1]->value] ?? null,
                         code: $code,
                         codeDv: $codeDv,
                         isDisabled: $isDisabled,
@@ -228,7 +229,7 @@ class MembershipTypeSeeder extends Seeder
     private function syncCollege(
         int $registerTypeId,
         string $name,
-        int $typeGestion,
+        TypeGestionEnum $typeGestion,
         ?int $typeGestionId,
         string $code,
         ?string $codeDv,
@@ -315,24 +316,24 @@ class MembershipTypeSeeder extends Seeder
     {
         return [
             1 => [
-                TypeGestion::COLLECTIVE => ['name' => 'Gestion collective', 'name_en' => 'Collective management', 'name_ar' => 'إدارة جماعية'],
-                TypeGestion::INDIVIDUAL => ['name' => 'Gestion individuelle', 'name_en' => 'Individual management', 'name_ar' => 'إدارة فردية'],
-                TypeGestion::SIMPLE => ['name' => 'Simple protection', 'name_en' => 'Simple protection', 'name_ar' => 'حماية بسيطة'],
+                TypeGestionEnum::COLLECTIVE->value => ['name' => 'Gestion collective', 'name_en' => 'Collective management', 'name_ar' => 'إدارة جماعية'],
+                TypeGestionEnum::INDIVIDUAL->value => ['name' => 'Gestion individuelle', 'name_en' => 'Individual management', 'name_ar' => 'إدارة فردية'],
+                TypeGestionEnum::SIMPLE->value => ['name' => 'Simple protection', 'name_en' => 'Simple protection', 'name_ar' => 'حماية بسيطة'],
             ],
         ];
     }
 
     /**
-     * The spec's `$typeGestion`, as the integers the column stores.
+     * The spec's `$typeGestion`, keyed by ONDA's integer.
      *
-     * @return array<int, int>
+     * @return array<int, TypeGestionEnum>
      */
     private function typeGestion(): array
     {
         return [
-            1 => TypeGestion::COLLECTIVE,
-            2 => TypeGestion::INDIVIDUAL,
-            3 => TypeGestion::SIMPLE,
+            1 => TypeGestionEnum::COLLECTIVE,
+            2 => TypeGestionEnum::INDIVIDUAL,
+            3 => TypeGestionEnum::SIMPLE,
         ];
     }
 
@@ -343,7 +344,7 @@ class MembershipTypeSeeder extends Seeder
      * a trimmed name matches nothing already seeded and creates a duplicate
      * college instead. Trim at display time only.
      *
-     * @return array<int, array<string, array{0: string, 1: int}>>
+     * @return array<int, array<string, array{0: string, 1: TypeGestionEnum}>>
      */
     private function registerTypeColleges(): array
     {
@@ -386,7 +387,7 @@ class MembershipTypeSeeder extends Seeder
      * The seven simple-protection colleges, seeded in a second pass. Leading
      * spaces are real data — see registerTypeColleges().
      *
-     * @return array<int, array<string, array{0: string, 1: int}>>
+     * @return array<int, array<string, array{0: string, 1: TypeGestionEnum}>>
      */
     private function deferredRegisterTypeColleges(): array
     {

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions\Referentiel;
 
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
+use App\Enums\TypeGestion\TypeGestionEnum;
 use App\Models\RegisterType;
 use App\Models\RegisterTypeCollege;
 use App\Models\TypeGestion;
@@ -33,14 +35,14 @@ final class CreateCollege extends CreatesReferenceRow
             // The college's own 1/2/3 integer follows its gestion; a type
             // without gestions uses 1, as the seeded Editeur/Artiste/
             // Producteur colleges do.
-            'type_gestion' => $gestion->type_gestion ?? TypeGestion::COLLECTIVE,
+            'type_gestion' => $gestion->type_gestion ?? TypeGestionEnum::COLLECTIVE,
             'code_college' => $data['code_college'],
             'code_dv' => $data['code_dv'] ?? null,
             'name' => $data['name'],
             'name_ar' => $data['name_ar'] ?? null,
             'name_en' => $data['name_en'] ?? null,
             'adhesion' => $data['adhesion'] ?? false,
-            'status' => RegisterTypeCollege::STATUS_ACTIVE,
+            'status' => ReferentielStatus::ACTIVE,
             'is_disabled' => true,
         ]);
     }

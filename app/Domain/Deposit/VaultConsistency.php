@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Deposit;
 
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\MediaFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
@@ -64,7 +65,7 @@ final class VaultConsistency
      */
     public function markedMissing(): Collection
     {
-        return $this->missing()->filter(fn (array $m): bool => $m['file']->status === 'failed')->values();
+        return $this->missing()->filter(fn (array $m): bool => $m['file']->status === MediaFileStatus::FAILED)->values();
     }
 
     /**

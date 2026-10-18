@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Deposit;
 
 use App\Domain\Vault\Doctor\CheckResult;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use Illuminate\Support\Collection;
 use Throwable;
 
@@ -39,7 +40,7 @@ final class VaultConsistencyChecks
     private function missing(): CheckResult
     {
         // Rows already marked failed (vault:mark-missing-bytes) are resolved.
-        $missing = $this->consistency->missing()->reject(fn (array $m): bool => $m['file']->status === 'failed')->values();
+        $missing = $this->consistency->missing()->reject(fn (array $m): bool => $m['file']->status === MediaFileStatus::FAILED)->values();
 
         if ($missing->isEmpty()) {
             return new CheckResult('vault.missing_bytes', 'Rows whose vault file is missing', CheckResult::PASS, '0', 'Every non-purged media file has its .bin and .mac on disk.');

@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Media;
 
 use App\Domain\Access\AccessLogger;
-use App\Domain\Deposit\MediaFileStatus;
 use App\Domain\Deposit\Value\StoredObjectMapper;
 use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Exceptions\MacVerificationFailed;
 use App\Domain\Vault\Value\ByteRange;
+use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Http\Controllers\Controller;
 use App\Models\MediaFile;
 use Illuminate\Http\Request;
@@ -63,7 +64,7 @@ final class StreamController extends Controller
             AccessLogger::record(
                 $mediaFile,
                 $user->id,
-                'stream',
+                ActionEnum::STREAM,
                 $request->ip() ?? 'unknown',
                 $request->userAgent(),
                 null,
@@ -78,7 +79,7 @@ final class StreamController extends Controller
         AccessLogger::record(
             $mediaFile,
             $user->id,
-            'stream',
+            ActionEnum::STREAM,
             $request->ip() ?? 'unknown',
             $request->userAgent(),
             $contentLength,

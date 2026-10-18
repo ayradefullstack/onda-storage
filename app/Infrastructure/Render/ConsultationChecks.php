@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Render;
 
 use App\Domain\Vault\Doctor\CheckResult;
+use App\Enums\MediaConsultation\StatusEnum as ConsultationStatus;
 use App\Models\MediaConsultation;
 use Illuminate\Support\Collection;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -70,7 +71,7 @@ final class ConsultationChecks
         $threshold = (int) config('vault.consult.pending_warn_seconds');
 
         try {
-            $stuck = MediaConsultation::where('status', MediaConsultation::PENDING)
+            $stuck = MediaConsultation::where('status', ConsultationStatus::PENDING)
                 ->where('updated_at', '<', now()->subSeconds($threshold))
                 ->count();
         } catch (Throwable) {

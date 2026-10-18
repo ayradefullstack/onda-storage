@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\UploadSession\StatusEnum as UploadSessionStatus;
 use App\Models\Oeuvre;
 use App\Models\UploadSession;
 use App\Models\User;
@@ -39,7 +40,7 @@ class UploadSessionFactory extends Factory
             // Stored as the hex encoding of the 8-byte nonce (CHAR(16) column).
             'nonce' => bin2hex(random_bytes(8)),
             'temp_path' => 'incoming/'.fake()->uuid().'.part',
-            'status' => 'pending',
+            'status' => UploadSessionStatus::PENDING,
             'expires_at' => now()->addMinutes(120),
         ];
     }

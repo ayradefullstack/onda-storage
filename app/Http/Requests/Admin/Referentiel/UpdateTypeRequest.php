@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin\Referentiel;
 
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
 use App\Http\Requests\Admin\Referentiel\Concerns\ValidatesEditableName;
+use App\Http\Requests\Concerns\AcceptsEnumKeys;
 use App\Models\RegisterType;
-use App\Models\RegisterTypeCollege;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -17,6 +18,16 @@ use Illuminate\Validation\Rule;
  */
 final class UpdateTypeRequest extends FormRequest
 {
+    use AcceptsEnumKeys;
+
+    /**
+     * @return array<string, class-string<ReferentielStatus>>
+     */
+    protected function enumFields(): array
+    {
+        return ['status' => ReferentielStatus::class];
+    }
+
     use ValidatesEditableName;
 
     public function authorize(): bool
@@ -36,7 +47,7 @@ final class UpdateTypeRequest extends FormRequest
             'name' => $this->nameRules($type, 'register_types', []),
             'name_ar' => ['sometimes', 'nullable', 'string', 'max:255'],
             'name_en' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'status' => ['sometimes', 'integer', Rule::in([0, RegisterTypeCollege::STATUS_ACTIVE])],
+            'status' => ['sometimes', Rule::enum(ReferentielStatus::class)],
             'is_disabled' => ['sometimes', 'boolean'],
         ];
     }

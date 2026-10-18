@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\MediaConsultation\StatusEnum as ConsultationStatus;
 use App\Infrastructure\Render\PptxOutlineRenderer;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -69,7 +70,7 @@ function pptxRender(string $path): array
     mkdir($workspace, 0700, true);
 
     $result = app(PptxOutlineRenderer::class)->render(new MediaFile, $path, $workspace);
-    $outline = $result->status === 'ready'
+    $outline = $result->status === ConsultationStatus::READY
         ? json_decode((string) file_get_contents($result->assets[0]->path), true, flags: JSON_THROW_ON_ERROR)
         : null;
 
@@ -94,7 +95,7 @@ test('slides come out in numeric order with their texts and notes', function () 
 
     [$result, $outline] = pptxRender($path);
 
-    expect($result->status)->toBe('ready')
+    expect($result->status)->toBe(ConsultationStatus::READY)
         ->and($result->pageCount)->toBe(3)
         ->and($result->assets[0]->kind)->toBe('outline')
         ->and($outline['slides'][0])->toBe(['index' => 1, 'texts' => ['عنوان'], 'notes' => []])
@@ -121,7 +122,7 @@ test('an XXE payload in a slide is not expanded', function () {
     [$result, $outline] = pptxRender(pptxFile([1 => $evil, 2 => pptxSlideXml(['clean'])]));
     @unlink($secret);
 
-    expect($result->status)->toBe('ready')
+    expect($result->status)->toBe(ConsultationStatus::READY)
         ->and(json_encode($outline))->not->toContain('TOP-SECRET-MARKER')
         // the malicious part is skipped, the next slide is untouched
         ->and($outline['slides'][0]['texts'])->toBe([])
@@ -168,7 +169,7 @@ test('the total text cap is enforced and noticed', function () {
 test('a zip with no slides fails with a reason, it does not throw', function () {
     [$result] = pptxRender(pptxFile([]));
 
-    expect($result->status)->toBe('failed');
+    expect($result->status)->toBe(ConsultationStatus::FAILED);
 });
 
 test('a pptx deposit becomes an encrypted outline asset through the pipeline, with no office tool', function () {
@@ -183,7 +184,7 @@ test('a pptx deposit becomes an encrypted outline asset through the pipeline, wi
     $consultation = consultGenerate($file);
     $asset = consultAssetRow($file, 'outline', 0);
 
-    expect($consultation->status)->toBe('ready')
+    expect($consultation->status)->toBe(ConsultationStatus::READY)
         ->and($consultation->page_count)->toBe(2)
         ->and($asset)->not->toBeNull();
 
@@ -204,7 +205,7 @@ test('ppt and odp are an unsupported card with no decryption', function (string 
 
     $consultation = consultGenerate($file);
 
-    expect($consultation->status)->toBe('unsupported')
+    expect($consultation->status)->toBe(ConsultationStatus::UNSUPPORTED)
         ->and($consultation->reason)->toBe('format_unavailable');
 
     consultCleanup($file);

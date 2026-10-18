@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions\Referentiel;
 
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
+use App\Enums\TypeGestion\TypeGestionEnum;
 use App\Models\RegisterType;
 use App\Models\TypeGestion;
 use App\Models\User;
@@ -29,7 +31,7 @@ final class CreateTypeGestion extends CreatesReferenceRow
             'name' => $data['name'],
             'name_ar' => $data['name_ar'] ?? null,
             'name_en' => $data['name_en'] ?? null,
-            'status' => $data['status'] ?? TypeGestion::STATUS_ACTIVE,
+            'status' => $data['status'] ?? ReferentielStatus::ACTIVE,
         ]);
     }
 
@@ -38,13 +40,14 @@ final class CreateTypeGestion extends CreatesReferenceRow
      * type — so a type can hold at most three. The next free value, retired
      * rows included (the unique index covers them).
      */
-    private function nextValue(RegisterType $type): int
+    private function nextValue(RegisterType $type): TypeGestionEnum
     {
+        // Eloquent's pluck() applies the cast, so these are enum cases.
         $used = TypeGestion::withTrashed()->where('register_type_id', $type->id)->pluck('type_gestion')->all();
 
-        foreach (TypeGestion::VALUES as $value) {
-            if (! in_array($value, $used, true)) {
-                return $value;
+        foreach (TypeGestionEnum::cases() as $case) {
+            if (! in_array($case, $used, true)) {
+                return $case;
             }
         }
 

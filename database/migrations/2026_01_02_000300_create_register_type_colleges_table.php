@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Enums\Referentiel\StatusEnum;
+use App\Enums\TypeGestion\TypeGestionEnum;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -38,17 +40,24 @@ return new class extends Migration
             // Droits voisins code: null for Auteur/Editeur colleges (droits
             // d'auteur), the college code for Artiste-interprète/Producteur.
             $table->string('code_dv')->nullable();
-            $table->unsignedTinyInteger('status')->default(1)->index();
-            // 1 collective, 2 individual, 3 simple protection — for every
-            // college, including the ones with no type_gestion_id. Kept
-            // alongside the foreign key: it is the value ONDA stores, and
-            // the seeder matches colleges on it.
-            $table->unsignedTinyInteger('type_gestion')->default(1)->index();
+            $table->unsignedTinyInteger('status')
+                ->default(StatusEnum::ACTIVE->value)
+                ->comment(StatusEnum::dbComment());
+            // For every college, including the ones with no type_gestion_id.
+            // Kept alongside the foreign key: it is the value ONDA stores,
+            // and the seeder matches colleges on it (with register_type_id).
+            // No lone index: no query filters on it alone.
+            $table->unsignedTinyInteger('type_gestion')
+                ->default(TypeGestionEnum::COLLECTIVE->value)
+                ->comment(TypeGestionEnum::dbComment());
             $table->boolean('adhesion')->default(true);
             $table->boolean('is_disabled')->default(false);
             $table->boolean('is_system')->default(false);
             $table->timestamps();
             $table->softDeletes();
+
+            // A declarant type's active colleges (create-page cascade, admin lists).
+            $table->index(['register_type_id', 'status']);
         });
     }
 

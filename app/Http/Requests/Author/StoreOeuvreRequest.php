@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Author;
 
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
 use App\Models\RegisterType;
 use App\Models\RegisterTypeCollege;
 use App\Models\RegisterTypeMember;
@@ -29,8 +30,6 @@ use Illuminate\Validation\Validator;
  */
 final class StoreOeuvreRequest extends FormRequest
 {
-    private const STATUS_ACTIVE = 1;
-
     private const ERRORS = 'oeuvres.classification.errors.';
 
     public function authorize(): bool
@@ -48,7 +47,7 @@ final class StoreOeuvreRequest extends FormRequest
         return [
             'register_type_id' => [
                 'bail', 'required', 'integer',
-                Rule::exists('register_types', 'id')->where('status', self::STATUS_ACTIVE)->whereNull('deleted_at'),
+                Rule::exists('register_types', 'id')->where('status', ReferentielStatus::ACTIVE)->whereNull('deleted_at'),
             ],
             // Required for a type that has a gestion level, rejected outright
             // for one that does not — the predicate is RegisterType::
@@ -58,15 +57,15 @@ final class StoreOeuvreRequest extends FormRequest
                 Rule::prohibitedIf(fn (): bool => ! $this->typeHasGestions()),
                 Rule::requiredIf(fn (): bool => $this->typeHasGestions()),
                 'nullable', 'integer',
-                Rule::exists('type_gestions', 'id')->where('status', self::STATUS_ACTIVE)->whereNull('deleted_at'),
+                Rule::exists('type_gestions', 'id')->where('status', ReferentielStatus::ACTIVE)->whereNull('deleted_at'),
             ],
             'register_type_college_id' => [
                 'bail', 'required', 'integer',
-                Rule::exists('register_type_colleges', 'id')->where('status', self::STATUS_ACTIVE)->whereNull('deleted_at'),
+                Rule::exists('register_type_colleges', 'id')->where('status', ReferentielStatus::ACTIVE)->whereNull('deleted_at'),
             ],
             'register_type_member_id' => [
                 'bail', 'required', 'integer',
-                Rule::exists('register_type_members', 'id')->where('status', self::STATUS_ACTIVE)->whereNull('deleted_at'),
+                Rule::exists('register_type_members', 'id')->where('status', ReferentielStatus::ACTIVE)->whereNull('deleted_at'),
             ],
         ];
     }

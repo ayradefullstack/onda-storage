@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin\Referentiel;
 
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
 use App\Http\Requests\Admin\Referentiel\Concerns\ValidatesEditableName;
-use App\Models\RegisterTypeCollege;
+use App\Http\Requests\Concerns\AcceptsEnumKeys;
 use App\Models\RegisterTypeMember;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -23,6 +24,16 @@ use Illuminate\Validation\Rule;
  */
 final class UpdateMemberRequest extends FormRequest
 {
+    use AcceptsEnumKeys;
+
+    /**
+     * @return array<string, class-string<ReferentielStatus>>
+     */
+    protected function enumFields(): array
+    {
+        return ['status' => ReferentielStatus::class];
+    }
+
     use ValidatesEditableName;
 
     public function authorize(): bool
@@ -42,7 +53,7 @@ final class UpdateMemberRequest extends FormRequest
             'name' => $this->nameRules($member, 'register_type_members', ['register_type_college_id' => $member->register_type_college_id]),
             'name_ar' => ['sometimes', 'nullable', 'string', 'max:255'],
             'name_en' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'status' => ['sometimes', 'integer', Rule::in([0, RegisterTypeCollege::STATUS_ACTIVE])],
+            'status' => ['sometimes', Rule::enum(ReferentielStatus::class)],
             'is_disabled' => ['sometimes', 'boolean'],
             'available_in_registration' => ['sometimes', 'boolean'],
         ];

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Domain\Deposit\MediaFileStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\User;
@@ -22,7 +22,7 @@ function statusAuthor(): User
     return $user;
 }
 
-function statusFile(Oeuvre $oeuvre, string $status, array $attributes = []): MediaFile
+function statusFile(Oeuvre $oeuvre, MediaFileStatus $status, array $attributes = []): MediaFile
 {
     return MediaFile::factory()->create([
         'oeuvre_id' => $oeuvre->id,
@@ -37,19 +37,20 @@ it('reports the status, rail stage and error of every pipeline state', function 
     $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
 
     $expected = [
-        MediaFileStatus::UPLOADING => ['upload', null],
-        MediaFileStatus::ASSEMBLING => ['assembly', null],
-        MediaFileStatus::SCANNING => ['antivirus', null],
-        MediaFileStatus::PROCESSING => ['processing', null],
-        MediaFileStatus::READY => ['sealed', null],
-        MediaFileStatus::FAILED => [null, 'media.failedWithRef'],
-        MediaFileStatus::QUARANTINED => [null, 'media.quarantineWithRef'],
+        // Keyed by status KEY: the endpoint's JSON carries keys.
+        'uploading' => ['upload', null],
+        'assembling' => ['assembly', null],
+        'scanning' => ['antivirus', null],
+        'processing' => ['processing', null],
+        'ready' => ['sealed', null],
+        'failed' => [null, 'media.failedWithRef'],
+        'quarantined' => [null, 'media.quarantineWithRef'],
     ];
 
     $files = [];
     $minute = 0;
     foreach (array_keys($expected) as $status) {
-        $files[$status] = statusFile($oeuvre, $status, ['created_at' => now()->addMinutes($minute++)]);
+        $files[$status] = statusFile($oeuvre, MediaFileStatus::fromKey($status), ['created_at' => now()->addMinutes($minute++)]);
     }
 
     $response = $this->actingAs($author)

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Language\DirectionEnum;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -20,7 +21,9 @@ return new class extends Migration
             $table->string('name', 100);
             $table->string('code', 12)->unique();
             $table->string('native_name', 100);
-            $table->string('direction', 3)->default('ltr');
+            $table->unsignedTinyInteger('direction')
+                ->default(DirectionEnum::LTR->value)
+                ->comment(DirectionEnum::dbComment());
             $table->boolean('is_default')->default(false);
             $table->boolean('is_active')->default(true);
             $table->unsignedSmallInteger('sort_order')->default(0);

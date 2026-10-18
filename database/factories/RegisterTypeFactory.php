@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
 use App\Models\RegisterType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -22,7 +23,7 @@ class RegisterTypeFactory extends Factory
         return [
             'name' => $name,
             'slug' => Str::slug($name),
-            'status' => RegisterType::STATUS_ACTIVE,
+            'status' => ReferentielStatus::ACTIVE,
             'is_disabled' => false,
         ];
     }

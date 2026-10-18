@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Referentiel;
 
 use App\Actions\Referentiel\CreateCollege;
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
 use App\Http\Requests\Admin\Referentiel\StoreCollegeRequest;
 use App\Http\Requests\Admin\Referentiel\UpdateCollegeRequest;
 use App\Models\RegisterType;
@@ -67,7 +68,7 @@ final class CollegeController extends ReferentielController
             // In-flight deposits, as its own subquery rather than a second
             // relation load: the disable confirmation needs it per row.
             ->withCount(['oeuvres as in_flight_oeuvres_count' => fn ($query) => $query
-                ->whereIn('status', RegisterTypeCollege::IN_FLIGHT_OEUVRE_STATUSES)])
+                ->whereIn('status', OeuvreStatus::inFlight())])
             ->when($search !== '', fn ($query) => $query->where(fn ($q) => $q
                 ->where('name', 'like', "%{$search}%")
                 ->orWhere('name_ar', 'like', "%{$search}%")
@@ -86,7 +87,7 @@ final class CollegeController extends ReferentielController
         // (the same predicates, expressed as counts; asserted equal in
         // ReferentielCreateTest).
         $types = RegisterType::query()
-            ->withCount(['typeGestions as active_gestions_count' => fn ($query) => $query->where('status', TypeGestion::STATUS_ACTIVE)])
+            ->withCount(['typeGestions as active_gestions_count' => fn ($query) => $query->where('status', ReferentielStatus::ACTIVE)])
             ->withCount('registerTypeColleges as colleges_count')
             ->withCount(['registerTypeColleges as coded_colleges_count' => fn ($query) => $query->whereNotNull('code_dv')])
             ->orderBy('id')
@@ -142,7 +143,7 @@ final class CollegeController extends ReferentielController
                 'uuid' => $g->uuid,
                 'type_uuid' => $typeUuids[$g->register_type_id] ?? null,
                 'name' => trim($g->name_global),
-                'active' => $g->status === TypeGestion::STATUS_ACTIVE,
+                'active' => $g->status === ReferentielStatus::ACTIVE,
             ]),
         ]);
     }
@@ -177,7 +178,7 @@ final class CollegeController extends ReferentielController
         $counts = [];
 
         foreach (self::OEUVRE_STATUSES as $status) {
-            $counts["oeuvres as oeuvres_{$status}_count"] = fn ($query) => $query->where('status', $status);
+            $counts["oeuvres as oeuvres_{$status->key()}_count"] = fn ($query) => $query->where('status', $status);
         }
 
         return $counts;
@@ -191,10 +192,10 @@ final class CollegeController extends ReferentielController
         $byStatus = [];
 
         foreach (self::OEUVRE_STATUSES as $status) {
-            $count = (int) $college["oeuvres_{$status}_count"];
+            $count = (int) $college["oeuvres_{$status->key()}_count"];
 
             if ($count > 0) {
-                $byStatus[$status] = $count;
+                $byStatus[$status->key()] = $count;
             }
         }
 

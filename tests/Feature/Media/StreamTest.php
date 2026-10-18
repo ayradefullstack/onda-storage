@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Domain\Access\SignedMediaUrl;
 use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Value\UploadIntent;
+use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\FileAccessLog;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -33,7 +35,7 @@ function streamTestAuthor(): User
     return $user;
 }
 
-function streamTestMediaFile(User $author, Oeuvre $oeuvre, string $status = 'ready'): MediaFile
+function streamTestMediaFile(User $author, Oeuvre $oeuvre, MediaFileStatus $status = MediaFileStatus::READY): MediaFile
 {
     $vault = app(VaultContract::class);
     $bytes = file_get_contents(base_path('tests/fixtures/sample.mp4'));
@@ -167,7 +169,7 @@ test('an author cannot stream another author\'s deposit', function () {
 test('a deposit still mid-pipeline cannot be streamed', function () {
     $author = streamTestAuthor();
     $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
-    $mediaFile = streamTestMediaFile($author, $oeuvre, status: 'scanning');
+    $mediaFile = streamTestMediaFile($author, $oeuvre, status: MediaFileStatus::SCANNING);
 
     $url = SignedMediaUrl::forStreaming($mediaFile, $author);
 
@@ -187,7 +189,7 @@ test('a successful stream writes a chained file_access_logs row', function () {
     $log = FileAccessLog::where('media_file_id', $mediaFile->id)->latest('id')->first();
 
     expect($log)->not->toBeNull()
-        ->and($log->action)->toBe('stream')
+        ->and($log->action)->toBe(ActionEnum::STREAM)
         ->and($log->user_id)->toBe($author->id)
         ->and($log->row_hash)->toHaveLength(64);
 
@@ -211,7 +213,7 @@ test('media.link issues a url only for a ready deposit the requester owns', func
 
     streamTestCleanup($ready);
 
-    $notReady = streamTestMediaFile($author, $oeuvre, status: 'processing');
+    $notReady = streamTestMediaFile($author, $oeuvre, status: MediaFileStatus::PROCESSING);
 
     $this->actingAs($author)
         ->getJson(route('media.link', $notReady))

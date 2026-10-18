@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Concerns\HasUuidColumn;
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
+use App\Models\Concerns\SerializesEnumsAsKeys;
 use Database\Factories\OeuvreFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -26,7 +28,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $register_type_college_id
  * @property int|null $register_type_member_id
  * @property string|null $code_college_snapshot
- * @property string $status
+ * @property OeuvreStatus $status
  * @property Carbon|null $submitted_at
  * @property Carbon|null $reviewed_at
  * @property int|null $reviewed_by
@@ -38,7 +40,7 @@ use Illuminate\Support\Carbon;
 class Oeuvre extends Model
 {
     /** @use HasFactory<OeuvreFactory> */
-    use HasFactory, HasUuidColumn, SoftDeletes;
+    use HasFactory, HasUuidColumn, SerializesEnumsAsKeys, SoftDeletes;
 
     /**
      * Only the classification — author_id and status are always set
@@ -55,6 +57,7 @@ class Oeuvre extends Model
     protected function casts(): array
     {
         return [
+            'status' => OeuvreStatus::class,
             'submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
             'registered_at' => 'datetime',
@@ -158,7 +161,7 @@ class Oeuvre extends Model
         $required = $this->requirements()->required()->get(['id', 'conditions']);
 
         $satisfiedIds = $this->mediaFiles()
-            ->where('status', 'ready')
+            ->where('status', MediaFileStatus::READY)
             ->whereIn('college_oeuvre_file_id', $required->modelKeys())
             ->distinct()
             ->pluck('college_oeuvre_file_id')
@@ -218,7 +221,7 @@ class Oeuvre extends Model
      */
     public function isAuthorEditable(): bool
     {
-        return OeuvreStatus::isAuthorEditable($this->status);
+        return $this->status->isAuthorEditable();
     }
 
     /**

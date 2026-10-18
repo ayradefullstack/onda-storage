@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\FileAccessLog\ActionEnum;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -32,10 +33,10 @@ return new class extends Migration
             $table->string('range_header')->nullable();
             $table->char('prev_hash', 64)->nullable();
             $table->char('row_hash', 64);
-            $table->enum('action', [
-                'stream', 'download', 'preview', 'delete', 'purge', 'deposit', 'inspect',
-                'admin_consult', 'bytes_released', 'bytes_kept', 'bytes_missing', 'consult_original',
-            ]);
+            // Hashed into row_hash as its KEY (ActionEnum), so the chain's
+            // payload format did not change when the column became an int.
+            $table->unsignedTinyInteger('action')
+                ->comment(ActionEnum::dbComment());
             $table->timestamp('created_at')->useCurrent();
 
             // A file's access history in order.

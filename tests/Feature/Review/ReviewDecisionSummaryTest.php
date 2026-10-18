@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Domain\Deposit\MediaFileStatus;
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\OeuvreReview;
@@ -39,7 +39,7 @@ function summaryAuthor(): User
 }
 
 /** An unclassified deposit (no slots) with one file of the given status. */
-function summaryOeuvre(string $status, ?User $holder = null, string $fileStatus = MediaFileStatus::READY): Oeuvre
+function summaryOeuvre(OeuvreStatus $status, ?User $holder = null, MediaFileStatus $fileStatus = MediaFileStatus::READY): Oeuvre
 {
     $author = summaryAuthor();
 
@@ -81,7 +81,7 @@ test('a submitted deposit offers only "open_review", and opening it works', func
         ->and($summary['blocked'])->toBe([])
         ->and($summary['holder'])->toBeNull()
         ->and($summary['heldByMe'])->toBeFalse()
-        ->and($summary['status'])->toBe(OeuvreStatus::SUBMITTED)
+        ->and($summary['status'])->toBe(OeuvreStatus::SUBMITTED->key())
         ->and($summary['reference'])->toBe($oeuvre->uuid)
         ->and($summary['title'])->toBe('Nouba andalouse')
         ->and($summary['author'])->toBe(['name' => $oeuvre->author->name])
@@ -172,8 +172,8 @@ test('a failing checklist moves approve to "blocked" and names every problem', f
         ->and($summary['checklist']['noFiles'])->toBeFalse()
         ->and($summary['checklist']['requiredMissing'])->toBe([trim($required->title_global)])
         ->and($summary['checklist']['filesNotReady'])->toBe([
-            ['name' => 'enregistrement.wav', 'status' => MediaFileStatus::PROCESSING],
-            ['name' => 'pochette.png', 'status' => MediaFileStatus::QUARANTINED],
+            ['name' => 'enregistrement.wav', 'status' => MediaFileStatus::PROCESSING->key()],
+            ['name' => 'pochette.png', 'status' => MediaFileStatus::QUARANTINED->key()],
         ])
         // The other five MUSIQUE documents are conditional: advisory only.
         ->and($summary['checklist']['conditionalMissing'])->toHaveCount(5);
@@ -196,7 +196,7 @@ test('a deposit with no file at all blocks approve with "noFiles"', function () 
         ->and($summary['blocked'])->toBe(['approve']);
 });
 
-test('registered, rejected and draft deposits offer nothing', function (string $status) {
+test('registered, rejected and draft deposits offer nothing', function (OeuvreStatus $status) {
     $admin = summaryAdmin();
     $oeuvre = summaryOeuvre($status, $status === OeuvreStatus::DRAFT || $status === OeuvreStatus::SUBMITTED ? null : $admin);
 
@@ -220,9 +220,9 @@ test('lastDecision names who decided, what and when', function () {
     $row = OeuvreReview::where('oeuvre_id', $oeuvre->id)->where('to_status', OeuvreStatus::REGISTERED)->sole();
 
     expect($summary['allowed'])->toBe([])
-        ->and($summary['status'])->toBe(OeuvreStatus::REGISTERED)
+        ->and($summary['status'])->toBe(OeuvreStatus::REGISTERED->key())
         ->and($summary['lastDecision'])->toBe([
-            'to' => OeuvreStatus::REGISTERED,
+            'to' => OeuvreStatus::REGISTERED->key(),
             'by' => 'Karim',
             'at' => $row->created_at->toIso8601String(),
         ]);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Referentiel;
 
 use App\Actions\Referentiel\CreateTypeGestion;
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
 use App\Http\Requests\Admin\Referentiel\StoreGestionRequest;
 use App\Http\Requests\Admin\Referentiel\UpdateGestionRequest;
 use App\Models\RegisterType;
@@ -39,7 +40,7 @@ final class GestionController extends ReferentielController
             ->with('registerType:id,uuid,name,name_ar,name_en')
             ->withCount('registerTypeColleges')
             ->withCount(['registerTypeColleges as reachable_colleges_count' => fn ($query) => $query
-                ->where('status', RegisterTypeCollege::STATUS_ACTIVE)
+                ->where('status', ReferentielStatus::ACTIVE)
                 ->where('is_disabled', false)
                 ->whereNotIn('code_college', RegisterTypeCollege::CODES_HIDDEN_FROM_REGISTRATION)])
             ->when($search !== '', fn ($query) => $query->where(fn ($q) => $q
@@ -70,7 +71,7 @@ final class GestionController extends ReferentielController
             // colleges but no gestion yet.
             'types' => RegisterType::query()
                 ->withCount('registerTypeColleges')
-                ->withCount(['typeGestions as active_gestions_count' => fn ($query) => $query->where('status', TypeGestion::STATUS_ACTIVE)])
+                ->withCount(['typeGestions as active_gestions_count' => fn ($query) => $query->where('status', ReferentielStatus::ACTIVE)])
                 ->orderBy('id')
                 ->get()
                 ->map(fn (RegisterType $type): array => [

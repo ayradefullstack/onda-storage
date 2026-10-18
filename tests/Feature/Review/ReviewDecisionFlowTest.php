@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Domain\Deposit\MediaFileStatus;
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\CollegeOeuvreFile;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -60,7 +60,7 @@ function flowAuthor(): User
  * An unclassified deposit (no required slots) with one ready file: the
  * registration guards pass unless a test breaks something on purpose.
  */
-function flowOeuvre(string $status = OeuvreStatus::SUBMITTED, ?User $holder = null, ?User $author = null): Oeuvre
+function flowOeuvre(OeuvreStatus $status = OeuvreStatus::SUBMITTED, ?User $holder = null, ?User $author = null): Oeuvre
 {
     $author ??= flowAuthor();
 
@@ -78,7 +78,7 @@ function flowOeuvre(string $status = OeuvreStatus::SUBMITTED, ?User $holder = nu
     return $oeuvre;
 }
 
-function flowFile(Oeuvre $oeuvre, string $status = MediaFileStatus::READY, ?CollegeOeuvreFile $slot = null, string $name = 'partition.pdf'): MediaFile
+function flowFile(Oeuvre $oeuvre, MediaFileStatus $status = MediaFileStatus::READY, ?CollegeOeuvreFile $slot = null, string $name = 'partition.pdf'): MediaFile
 {
     return MediaFile::factory()->create([
         'oeuvre_id' => $oeuvre->id,
@@ -139,7 +139,7 @@ test('the three valid transitions answer with the new status and write one row e
         ->assertOk()->assertExactJson(['status' => OeuvreStatus::REJECTED, 'replayed' => false]);
 
     $history = fn (Oeuvre $oeuvre): array => OeuvreReview::where('oeuvre_id', $oeuvre->id)->orderBy('id')
-        ->get()->map(fn (OeuvreReview $r): string => "{$r->from_status}->{$r->to_status}")->all();
+        ->get()->map(fn (OeuvreReview $r): string => "{$r->from_status->key()}->{$r->to_status->key()}")->all();
 
     expect($history($accepted))->toBe(['submitted->under_review', 'under_review->registered'])
         ->and($history($rejected))->toBe(['submitted->under_review', 'under_review->rejected'])
@@ -258,7 +258,7 @@ test('registration is refused while an unconditional required document is missin
     Notification::assertNothingSent();
 });
 
-test('registration is refused while a file is not ready, and names the file', function (string $status, string $code) {
+test('registration is refused while a file is not ready, and names the file', function (MediaFileStatus $status, string $code) {
     $admin = flowAdmin();
     $oeuvre = flowMusique($admin);
     flowFile($oeuvre, slot: flowSlot('justificatif_exploitation'));
@@ -311,7 +311,7 @@ test('empty conditional documents do not block registration', function () {
     flowFile($oeuvre, slot: flowSlot('justificatif_exploitation'));
 
     $this->actingAs($admin)->postJson(route('admin.oeuvres.approve', $oeuvre))
-        ->assertOk()->assertJsonPath('status', OeuvreStatus::REGISTERED);
+        ->assertOk()->assertJsonPath('status', OeuvreStatus::REGISTERED->key());
 
     expect($oeuvre->fresh()->status)->toBe(OeuvreStatus::REGISTERED);
 });
@@ -397,7 +397,7 @@ test('two officers registering the same deposit: one row, and the second is told
         ->assertConflict()
         ->assertJsonPath('conflict.kind', 'decided')
         ->assertJsonPath('conflict.by', 'Amina')
-        ->assertJsonPath('conflict.status', OeuvreStatus::REGISTERED);
+        ->assertJsonPath('conflict.status', OeuvreStatus::REGISTERED->key());
 
     $row = OeuvreReview::where('oeuvre_id', $oeuvre->id)->sole();
 
@@ -416,7 +416,7 @@ test('an opposite decision after another officer decided is a conflict too, even
         ->assertConflict()
         ->assertJsonPath('conflict.kind', 'decided')
         ->assertJsonPath('conflict.by', 'Amina')
-        ->assertJsonPath('conflict.status', OeuvreStatus::REJECTED);
+        ->assertJsonPath('conflict.status', OeuvreStatus::REJECTED->key());
 
     $this->actingAs($karim)->postJson(route('admin.oeuvres.review', $oeuvre))
         ->assertConflict()->assertJsonPath('conflict.kind', 'decided');
@@ -435,7 +435,7 @@ test('a deposit another officer holds is a conflict naming the holder, lifted by
             ->assertConflict()
             ->assertJsonPath('conflict.kind', 'held')
             ->assertJsonPath('conflict.by', 'Amina')
-            ->assertJsonPath('conflict.status', OeuvreStatus::UNDER_REVIEW);
+            ->assertJsonPath('conflict.status', OeuvreStatus::UNDER_REVIEW->key());
     }
 
     $this->actingAs($karim)->postJson(route('admin.oeuvres.review', $oeuvre), ['take_over' => true])->assertOk();
@@ -539,7 +539,7 @@ test('a take-over and a refused decision notify nobody', function () {
     Notification::assertNothingSent();
 });
 
-test('the author-facing notifications are queued on default, never written inside the request', function (string $route, string $from, string $class) {
+test('the author-facing notifications are queued on default, never written inside the request', function (string $route, OeuvreStatus $from, string $class) {
     Queue::fake();
 
     $admin = flowAdmin();
@@ -603,9 +603,9 @@ test('the author page carries the reason and the decision date, and no reviewer 
         ->assertOk()
         ->assertInertia(function (AssertableInertia $page) use ($admin) {
             $page->component('author/oeuvres/Show')
-                ->where('oeuvre.status', OeuvreStatus::REJECTED)
+                ->where('oeuvre.status', OeuvreStatus::REJECTED->key())
                 ->has('reviews', 2)
-                ->where('reviews.1.to_status', OeuvreStatus::REJECTED)
+                ->where('reviews.1.to_status', OeuvreStatus::REJECTED->key())
                 ->where('reviews.1.reason', FLOW_REASON)
                 ->has('reviews.1.created_at')
                 ->missing('reviews.0.actor')
@@ -680,6 +680,6 @@ test('the admin list has an "à examiner" filter and a count over the whole queu
         });
 
     // The count does not follow the filter: it is the queue, always.
-    $this->actingAs($admin)->get(route('admin.oeuvres.index', ['status' => OeuvreStatus::REGISTERED]))
+    $this->actingAs($admin)->get(route('admin.oeuvres.index', ['status' => OeuvreStatus::REGISTERED->key()]))
         ->assertInertia(fn (AssertableInertia $page) => $page->where('counts.to_review', 2)->has('oeuvres.data', 1));
 });

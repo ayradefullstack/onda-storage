@@ -2,7 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\User;
@@ -31,7 +32,7 @@ function notifyAuthor(): User
     return $user;
 }
 
-function notifyOeuvre(User $author, string $status = OeuvreStatus::DRAFT, ?User $holder = null): Oeuvre
+function notifyOeuvre(User $author, OeuvreStatus $status = OeuvreStatus::DRAFT, ?User $holder = null): Oeuvre
 {
     $oeuvre = Oeuvre::factory()->create([
         'author_id' => $author->id,
@@ -44,7 +45,7 @@ function notifyOeuvre(User $author, string $status = OeuvreStatus::DRAFT, ?User 
     MediaFile::factory()->create([
         'oeuvre_id' => $oeuvre->id,
         'uploaded_by' => $author->id,
-        'status' => 'ready',
+        'status' => MediaFileStatus::READY,
     ]);
 
     return $oeuvre;
@@ -107,7 +108,7 @@ test('the submission notification carries label, author, college and file count'
     MediaFile::factory()->create([
         'oeuvre_id' => $oeuvre->id,
         'uploaded_by' => $author->id,
-        'status' => 'ready',
+        'status' => MediaFileStatus::READY,
     ]);
 
     $this->actingAs($author)->post(route('author.oeuvres.submit', $oeuvre));

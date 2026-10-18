@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 use App\Domain\Deposit\Exceptions\IllegalTransition;
 use App\Domain\Deposit\Exceptions\ReasonRequired;
-use App\Domain\Deposit\OeuvreStatus;
 use App\Domain\Deposit\OeuvreStatusMachine;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\OeuvreReview;
@@ -39,7 +40,7 @@ function reviewAuthorUser(): User
     return $user;
 }
 
-function reviewOeuvre(User $author, string $status = OeuvreStatus::SUBMITTED, ?User $holder = null): Oeuvre
+function reviewOeuvre(User $author, OeuvreStatus $status = OeuvreStatus::SUBMITTED, ?User $holder = null): Oeuvre
 {
     $oeuvre = Oeuvre::factory()->create([
         'author_id' => $author->id,
@@ -53,7 +54,7 @@ function reviewOeuvre(User $author, string $status = OeuvreStatus::SUBMITTED, ?U
     MediaFile::factory()->create([
         'oeuvre_id' => $oeuvre->id,
         'uploaded_by' => $author->id,
-        'status' => 'ready',
+        'status' => MediaFileStatus::READY,
     ]);
 
     return $oeuvre;
@@ -225,7 +226,7 @@ test('the history survives: an approved resubmission keeps every earlier row', f
     $this->actingAs($admin)->post(route('admin.oeuvres.approve', $oeuvre));
 
     $trail = OeuvreReview::where('oeuvre_id', $oeuvre->id)->orderBy('id')->get()
-        ->map(fn (OeuvreReview $r): string => "{$r->from_status}->{$r->to_status}")
+        ->map(fn (OeuvreReview $r): string => "{$r->from_status->key()}->{$r->to_status->key()}")
         ->all();
 
     expect($trail)->toBe([

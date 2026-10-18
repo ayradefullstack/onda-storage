@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Referentiel;
 
 use App\Actions\Referentiel\CreateDocument;
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Http\Requests\Admin\Referentiel\StoreDocumentRequest;
 use App\Http\Requests\Admin\Referentiel\UpdateDocumentRequest;
 use App\Models\CollegeOeuvreFile;
@@ -121,7 +122,7 @@ final class DocumentController extends ReferentielController
             ->where('status', OeuvreStatus::DRAFT)
             ->whereDoesntHave('mediaFiles', fn ($query) => $query
                 ->where('college_oeuvre_file_id', $document->id)
-                ->where('status', 'ready'))
+                ->where('status', MediaFileStatus::READY))
             ->count();
 
         return response()->json(['affected_drafts' => $affected]);

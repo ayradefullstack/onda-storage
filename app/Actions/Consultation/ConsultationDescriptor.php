@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Actions\Consultation;
 
+use App\Enums\MediaConsultation\StatusEnum as ConsultationStatus;
 use App\Infrastructure\Render\DeliveryMode;
 use App\Infrastructure\Render\PreviewFamily;
 use App\Infrastructure\Render\PreviewFamilyResolver;
-use App\Models\MediaConsultation;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\User;
@@ -43,22 +43,22 @@ final class ConsultationDescriptor
             ? PreviewFamily::tryFrom($consultation->family) ?? PreviewFamily::Other
             : $this->resolver->resolve($mediaFile);
 
-        $status = $consultation === null ? MediaConsultation::PENDING : $consultation->status;
+        $status = $consultation === null ? ConsultationStatus::PENDING : $consultation->status;
         $reason = $consultation === null
             ? 'not_generated'
-            : (in_array($status, [MediaConsultation::FAILED, MediaConsultation::UNSUPPORTED], true) ? $consultation->reason : null);
+            : (in_array($status, [ConsultationStatus::FAILED, ConsultationStatus::UNSUPPORTED], true) ? $consultation->reason : null);
         $mode = $this->resolver->deliveryMode($family, $mediaFile->extension);
         $assets = [];
         $original = null;
 
-        if ($consultation !== null && $status === MediaConsultation::READY && $mode === DeliveryMode::OriginalInline) {
+        if ($consultation !== null && $status === ConsultationStatus::READY && $mode === DeliveryMode::OriginalInline) {
             $mime = $this->resolver->inlineMime($mediaFile);
 
             if ($mime === null) {
-                [$status, $reason] = [MediaConsultation::UNSUPPORTED, 'format_unavailable'];
+                [$status, $reason] = [ConsultationStatus::UNSUPPORTED, 'format_unavailable'];
             } elseif ($family === PreviewFamily::Document && $mediaFile->size_bytes > (int) config('vault.consult.docx_max_bytes')) {
                 // docx-preview loads the whole file in the browser.
-                [$status, $reason] = [MediaConsultation::UNSUPPORTED, 'docx_too_large'];
+                [$status, $reason] = [ConsultationStatus::UNSUPPORTED, 'docx_too_large'];
             } else {
                 $original = [
                     'url' => $this->originalUrls->handle($oeuvre, $mediaFile, $viewer),
@@ -66,13 +66,13 @@ final class ConsultationDescriptor
                     'extension' => strtolower($mediaFile->extension),
                 ];
             }
-        } elseif ($consultation !== null && $status === MediaConsultation::READY && $mode !== DeliveryMode::Derivative) {
+        } elseif ($consultation !== null && $status === ConsultationStatus::READY && $mode !== DeliveryMode::Derivative) {
             // `ready` is stale: the file was prepared under another delivery
             // map. Re-run vault:generate-previews --all --force.
-            [$status, $reason] = [MediaConsultation::PENDING, 'not_generated'];
+            [$status, $reason] = [ConsultationStatus::PENDING, 'not_generated'];
         }
 
-        if ($consultation !== null && $status === MediaConsultation::READY && $mode === DeliveryMode::Derivative) {
+        if ($consultation !== null && $status === ConsultationStatus::READY && $mode === DeliveryMode::Derivative) {
             foreach ($mediaFile->consultationAssets()->orderBy('kind')->orderBy('page_index')->get() as $asset) {
                 $assets[] = [
                     'kind' => $asset->kind,
@@ -83,7 +83,7 @@ final class ConsultationDescriptor
 
             if ($assets === []) {
                 // Prepared as `original_inline` under an earlier delivery map.
-                [$status, $reason] = [MediaConsultation::PENDING, 'not_generated'];
+                [$status, $reason] = [ConsultationStatus::PENDING, 'not_generated'];
             }
         }
 
@@ -99,7 +99,7 @@ final class ConsultationDescriptor
             // feature): see vault:generate-previews.
             'reason' => $reason,
             // A ready file may carry a notice (e.g. "first N pages shown").
-            'notice' => $status === MediaConsultation::READY ? $consultation?->reason : null,
+            'notice' => $status === ConsultationStatus::READY ? $consultation?->reason : null,
             'assets' => $assets,
             'pageCount' => $consultation?->page_count,
             // Label for the CSS watermark overlay; null turns it off.

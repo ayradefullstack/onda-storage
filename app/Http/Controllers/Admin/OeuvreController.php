@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Domain\Access\AccessLogger;
-use App\Domain\Deposit\OeuvreStatus;
 use App\Domain\Deposit\SlotProgressQuery;
 use App\Domain\Deposit\SubmissionGate;
 use App\Domain\Deposit\Value\SubmissionReason;
+use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Http\Controllers\Author\OeuvreController as AuthorOeuvreController;
 use App\Http\Controllers\Concerns\ResolvesPerPage;
 use App\Http\Controllers\Controller;
@@ -41,7 +43,7 @@ final class OeuvreController extends Controller
      * What the status filter offers. `draft` is last and only ever shown
      * when selected explicitly — see class docblock.
      *
-     * @var list<string>
+     * @var list<OeuvreStatus>
      */
     private const FILTERABLE_STATUSES = [
         OeuvreStatus::SUBMITTED,
@@ -58,7 +60,7 @@ final class OeuvreController extends Controller
      */
     private const TO_REVIEW = 'to_review';
 
-    /** @var list<string> */
+    /** @var list<OeuvreStatus> */
     private const TO_REVIEW_STATUSES = [OeuvreStatus::SUBMITTED, OeuvreStatus::UNDER_REVIEW];
 
     public function index(Request $request, SlotProgressQuery $slotProgress): Response
@@ -67,37 +69,44 @@ final class OeuvreController extends Controller
         $admin = $request->user();
 
         $search = trim((string) $request->string('search'));
+        // The URL carries the status KEY (`?status=submitted`) or `to_review`;
+        // an unknown key is no filter at all.
         $status = (string) $request->string('status');
+        $statusCase = OeuvreStatus::fromKey($status);
         $author = trim((string) $request->string('author'));
         $from = trim((string) $request->string('from'));
         $to = trim((string) $request->string('to'));
 
         $oeuvres = Oeuvre::query()
-            ->when($status !== OeuvreStatus::DRAFT, fn ($query) => $query->excludingDrafts())
+            ->when($statusCase !== OeuvreStatus::DRAFT, fn ($query) => $query->excludingDrafts())
             ->with(['author:id,uuid,name', 'registerTypeCollege', 'reviewer:id,uuid,name'])
             ->withCount('mediaFiles')
             ->selectRaw('(select coalesce(sum(mf.size_bytes), 0) from media_files mf where mf.oeuvre_id = oeuvres.id and mf.deleted_at is null) as files_size_bytes')
             ->selectRaw(
-                "(select case when count(*) = 0 then 0 when sum(case when mf.status = 'ready' then 1 else 0 end) = count(*) then 1 else 0 end ".
-                'from media_files mf where mf.oeuvre_id = oeuvres.id and mf.deleted_at is null) as all_ready'
+                '(select case when count(*) = 0 then 0 when sum(case when mf.status = ? then 1 else 0 end) = count(*) then 1 else 0 end '.
+                'from media_files mf where mf.oeuvre_id = oeuvres.id and mf.deleted_at is null) as all_ready',
+                [MediaFileStatus::READY]
             )
             ->selectRaw(
                 '(select case when count(*) > 0 then 1 else 0 end from media_files mf '.
-                "where mf.oeuvre_id = oeuvres.id and mf.deleted_at is null and mf.status in ('failed', 'quarantined')) as has_blocking_file"
+                'where mf.oeuvre_id = oeuvres.id and mf.deleted_at is null and mf.status in (?, ?)) as has_blocking_file',
+                MediaFileStatus::blocking()
             )
             // The two numbers behind a disabled "Accepter": files the
             // pipeline has not finished with, and files it gave up on.
             ->selectRaw(
                 '(select count(*) from media_files mf where mf.oeuvre_id = oeuvres.id and mf.deleted_at is null '.
-                "and mf.status not in ('ready', 'failed', 'quarantined')) as pending_files_count"
+                'and mf.status not in (?, ?, ?)) as pending_files_count',
+                [MediaFileStatus::READY, ...MediaFileStatus::blocking()]
             )
             ->selectRaw(
                 '(select count(*) from media_files mf where mf.oeuvre_id = oeuvres.id and mf.deleted_at is null '.
-                "and mf.status in ('failed', 'quarantined')) as blocked_files_count"
+                'and mf.status in (?, ?)) as blocked_files_count',
+                MediaFileStatus::blocking()
             )
             ->when($search !== '', fn ($query) => $query->where('title', 'like', "%{$search}%"))
             ->when($status === self::TO_REVIEW, fn ($query) => $query->whereIn('oeuvres.status', self::TO_REVIEW_STATUSES))
-            ->when($status !== '' && in_array($status, self::FILTERABLE_STATUSES, true), fn ($query) => $query->where('status', $status))
+            ->when($statusCase !== null && in_array($statusCase, self::FILTERABLE_STATUSES, true), fn ($query) => $query->where('status', $statusCase))
             ->when($author !== '', fn ($query) => $query->whereHas(
                 'author',
                 fn ($q) => $q->where('uuid', $author)->orWhere('name', 'like', "%{$author}%")->orWhere('email', 'like', "%{$author}%")
@@ -198,7 +207,7 @@ final class OeuvreController extends Controller
             $oeuvre->mediaFiles()->get()->each(fn (MediaFile $file) => AccessLogger::record(
                 $file,
                 $admin->id,
-                'inspect',
+                ActionEnum::INSPECT,
                 $request->ip() ?? 'unknown',
                 $request->userAgent(),
             ));
@@ -290,15 +299,15 @@ final class OeuvreController extends Controller
      */
     private function scanResult(MediaFile $mediaFile): string
     {
-        if ($mediaFile->status === 'quarantined') {
+        if ($mediaFile->status === MediaFileStatus::QUARANTINED) {
             return 'infected';
         }
 
-        if (in_array($mediaFile->status, ['uploading', 'assembling', 'scanning'], true)) {
+        if (in_array($mediaFile->status, [MediaFileStatus::UPLOADING, MediaFileStatus::ASSEMBLING, MediaFileStatus::SCANNING], true)) {
             return 'pending';
         }
 
-        if ($mediaFile->status === 'failed') {
+        if ($mediaFile->status === MediaFileStatus::FAILED) {
             return 'unknown';
         }
 

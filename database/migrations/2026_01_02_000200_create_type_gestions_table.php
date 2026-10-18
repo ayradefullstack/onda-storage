@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Enums\Referentiel\StatusEnum;
+use App\Enums\TypeGestion\TypeGestionEnum;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -40,15 +42,20 @@ return new class extends Migration
             $table->string('name');
             $table->string('name_ar')->nullable();
             $table->string('name_en')->nullable();
-            // Matches register_type_colleges.type_gestion: 1 collective, 2 individual, 3 simple.
-            $table->unsignedTinyInteger('type_gestion');
-            $table->unsignedTinyInteger('status')->default(1)->index();
+            // Same value as register_type_colleges.type_gestion.
+            $table->unsignedTinyInteger('type_gestion')
+                ->comment(TypeGestionEnum::dbComment());
+            $table->unsignedTinyInteger('status')
+                ->default(StatusEnum::ACTIVE->value)
+                ->comment(StatusEnum::dbComment());
             $table->boolean('is_system')->default(false);
             $table->timestamps();
             $table->softDeletes();
 
             // One label per gestion value per declarant type.
             $table->unique(['register_type_id', 'type_gestion']);
+            // A declarant type's active gestions (create form, college admin counts).
+            $table->index(['register_type_id', 'status']);
         });
     }
 

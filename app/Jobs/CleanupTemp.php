@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
-use App\Domain\Deposit\MediaFileStatus;
 use App\Domain\Deposit\PipelineWorkspace;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\MediaFile;
 use Illuminate\Support\Facades\Log;
 use Throwable;

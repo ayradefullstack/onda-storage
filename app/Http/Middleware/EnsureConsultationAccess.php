@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Enums\MediaConsultation\StatusEnum as ConsultationStatus;
 use App\Infrastructure\Render\DeliveryMode;
 use App\Infrastructure\Render\PreviewFamilyResolver;
 use App\Models\MediaConsultation;
@@ -67,7 +68,7 @@ final class EnsureConsultationAccess
         }
 
         $ready = MediaConsultation::where('media_file_id', $mediaFile->id)
-            ->where('status', MediaConsultation::READY)
+            ->where('status', ConsultationStatus::READY)
             ->exists();
 
         abort_unless($ready, 403, 'This preview is not ready.');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Render;
 
+use App\Enums\MediaVariant\KindEnum;
 use App\Models\MediaFile;
 
 /**
@@ -46,8 +47,8 @@ final class AudioRenderer implements ConsultationRenderer
 
         $assets = [new RenderedAsset('audio', 0, $out)];
 
-        if ($mediaFile->variants()->where('kind', 'waveform')->exists()) {
-            $assets[] = new RenderedAsset('waveform', 0, null, 'waveform');
+        if ($mediaFile->variants()->where('kind', KindEnum::WAVEFORM)->exists()) {
+            $assets[] = new RenderedAsset('waveform', 0, null, KindEnum::WAVEFORM);
         }
 
         return RenderResult::ready($assets, 1);

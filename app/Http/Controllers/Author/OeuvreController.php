@@ -6,11 +6,13 @@ namespace App\Http\Controllers\Author;
 
 use App\Actions\Oeuvre\DeleteOeuvre;
 use App\Domain\Deposit\Exceptions\RemovalRefused;
-use App\Domain\Deposit\OeuvreStatus;
 use App\Domain\Deposit\RemovalGate;
 use App\Domain\Deposit\SlotProgressQuery;
 use App\Domain\Deposit\SubmissionGate;
 use App\Domain\Quota\QuotaPolicy;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
 use App\Http\Controllers\Concerns\ResolvesPerPage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Author\StoreOeuvreRequest;
@@ -48,7 +50,7 @@ final class OeuvreController extends Controller
      * the admin console, `draft` belongs here: it is the author's own
      * working state.
      *
-     * @var list<string>
+     * @var list<OeuvreStatus>
      */
     private const STATUSES = [
         OeuvreStatus::DRAFT,
@@ -67,7 +69,7 @@ final class OeuvreController extends Controller
      */
     public const FILTER_PENDING = 'pending';
 
-    /** @var list<string> */
+    /** @var list<OeuvreStatus> */
     public const PENDING_STATUSES = [OeuvreStatus::SUBMITTED, OeuvreStatus::UNDER_REVIEW];
 
     /** @var list<string> */
@@ -97,7 +99,10 @@ final class OeuvreController extends Controller
         // made `$request->string()` throw "Array to string conversion" (a
         // 500). Anything that is not a string is treated as "no filter".
         $search = trim(self::queryString($request, 'search'));
+        // The status KEY (`?status=submitted`) or `pending`; an unknown key
+        // is no filter.
         $status = self::queryString($request, 'status');
+        $statusCase = OeuvreStatus::fromKey($status);
         $sort = self::queryString($request, 'sort');
 
         $oeuvres = Oeuvre::query()
@@ -109,7 +114,8 @@ final class OeuvreController extends Controller
             // page statement, not a question asked once per row.
             ->selectRaw(
                 '(select case when count(*) > 0 then 1 else 0 end from media_files mf '.
-                "where mf.oeuvre_id = oeuvres.id and mf.deleted_at is null and mf.status != 'ready') as has_unready_file"
+                'where mf.oeuvre_id = oeuvres.id and mf.deleted_at is null and mf.status != ?) as has_unready_file',
+                [MediaFileStatus::READY]
             )
             ->when($search !== '', fn ($query) => $query->where(
                 fn ($q) => $q->where('title', 'like', "%{$search}%")
@@ -119,7 +125,7 @@ final class OeuvreController extends Controller
                         ->orWhere('name_ar', 'like', "%{$search}%")
                         ->orWhere('name_en', 'like', "%{$search}%"))
             ))
-            ->when(in_array($status, self::STATUSES, true), fn ($query) => $query->where('status', $status))
+            ->when($statusCase !== null, fn ($query) => $query->where('status', $statusCase))
             ->when($status === self::FILTER_PENDING, fn ($query) => $query->whereIn('status', self::PENDING_STATUSES))
             ->tap(fn (Builder $query) => $this->applySort($query, $sort))
             ->paginate($this->perPage($request, self::PER_PAGE))
@@ -159,7 +165,7 @@ final class OeuvreController extends Controller
             ]),
             'filters' => [
                 'search' => $search,
-                'status' => in_array($status, self::STATUSES, true) || $status === self::FILTER_PENDING ? $status : '',
+                'status' => $statusCase !== null || $status === self::FILTER_PENDING ? $status : '',
                 'sort' => in_array($sort, self::SORTS, true) ? $sort : self::SORTS[0],
             ],
             'statuses' => self::STATUSES,
@@ -234,15 +240,17 @@ final class OeuvreController extends Controller
             ->selectRaw('status, count(*) as total')
             ->pluck('total', 'status');
 
+        // The grouped query returns the stored ints; the result is keyed
+        // by status KEY, as the filter tabs and the dashboard read it.
         $byStatus = [];
 
         foreach (self::STATUSES as $status) {
-            $byStatus[$status] = (int) ($counts[$status] ?? 0);
+            $byStatus[$status->key()] = (int) ($counts[$status->value] ?? 0);
         }
 
         $byStatus['all'] = array_sum($byStatus);
         $byStatus[self::FILTER_PENDING] = array_sum(array_map(
-            fn (string $status): int => $byStatus[$status],
+            fn (OeuvreStatus $status): int => $byStatus[$status->key()],
             self::PENDING_STATUSES,
         ));
 
@@ -379,7 +387,7 @@ final class OeuvreController extends Controller
      * `withTrashed` on the actor: `users` is soft-deleted, and a decision
      * must still name its officer after that account is retired.
      *
-     * @return array<int, array{uuid: string, from_status: string, to_status: string, reason: string|null, created_at: string|null, actor?: string|null}>
+     * @return array<int, array{uuid: string, from_status: OeuvreStatus, to_status: OeuvreStatus, reason: string|null, created_at: string|null, actor?: string|null}>
      */
     public static function reviewHistory(Oeuvre $oeuvre, bool $withActor = false): array
     {
@@ -508,11 +516,11 @@ final class OeuvreController extends Controller
             ->with([
                 'typeGestions' => fn ($query) => $query->active()->orderBy('type_gestion'),
                 'registerTypeColleges' => fn ($query) => $query
-                    ->where('status', RegisterTypeCollege::STATUS_ACTIVE)
+                    ->where('status', ReferentielStatus::ACTIVE)
                     ->where('code_college', '!=', RegisterTypeCollege::CODE_REFERENTIEL_HORS_ADHESION)
                     ->orderBy('id'),
                 'registerTypeColleges.registerTypeMembers' => fn ($query) => $query
-                    ->where('status', RegisterTypeCollege::STATUS_ACTIVE)
+                    ->where('status', ReferentielStatus::ACTIVE)
                     ->where('available_in_registration', true)
                     ->orderBy('id'),
             ])

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Referentiel\StatusEnum;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -20,10 +21,15 @@ return new class extends Migration
             $table->string('name');
             $table->string('name_ar')->nullable();
             $table->string('name_en')->nullable();
-            $table->unsignedTinyInteger('status')->default(1)->index();
+            $table->unsignedTinyInteger('status')
+                ->default(StatusEnum::ACTIVE->value)
+                ->comment(StatusEnum::dbComment());
             $table->boolean('is_disabled')->default(false);
             $table->timestamps();
             $table->softDeletes();
+
+            // A college's active contributor roles.
+            $table->index(['register_type_college_id', 'status']);
         });
     }
 

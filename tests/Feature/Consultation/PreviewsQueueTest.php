@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use App\Actions\Consultation\GenerateDerivative;
 use App\Domain\Deposit\PipelineWorkspace;
+use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaConsultation\StatusEnum as ConsultationStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Infrastructure\Render\ConsultationRenderer;
 use App\Infrastructure\Render\PreviewFamily;
 use App\Infrastructure\Render\RenderResult;
@@ -83,19 +86,19 @@ test('defaults are veryfast and crf 28', function () {
 });
 
 test('a deposit is ready, with its deposit row written, before any derivative exists; the preview job is merely queued', function () {
-    $file = pipelineFile($this->author, $this->oeuvre, consultFixture('sample.mp4'), 'clip.mp4', 'video/mp4', 'scanning');
+    $file = pipelineFile($this->author, $this->oeuvre, consultFixture('sample.mp4'), 'clip.mp4', 'video/mp4', MediaFileStatus::SCANNING);
     $file->forceFill(['sha256_plain' => null])->save();
 
     ProcessMediaFile::dispatch($file->uuid);
 
-    expect($file->fresh()->status)->toBe('ready')
-        ->and(FileAccessLog::where('media_file_id', $file->id)->where('action', 'deposit')->count())->toBe(1)
+    expect($file->fresh()->status)->toBe(MediaFileStatus::READY)
+        ->and(FileAccessLog::where('media_file_id', $file->id)->where('action', ActionEnum::DEPOSIT)->count())->toBe(1)
         ->and(MediaConsultation::where('media_file_id', $file->id)->exists())->toBeFalse()
         ->and(previewJobsQueued())->toBe(1);
 });
 
 test('with a slow renderer the file is already ready and recorded while the derivative is still being built', function () {
-    $file = pipelineFile($this->author, $this->oeuvre, 'plain text body', 'notes.txt', 'text/plain', 'scanning');
+    $file = pipelineFile($this->author, $this->oeuvre, 'plain text body', 'notes.txt', 'text/plain', MediaFileStatus::SCANNING);
     $file->forceFill(['sha256_plain' => null])->save();
 
     ProcessMediaFile::dispatch($file->uuid);
@@ -116,8 +119,8 @@ test('with a slow renderer the file is already ready and recorded while the deri
             usleep(300_000); // slow
 
             $this->observed['status'] = MediaFile::find($this->fileId)->status;
-            $this->observed['deposit_rows'] = FileAccessLog::where('media_file_id', $this->fileId)->where('action', 'deposit')->count();
-            $this->observed['consultation_exists'] = MediaConsultation::where('media_file_id', $this->fileId)->where('status', 'ready')->exists();
+            $this->observed['deposit_rows'] = FileAccessLog::where('media_file_id', $this->fileId)->where('action', ActionEnum::DEPOSIT)->count();
+            $this->observed['consultation_exists'] = MediaConsultation::where('media_file_id', $this->fileId)->where('status', ConsultationStatus::READY)->exists();
 
             return RenderResult::unsupported('unsupported_format');
         }
@@ -125,13 +128,13 @@ test('with a slow renderer the file is already ready and recorded while the deri
 
     app()->call([new GenerateConsultationDerivative($file->uuid), 'handle']);
 
-    expect($observed->getArrayCopy())->toBe(['status' => 'ready', 'deposit_rows' => 1, 'consultation_exists' => false])
-        ->and(MediaConsultation::where('media_file_id', $file->id)->value('status'))->toBe('unsupported');
+    expect($observed->getArrayCopy())->toBe(['status' => MediaFileStatus::READY, 'deposit_rows' => 1, 'consultation_exists' => false])
+        ->and(MediaConsultation::where('media_file_id', $file->id)->value('status'))->toBe(ConsultationStatus::UNSUPPORTED);
 });
 
 test('CleanupTemp queues previews only for a ready deposit', function () {
-    $ready = pipelineFile($this->author, $this->oeuvre, 'a', 'a.txt', 'text/plain', 'ready');
-    $failed = pipelineFile($this->author, $this->oeuvre, 'b', 'b.txt', 'text/plain', 'failed');
+    $ready = pipelineFile($this->author, $this->oeuvre, 'a', 'a.txt', 'text/plain', MediaFileStatus::READY);
+    $failed = pipelineFile($this->author, $this->oeuvre, 'b', 'b.txt', 'text/plain', MediaFileStatus::FAILED);
 
     app()->call([new CleanupTemp($failed->uuid), 'handle']);
     expect(previewJobsQueued())->toBe(0);
@@ -162,7 +165,7 @@ test('it works when the chain temp file is already gone, and leaves no scratch d
 
     app(GenerateDerivative::class)->handle($file);
 
-    expect(MediaConsultation::where('media_file_id', $file->id)->value('status'))->toBe('ready')
+    expect(MediaConsultation::where('media_file_id', $file->id)->value('status'))->toBe(ConsultationStatus::READY)
         ->and(glob(Storage::disk('work')->path('consult-*')) ?: [])->toBe([]);
 });
 
@@ -184,13 +187,13 @@ test('the scratch directory (plaintext included) is removed even when the render
 
     app(GenerateDerivative::class)->handle($file);
 
-    expect(MediaConsultation::where('media_file_id', $file->id)->value('status'))->toBe('failed')
+    expect(MediaConsultation::where('media_file_id', $file->id)->value('status'))->toBe(ConsultationStatus::FAILED)
         ->and(glob(Storage::disk('work')->path('consult-*')) ?: [])->toBe([]);
 });
 
 test('CleanupTemp dispatches the previews job on the previews connection and queue', function () {
     Queue::fake();
-    $file = pipelineFile($this->author, $this->oeuvre, 'a', 'a.txt', 'text/plain', 'ready');
+    $file = pipelineFile($this->author, $this->oeuvre, 'a', 'a.txt', 'text/plain', MediaFileStatus::READY);
 
     app()->call([new CleanupTemp($file->uuid), 'handle']);
 
@@ -202,7 +205,7 @@ test('CleanupTemp dispatches the previews job on the previews connection and que
 
 test('vault:generate-previews dispatches on the previews connection and queue and says so', function () {
     Queue::fake();
-    $file = pipelineFile($this->author, $this->oeuvre, 'a', 'a.txt', 'text/plain', 'ready');
+    $file = pipelineFile($this->author, $this->oeuvre, 'a', 'a.txt', 'text/plain', MediaFileStatus::READY);
 
     $this->artisan('vault:generate-previews', ['--uuid' => $file->uuid])
         ->expectsOutputToContain("on the 'previews' queue")
@@ -215,7 +218,7 @@ test('vault:generate-previews dispatches on the previews connection and queue an
 });
 
 test('a logger that throws cannot leave the consultation pending or fail the job', function () {
-    $file = pipelineFile($this->author, $this->oeuvre, 'some bytes', 'a.txt', 'text/plain', 'ready');
+    $file = pipelineFile($this->author, $this->oeuvre, 'some bytes', 'a.txt', 'text/plain', MediaFileStatus::READY);
     // Bytes gone: rendering fails, so the catch block runs.
     @unlink(Storage::disk($file->disk)->path($file->path));
 
@@ -223,18 +226,18 @@ test('a logger that throws cannot leave the consultation pending or fail the job
 
     $result = app(GenerateDerivative::class)->handle($file);
 
-    expect($result->status)->toBe(MediaConsultation::FAILED)
-        ->and(MediaConsultation::where('media_file_id', $file->id)->value('status'))->toBe('failed')
+    expect($result->status)->toBe(ConsultationStatus::FAILED)
+        ->and(MediaConsultation::where('media_file_id', $file->id)->value('status'))->toBe(ConsultationStatus::FAILED)
         ->and(MediaConsultation::where('media_file_id', $file->id)->value('reason'))->not->toBeNull();
 });
 
 test('vault:generate-previews --only-missing picks up rows left pending or failed, skips ready', function () {
     Queue::fake();
-    $pending = pipelineFile($this->author, $this->oeuvre, 'a', 'a.txt', 'text/plain', 'ready');
-    $failed = pipelineFile($this->author, $this->oeuvre, 'b', 'b.txt', 'text/plain', 'ready');
-    $ready = pipelineFile($this->author, $this->oeuvre, 'c', 'c.txt', 'text/plain', 'ready');
+    $pending = pipelineFile($this->author, $this->oeuvre, 'a', 'a.txt', 'text/plain', MediaFileStatus::READY);
+    $failed = pipelineFile($this->author, $this->oeuvre, 'b', 'b.txt', 'text/plain', MediaFileStatus::READY);
+    $ready = pipelineFile($this->author, $this->oeuvre, 'c', 'c.txt', 'text/plain', MediaFileStatus::READY);
 
-    foreach ([[$pending, MediaConsultation::PENDING], [$failed, MediaConsultation::FAILED], [$ready, MediaConsultation::READY]] as [$file, $status]) {
+    foreach ([[$pending, ConsultationStatus::PENDING], [$failed, ConsultationStatus::FAILED], [$ready, ConsultationStatus::READY]] as [$file, $status]) {
         $row = MediaConsultation::forFile($file);
         $row->family = 'text';
         $row->status = $status;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\Oeuvre;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -36,7 +36,7 @@ function filtersShelf(User $author): array
         OeuvreStatus::REGISTERED,
         OeuvreStatus::REJECTED,
     ] as $status) {
-        $shelf[$status] = Oeuvre::factory()->create([
+        $shelf[$status->key()] = Oeuvre::factory()->create([
             'author_id' => $author->id,
             'status' => $status,
             'submitted_at' => $status === OeuvreStatus::DRAFT ? null : now(),
@@ -46,25 +46,25 @@ function filtersShelf(User $author): array
     return $shelf;
 }
 
-test('each status filter returns exactly that status, and never another author\'s row', function (string $status) {
+test('each status filter returns exactly that status, and never another author\'s row', function (OeuvreStatus $status) {
     $author = filtersAuthor();
     $mine = filtersShelf($author);
     // Same statuses on someone else's shelf: none of these may leak.
     $theirs = filtersShelf(filtersAuthor());
 
     $this->actingAs($author)
-        ->get(route('oeuvres.index', ['status' => $status]))
+        ->get(route('oeuvres.index', ['status' => $status->key()]))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('author/oeuvres/Index')
             ->has('oeuvres.data', 1)
-            ->where('oeuvres.data.0.uuid', $mine[$status]->uuid)
-            ->where('oeuvres.data.0.status', $status)
-            ->where('filters.status', $status)
+            ->where('oeuvres.data.0.uuid', $mine[$status->key()]->uuid)
+            ->where('oeuvres.data.0.status', $status->key())
+            ->where('filters.status', $status->key())
             ->where('counts.all', 5)
         );
 
-    expect($theirs[$status]->author_id)->not->toBe($author->id);
+    expect($theirs[$status->key()]->author_id)->not->toBe($author->id);
 })->with([
     OeuvreStatus::DRAFT,
     OeuvreStatus::SUBMITTED,
@@ -84,7 +84,7 @@ test('the pending filter returns submitted and under review, own rows only', fun
             ->has('oeuvres.data', 2)
             ->where('filters.status', 'pending')
             ->where('oeuvres.data', fn ($rows) => collect($rows)->pluck('uuid')->sort()->values()->all()
-                === collect([$mine[OeuvreStatus::SUBMITTED]->uuid, $mine[OeuvreStatus::UNDER_REVIEW]->uuid])->sort()->values()->all())
+                === collect([$mine['submitted']->uuid, $mine['under_review']->uuid])->sort()->values()->all())
         );
 });
 
@@ -116,12 +116,12 @@ test('the partial reload the filter controls send returns the filtered list', fu
     filtersShelf(filtersAuthor());
 
     $this->actingAs($author)
-        ->get(route('oeuvres.index', ['status' => OeuvreStatus::REGISTERED]))
+        ->get(route('oeuvres.index', ['status' => OeuvreStatus::REGISTERED->key()]))
         ->assertInertia(fn (Assert $page) => $page
             ->reloadOnly(['oeuvres', 'counts', 'filters'], fn (Assert $reload) => $reload
                 ->has('oeuvres.data', 1)
-                ->where('oeuvres.data.0.uuid', $mine[OeuvreStatus::REGISTERED]->uuid)
-                ->where('filters.status', OeuvreStatus::REGISTERED)
+                ->where('oeuvres.data.0.uuid', $mine['registered']->uuid)
+                ->where('filters.status', OeuvreStatus::REGISTERED->key())
                 ->where('counts.all', 5)
                 ->missing('statuses')
             )
@@ -162,7 +162,7 @@ test('search and status combine, and a filter lands on page 1', function () {
     ]);
 
     $this->actingAs($author)
-        ->get(route('oeuvres.index', ['search' => 'Symphonie', 'status' => OeuvreStatus::REGISTERED]))
+        ->get(route('oeuvres.index', ['search' => 'Symphonie', 'status' => OeuvreStatus::REGISTERED->key()]))
         ->assertInertia(fn (Assert $page) => $page
             ->has('oeuvres.data', 1)
             ->where('oeuvres.data.0.uuid', $match->uuid)

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Referentiel\StatusEnum;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -25,7 +26,9 @@ return new class extends Migration
             // colleges ("CO" is Co-Auteur in LOGICIEL, Conteur in
             // PRESTATION_AUDIOVISUELLE), and several members have none.
             $table->string('code_qlt')->nullable()->index();
-            $table->unsignedTinyInteger('status')->default(1)->index();
+            $table->unsignedTinyInteger('status')
+                ->default(StatusEnum::ACTIVE->value)
+                ->comment(StatusEnum::dbComment());
             $table->boolean('is_disabled')->default(false);
             // False for ONDA's internal reference qualities, which are never
             // offered when declaring.
@@ -33,6 +36,9 @@ return new class extends Migration
             $table->boolean('is_system')->default(false);
             $table->timestamps();
             $table->softDeletes();
+
+            // A college's active qualités (create-page cascade, admin lists).
+            $table->index(['register_type_college_id', 'status']);
         });
     }
 

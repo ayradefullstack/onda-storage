@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\Consultation\IssueAssetUrl;
 use App\Actions\Consultation\StoreConsultationAsset;
+use App\Enums\MediaConsultation\StatusEnum as ConsultationStatus;
 use App\Infrastructure\Render\RenderedAsset;
 use App\Models\MediaConsultation;
 use App\Models\Oeuvre;
@@ -151,7 +152,7 @@ test('an unsigned or tampered URL is refused', function () {
 });
 
 test('a URL is refused when the consultation is not ready', function () {
-    MediaConsultation::where('media_file_id', $this->file->id)->update(['status' => 'failed']);
+    MediaConsultation::where('media_file_id', $this->file->id)->update(['status' => ConsultationStatus::FAILED]);
 
     $this->actingAs($this->admin)->get(consultUrl($this))->assertForbidden();
 });

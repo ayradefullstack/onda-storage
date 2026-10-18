@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Consultation;
 
 use App\Domain\Access\AccessLogger;
+use App\Enums\FileAccessLog\ActionEnum;
 use App\Infrastructure\Render\DeliveryMode;
 use App\Infrastructure\Render\PreviewFamilyResolver;
 use App\Models\MediaFile;
@@ -45,8 +46,8 @@ final class AuditConsultation
         // The owner previewing their own file is recorded the way the owner's
         // media.stream access already is: action `stream`.
         $action = ! $admin->hasRole('admin')
-            ? 'stream'
-            : ($original ? 'consult_original' : 'admin_consult');
+            ? ActionEnum::STREAM
+            : ($original ? ActionEnum::CONSULT_ORIGINAL : ActionEnum::ADMIN_CONSULT);
 
         AccessLogger::record(
             $mediaFile,

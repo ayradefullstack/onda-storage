@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Actions\Upload;
 
-use App\Domain\Deposit\OeuvreStatus;
 use App\Domain\Quota\QuotaPolicy;
 use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Exceptions\InsufficientStorage;
 use App\Domain\Vault\Value\UploadIntent;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\UploadSession\StatusEnum as UploadSessionStatus;
 use App\Models\CollegeOeuvreFile;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -80,7 +81,7 @@ final class InitUpload
         // comes back. A rejected one reopens, which is what makes "fix it
         // and resubmit" possible. Hiding the upload button is not a
         // freeze — this is.
-        if (! OeuvreStatus::isAuthorEditable($oeuvre->status)) {
+        if (! $oeuvre->status->isAuthorEditable()) {
             throw ValidationException::withMessages([
                 'oeuvre_id' => ['This work has been submitted and can no longer receive files.'],
             ]);
@@ -201,7 +202,7 @@ final class InitUpload
     {
         return UploadSession::query()
             ->when($userId !== null, fn (Builder $query) => $query->where('user_id', $userId))
-            ->whereNotIn('status', ['aborted', 'completed'])
+            ->whereNotIn('status', UploadSessionStatus::finished())
             ->where('expires_at', '>', now());
     }
 
@@ -312,12 +313,12 @@ final class InitUpload
         $occupied = MediaFile::query()
             ->where('oeuvre_id', $oeuvre->id)
             ->where('college_oeuvre_file_id', $requirement->id)
-            ->whereNotIn('status', ['failed', 'quarantined'])
+            ->whereNotIn('status', MediaFileStatus::blocking())
             ->exists()
             || UploadSession::query()
                 ->where('oeuvre_id', $oeuvre->id)
                 ->where('college_oeuvre_file_id', $requirement->id)
-                ->where('status', '!=', 'aborted')
+                ->where('status', '!=', UploadSessionStatus::ABORTED)
                 ->where('expires_at', '>', now())
                 ->exists();
 

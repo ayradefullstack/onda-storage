@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Concerns\HasUuidColumn;
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
+use App\Models\Concerns\SerializesEnumsAsKeys;
 use Database\Factories\RegisterTypeFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -23,7 +25,7 @@ use Illuminate\Support\Carbon;
  * @property string $slug
  * @property string|null $name_ar
  * @property string|null $name_en
- * @property int $status
+ * @property ReferentielStatus $status
  * @property bool $is_disabled
  * @property bool $is_system
  * @property-read string $name_global
@@ -34,9 +36,7 @@ use Illuminate\Support\Carbon;
 class RegisterType extends Model
 {
     /** @use HasFactory<RegisterTypeFactory> */
-    use HasFactory, HasUuidColumn, SoftDeletes;
-
-    public const STATUS_ACTIVE = 1;
+    use HasFactory, HasUuidColumn, SerializesEnumsAsKeys, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -50,7 +50,7 @@ class RegisterType extends Model
     protected function casts(): array
     {
         return [
-            'status' => 'integer',
+            'status' => ReferentielStatus::class,
             'is_disabled' => 'boolean',
             'is_system' => 'boolean',
         ];
@@ -107,7 +107,7 @@ class RegisterType extends Model
      */
     public function scopeActive(Builder $query): Builder
     {
-        return $query->where('status', self::STATUS_ACTIVE);
+        return $query->where('status', ReferentielStatus::ACTIVE);
     }
 
     /**

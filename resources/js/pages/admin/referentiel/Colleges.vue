@@ -46,7 +46,7 @@ interface CollegeRow {
     is_system: boolean;
     code_dv: string | null;
     has_documents: boolean;
-    status: number;
+    status: 'active' | 'inactive';
     is_disabled: boolean;
     adhesion: boolean;
     hidden_from_registration: boolean;
@@ -99,7 +99,7 @@ const form = ref({
     name: '',
     name_ar: '',
     name_en: '',
-    status: 1,
+    status: 'active',
     is_disabled: false,
     adhesion: false,
 });
@@ -439,12 +439,12 @@ const setFilter = (key: 'type' | 'gestion', value: string) =>
                                     <span
                                         :class="[
                                             'rounded px-1.5 py-0.5 text-[10px] font-medium',
-                                            row.status === 1
+                                            row.status === 'active'
                                                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                                                 : 'bg-muted text-muted-foreground',
                                         ]"
                                         >{{
-                                            row.status === 1
+                                            row.status === 'active'
                                                 ? t(
                                                       'admin.referentiel.flags.statusOn',
                                                   )
@@ -579,8 +579,10 @@ const setFilter = (key: 'type' | 'gestion', value: string) =>
                 <div class="space-y-3 rounded-lg border border-border/80 p-3">
                     <label class="flex items-start gap-2.5 text-xs">
                         <Checkbox
-                            :model-value="form.status === 1"
-                            @update:model-value="form.status = $event ? 1 : 0"
+                            :model-value="form.status === 'active'"
+                            @update:model-value="
+                                form.status = $event ? 'active' : 'inactive'
+                            "
                         />
                         <span>
                             <span class="block font-medium">{{

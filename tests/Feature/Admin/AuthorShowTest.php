@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\User;
@@ -12,8 +13,8 @@ test('an author\'s show page lists only that author\'s works', function () {
     $author = User::factory()->withRole('author')->create();
     $stranger = User::factory()->withRole('author')->create();
 
-    $ownOeuvre = Oeuvre::factory()->create(['author_id' => $author->id, 'title' => 'Mine', 'status' => 'submitted']);
-    Oeuvre::factory()->create(['author_id' => $stranger->id, 'title' => 'Not mine', 'status' => 'submitted']);
+    $ownOeuvre = Oeuvre::factory()->create(['author_id' => $author->id, 'title' => 'Mine', 'status' => OeuvreStatus::SUBMITTED]);
+    Oeuvre::factory()->create(['author_id' => $stranger->id, 'title' => 'Not mine', 'status' => OeuvreStatus::SUBMITTED]);
     MediaFile::factory()->create(['oeuvre_id' => $ownOeuvre->id]);
 
     $response = $this->actingAs($admin)->get(route('admin.authors.show', $author));
@@ -30,8 +31,8 @@ test('the author show page excludes drafts from the works list', function () {
     $admin = User::factory()->withRole('admin')->create();
     $author = User::factory()->withRole('author')->create();
 
-    Oeuvre::factory()->create(['author_id' => $author->id, 'title' => 'Draft', 'status' => 'draft']);
-    $submitted = Oeuvre::factory()->create(['author_id' => $author->id, 'title' => 'Submitted', 'status' => 'submitted']);
+    Oeuvre::factory()->create(['author_id' => $author->id, 'title' => 'Draft', 'status' => OeuvreStatus::DRAFT]);
+    $submitted = Oeuvre::factory()->create(['author_id' => $author->id, 'title' => 'Submitted', 'status' => OeuvreStatus::SUBMITTED]);
 
     $response = $this->actingAs($admin)->get(route('admin.authors.show', $author));
 
@@ -51,7 +52,7 @@ test('visiting an admin\'s uuid on the author show route 404s', function () {
 test('the author show page never exposes a vault path, wrapped DEK, or nonce', function () {
     $admin = User::factory()->withRole('admin')->create();
     $author = User::factory()->withRole('author')->create();
-    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id, 'status' => 'submitted']);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id, 'status' => OeuvreStatus::SUBMITTED]);
     MediaFile::factory()->create(['oeuvre_id' => $oeuvre->id]);
 
     $response = $this->actingAs($admin)->get(route('admin.authors.show', $author));

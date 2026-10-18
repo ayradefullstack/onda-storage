@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
+use App\Enums\TypeGestion\TypeGestionEnum;
 use App\Models\CollegeOeuvreFile;
 use App\Models\RegisterType;
 use App\Models\RegisterTypeCollege;
@@ -36,10 +38,10 @@ function ownershipAdminCollege(string $code = 'ADMIN_COLLEGE'): RegisterTypeColl
     $college->fill([
         'register_type_id' => $type->id,
         'type_gestion_id' => $gestion->id,
-        'type_gestion' => 1,
+        'type_gestion' => TypeGestionEnum::COLLECTIVE,
         'code_college' => $code,
         'name' => 'Collège ajouté par un admin',
-        'status' => 1,
+        'status' => ReferentielStatus::ACTIVE,
         'is_disabled' => false,
     ])->save();
 
@@ -75,17 +77,17 @@ test('re-running the seeders keeps an admin\'s status flags on a system row', fu
     $type = RegisterType::where('slug', 'auteur')->firstOrFail();
     $gestion = TypeGestion::where('register_type_id', $type->id)->firstOrFail();
 
-    $college->update(['is_disabled' => true, 'status' => 0, 'adhesion' => false, 'name_ar' => 'اسم']);
-    $member->update(['is_disabled' => true, 'available_in_registration' => false, 'status' => 0]);
-    $type->update(['status' => 0, 'is_disabled' => true]);
-    $gestion->update(['status' => 0]);
+    $college->update(['is_disabled' => true, 'status' => ReferentielStatus::INACTIVE, 'adhesion' => false, 'name_ar' => 'اسم']);
+    $member->update(['is_disabled' => true, 'available_in_registration' => false, 'status' => ReferentielStatus::INACTIVE]);
+    $type->update(['status' => ReferentielStatus::INACTIVE, 'is_disabled' => true]);
+    $gestion->update(['status' => ReferentielStatus::INACTIVE]);
 
     ownershipRerun();
 
-    expect($college->fresh())->is_disabled->toBeTrue()->status->toBe(0)->name_ar->toBe('اسم')
-        ->and($member->fresh())->is_disabled->toBeTrue()->available_in_registration->toBeFalse()->status->toBe(0)
-        ->and($type->fresh())->status->toBe(0)->is_disabled->toBeTrue()
-        ->and($gestion->fresh()->status)->toBe(0);
+    expect($college->fresh())->is_disabled->toBeTrue()->status->toBe(ReferentielStatus::INACTIVE)->name_ar->toBe('اسم')
+        ->and($member->fresh())->is_disabled->toBeTrue()->available_in_registration->toBeFalse()->status->toBe(ReferentielStatus::INACTIVE)
+        ->and($type->fresh())->status->toBe(ReferentielStatus::INACTIVE)->is_disabled->toBeTrue()
+        ->and($gestion->fresh()->status)->toBe(ReferentielStatus::INACTIVE);
 });
 
 test('re-running the seeders creates no duplicate of a system row nor of an admin row', function () {
@@ -94,7 +96,7 @@ test('re-running the seeders creates no duplicate of a system row nor of an admi
     $adminMember = new RegisterTypeMember;
     $adminMember->fill([
         'register_type_college_id' => $adminCollege->id, 'name' => 'Qualité admin', 'code_qlt' => 'ADM',
-        'status' => 1, 'is_disabled' => false, 'available_in_registration' => true,
+        'status' => ReferentielStatus::ACTIVE, 'is_disabled' => false, 'available_in_registration' => true,
     ])->save();
 
     $before = [
@@ -162,7 +164,7 @@ test('every row the seeder writes is a system row, and the column defaults hold'
     // A row written outside the seeder takes the column default: not a system row.
     DB::table('register_types')->insert([
         'uuid' => (string) Str::uuid(), 'name' => 'Admin-made', 'slug' => 'admin-made',
-        'status' => 1, 'is_disabled' => false, 'created_at' => now(), 'updated_at' => now(),
+        'status' => ReferentielStatus::ACTIVE, 'is_disabled' => false, 'created_at' => now(), 'updated_at' => now(),
     ]);
 
     expect(DB::table('register_types')->where('slug', 'admin-made')->value('is_system'))->toBeFalsy();

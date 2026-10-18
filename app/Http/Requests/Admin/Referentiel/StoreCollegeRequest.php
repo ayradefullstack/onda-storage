@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin\Referentiel;
 
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
 use App\Http\Requests\Admin\Referentiel\Rules\UniqueTrimmedName;
 use App\Models\RegisterType;
 use App\Models\TypeGestion;
@@ -107,7 +108,7 @@ final class StoreCollegeRequest extends FormRequest
             if ($type->hasActiveGestions()) {
                 if ($gestion === null) {
                     $validator->errors()->add('type_gestion', 'admin.referentiel.errors.gestionRequired');
-                } elseif ($gestion->register_type_id !== $type->id || $gestion->status !== TypeGestion::STATUS_ACTIVE) {
+                } elseif ($gestion->register_type_id !== $type->id || $gestion->status !== ReferentielStatus::ACTIVE) {
                     $validator->errors()->add('type_gestion', 'admin.referentiel.errors.gestionWrongType');
                 }
             } elseif ($this->filled('type_gestion')) {

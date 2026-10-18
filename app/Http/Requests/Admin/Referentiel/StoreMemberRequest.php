@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin\Referentiel;
 
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
 use App\Http\Requests\Admin\Referentiel\Rules\UniqueTrimmedName;
+use App\Http\Requests\Concerns\AcceptsEnumKeys;
 use App\Models\RegisterTypeCollege;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -16,6 +18,16 @@ use Illuminate\Validation\Rule;
  */
 final class StoreMemberRequest extends FormRequest
 {
+    use AcceptsEnumKeys;
+
+    /**
+     * @return array<string, class-string<ReferentielStatus>>
+     */
+    protected function enumFields(): array
+    {
+        return ['status' => ReferentielStatus::class];
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -58,7 +70,7 @@ final class StoreMemberRequest extends FormRequest
                 Rule::unique('register_type_members', 'code_qlt')->where('register_type_college_id', $college->id ?? 0),
             ],
             'available_in_registration' => ['sometimes', 'boolean'],
-            'status' => ['sometimes', 'integer', Rule::in([0, RegisterTypeCollege::STATUS_ACTIVE])],
+            'status' => ['sometimes', Rule::enum(ReferentielStatus::class)],
         ];
     }
 

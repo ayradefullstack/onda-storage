@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin\Referentiel;
 
 use App\Actions\Referentiel\CreateRegisterType;
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
 use App\Http\Requests\Admin\Referentiel\StoreTypeRequest;
 use App\Http\Requests\Admin\Referentiel\UpdateTypeRequest;
 use App\Models\RegisterType;
@@ -35,7 +36,7 @@ final class TypeController extends ReferentielController
             // The blast radius of retiring a type: the colleges step 1
             // would stop offering. Mirrors RegisterTypeCollege::isReachable.
             ->withCount(['registerTypeColleges as reachable_colleges_count' => fn ($query) => $query
-                ->where('status', RegisterTypeCollege::STATUS_ACTIVE)
+                ->where('status', ReferentielStatus::ACTIVE)
                 ->where('is_disabled', false)
                 ->whereNotIn('code_college', RegisterTypeCollege::CODES_HIDDEN_FROM_REGISTRATION)])
             ->when($search !== '', fn ($query) => $query->where(fn ($q) => $q

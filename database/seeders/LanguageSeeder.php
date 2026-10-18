@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Enums\Language\DirectionEnum;
 use App\Models\Language;
 use Illuminate\Database\Seeder;
 
@@ -23,9 +24,9 @@ use Illuminate\Database\Seeder;
 class LanguageSeeder extends Seeder
 {
     private const LANGUAGES = [
-        ['code' => 'ar', 'name' => 'Arabic', 'native_name' => 'العربية', 'direction' => 'rtl', 'is_default' => true, 'sort_order' => 1],
-        ['code' => 'fr', 'name' => 'French', 'native_name' => 'Français', 'direction' => 'ltr', 'is_default' => false, 'sort_order' => 2],
-        ['code' => 'en', 'name' => 'English', 'native_name' => 'English', 'direction' => 'ltr', 'is_default' => false, 'sort_order' => 3],
+        ['code' => 'ar', 'name' => 'Arabic', 'native_name' => 'العربية', 'direction' => DirectionEnum::RTL, 'is_default' => true, 'sort_order' => 1],
+        ['code' => 'fr', 'name' => 'French', 'native_name' => 'Français', 'direction' => DirectionEnum::LTR, 'is_default' => false, 'sort_order' => 2],
+        ['code' => 'en', 'name' => 'English', 'native_name' => 'English', 'direction' => DirectionEnum::LTR, 'is_default' => false, 'sort_order' => 3],
     ];
 
     public function run(): void

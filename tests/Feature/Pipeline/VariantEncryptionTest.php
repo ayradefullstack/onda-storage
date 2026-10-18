@@ -8,6 +8,8 @@ use App\Domain\Vault\Crypto\CtrCipher;
 use App\Domain\Vault\Crypto\HkdfKeys;
 use App\Domain\Vault\Crypto\KeyManager;
 use App\Domain\Vault\Value\UploadIntent;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\MediaVariant\KindEnum;
 use App\Jobs\DecryptToTemp;
 use App\Jobs\GenerateVariants;
 use App\Models\MediaFile;
@@ -65,7 +67,7 @@ function variantEncryptionUploadFixture(User $author, Oeuvre $oeuvre): MediaFile
     $mediaFile->dek_wrapped = $object->dekWrapped;
     $mediaFile->nonce = $object->nonce;
     $mediaFile->mac_path = $object->macPath;
-    $mediaFile->status = 'scanning';
+    $mediaFile->status = MediaFileStatus::SCANNING;
     $mediaFile->ref_count = 1;
     $mediaFile->save();
 
@@ -111,7 +113,7 @@ test('regenerating the same variant twice produces two different ciphertexts und
     (new GenerateVariants($mediaFile->uuid))->handle();
     (new GenerateVariants($mediaFile->uuid))->handle();
 
-    $posters = MediaVariant::where('media_file_id', $mediaFile->id)->where('kind', 'poster')->orderBy('id')->get();
+    $posters = MediaVariant::where('media_file_id', $mediaFile->id)->where('kind', KindEnum::POSTER)->orderBy('id')->get();
     expect($posters)->toHaveCount(2);
 
     [$first, $second] = $posters;

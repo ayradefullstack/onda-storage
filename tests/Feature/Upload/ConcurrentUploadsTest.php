@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\Upload\InitUpload;
+use App\Enums\UploadSession\StatusEnum as UploadSessionStatus;
 use App\Models\CollegeOeuvreFile;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -253,7 +254,7 @@ test('cancelling mid-upload (after chunks have landed) releases the reservation'
 
     $this->deleteJson("/uploads/{$uuid}")->assertOk();
 
-    expect(UploadSession::where('uuid', $uuid)->value('status'))->toBe('aborted');
+    expect(UploadSession::where('uuid', $uuid)->value('status'))->toBe(UploadSessionStatus::ABORTED);
     concurrentInit($oeuvre, 'two.mp4', 600)->assertCreated();
 });
 
@@ -320,8 +321,8 @@ test('only live sessions count as reserved: expired, aborted and completed ones 
     concurrentInit($oeuvre, 'e.mp4', 1)->assertStatus(413);
 
     UploadSession::where('uuid', $expired)->update(['expires_at' => now()->subSecond()]);
-    UploadSession::where('uuid', $aborted)->update(['status' => 'aborted']);
-    UploadSession::where('uuid', $completed)->update(['status' => 'completed']);
+    UploadSession::where('uuid', $aborted)->update(['status' => UploadSessionStatus::ABORTED]);
+    UploadSession::where('uuid', $completed)->update(['status' => UploadSessionStatus::COMPLETED]);
 
     expect(InitUpload::liveSessions($user->id)->pluck('uuid')->all())->toBe([$live]);
 
@@ -396,14 +397,14 @@ test('uploads:release-stale aborts only live-but-idle sessions, through the abor
     UploadSession::where('uuid', $idle)->update(['updated_at' => now()->subHours(2)]);
 
     $this->artisan('uploads:release-stale --dry-run')->assertSuccessful();
-    expect(UploadSession::where('uuid', $idle)->value('status'))->toBe('uploading');
+    expect(UploadSession::where('uuid', $idle)->value('status'))->toBe(UploadSessionStatus::UPLOADING);
 
     $this->artisan('uploads:release-stale --idle=30')
         ->expectsOutputToContain('Released 1 stale session(s), 600 reserved bytes.')
         ->assertSuccessful();
 
-    expect(UploadSession::where('uuid', $idle)->value('status'))->toBe('aborted')
-        ->and(UploadSession::where('uuid', $fresh)->value('status'))->toBe('uploading');
+    expect(UploadSession::where('uuid', $idle)->value('status'))->toBe(UploadSessionStatus::ABORTED)
+        ->and(UploadSession::where('uuid', $fresh)->value('status'))->toBe(UploadSessionStatus::UPLOADING);
 
     // The 600 bytes are free again: 700 fits next to the fresh 300.
     concurrentInit($oeuvre, 'next.mp4', 700)->assertCreated();

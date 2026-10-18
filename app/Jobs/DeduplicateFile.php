@@ -8,6 +8,7 @@ use App\Domain\Deposit\Value\StoredObjectMapper;
 use App\Domain\Deposit\VaultBytesReleaser;
 use App\Domain\Deposit\VaultConsistency;
 use App\Domain\Vault\Value\StoredObject;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\MediaFile;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -99,7 +100,7 @@ final class DeduplicateFile extends PipelineJob
 
             $canonical = $rows->first(
                 fn (MediaFile $row): bool => $row->purged_at === null
-                    && ($row->id === $current->id || ! in_array($row->status, ['failed', 'quarantined'], true))
+                    && ($row->id === $current->id || ! in_array($row->status, MediaFileStatus::blocking(), true))
                     && $consistency->bytesIntact($row),
             );
 

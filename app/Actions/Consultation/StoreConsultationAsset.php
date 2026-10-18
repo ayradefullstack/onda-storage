@@ -105,7 +105,7 @@ final class StoreConsultationAsset
             ->first();
 
         if ($variant === null) {
-            throw new RuntimeException("Variant [{$asset->variantKind}] vanished before it could be referenced.");
+            throw new RuntimeException("Variant [{$asset->variantKind?->key()}] vanished before it could be referenced.");
         }
 
         $row = new ConsultationAsset;
@@ -116,7 +116,7 @@ final class StoreConsultationAsset
         $row->nonce = $variant->nonce;
         $row->size_bytes = $variant->size_bytes;
         $row->is_shared_variant = true;
-        $row->meta = ['variant_kind' => $variant->kind];
+        $row->meta = ['variant_kind' => $variant->kind->key()];
         $row->save();
 
         return $row;

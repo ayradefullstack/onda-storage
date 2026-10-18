@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Concerns\HasUuidColumn;
+use App\Enums\MediaConsultation\StatusEnum as ConsultationStatus;
+use App\Models\Concerns\SerializesEnumsAsKeys;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,7 +20,7 @@ use Illuminate\Support\Carbon;
  * @property string $uuid
  * @property int $media_file_id
  * @property string $family
- * @property string $status pending|ready|failed|unsupported
+ * @property ConsultationStatus $status
  * @property int|null $page_count
  * @property string|null $reason
  * @property CarbonInterface|null $generated_at
@@ -27,15 +29,7 @@ use Illuminate\Support\Carbon;
  */
 class MediaConsultation extends Model
 {
-    use HasUuidColumn;
-
-    public const PENDING = 'pending';
-
-    public const READY = 'ready';
-
-    public const FAILED = 'failed';
-
-    public const UNSUPPORTED = 'unsupported';
+    use HasUuidColumn, SerializesEnumsAsKeys;
 
     /**
      * The file's row, unsaved when it has none yet. (No mass assignment in
@@ -56,6 +50,7 @@ class MediaConsultation extends Model
     protected function casts(): array
     {
         return [
+            'status' => ConsultationStatus::class,
             'page_count' => 'integer',
             'generated_at' => 'datetime',
         ];

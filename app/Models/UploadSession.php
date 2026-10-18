@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Concerns\HasUuidColumn;
+use App\Enums\UploadSession\StatusEnum as UploadSessionStatus;
+use App\Models\Concerns\SerializesEnumsAsKeys;
 use Database\Factories\UploadSessionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -27,7 +29,7 @@ use Illuminate\Support\Carbon;
  * @property string $dek_wrapped
  * @property string $nonce
  * @property string $temp_path
- * @property string $status
+ * @property UploadSessionStatus $status
  * @property Carbon $expires_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -35,11 +37,12 @@ use Illuminate\Support\Carbon;
 class UploadSession extends Model
 {
     /** @use HasFactory<UploadSessionFactory> */
-    use HasFactory, HasUuidColumn;
+    use HasFactory, HasUuidColumn, SerializesEnumsAsKeys;
 
     protected function casts(): array
     {
         return [
+            'status' => UploadSessionStatus::class,
             'size_bytes' => 'integer',
             'chunk_size' => 'integer',
             'total_chunks' => 'integer',

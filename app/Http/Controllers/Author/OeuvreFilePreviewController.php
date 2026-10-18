@@ -6,7 +6,7 @@ namespace App\Http\Controllers\Author;
 
 use App\Actions\Consultation\AuditConsultation;
 use App\Actions\Consultation\ConsultationDescriptor;
-use App\Domain\Deposit\MediaFileStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Http\Controllers\Controller;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;

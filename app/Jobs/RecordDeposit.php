@@ -6,9 +6,10 @@ namespace App\Jobs;
 
 use App\Actions\Media\TransitionMediaFileStatus;
 use App\Domain\Access\AccessLogger;
-use App\Domain\Deposit\MediaFileStatus;
 use App\Domain\Deposit\Value\RowHash;
 use App\Domain\Deposit\VaultConsistency;
+use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\FileAccessLog;
 use App\Models\MediaFile;
 use Illuminate\Support\Facades\Cache;
@@ -68,7 +69,7 @@ final class RecordDeposit extends PipelineJob
             'path' => $mediaFile->path,
         ]);
 
-        AccessLogger::record($mediaFile, null, 'bytes_missing', 'system', null);
+        AccessLogger::record($mediaFile, null, ActionEnum::BYTES_MISSING, 'system', null);
 
         $exception = new RuntimeException('bytes_missing');
 
@@ -89,7 +90,8 @@ final class RecordDeposit extends PipelineJob
             $previousRowHash = FileAccessLog::orderByDesc('id')->value('row_hash');
 
             $payload = [
-                'action' => 'deposit',
+                // The ActionEnum key, as in AccessLogger: the chain's format is unchanged.
+                'action' => ActionEnum::DEPOSIT->key(),
                 'media_file_uuid' => $mediaFile->uuid,
                 'sha256_plain' => $mediaFile->sha256_plain,
                 'size_bytes' => $mediaFile->size_bytes,
@@ -100,7 +102,7 @@ final class RecordDeposit extends PipelineJob
             $log = new FileAccessLog;
             $log->media_file_id = $mediaFile->id;
             $log->user_id = $mediaFile->uploaded_by;
-            $log->action = 'deposit';
+            $log->action = ActionEnum::DEPOSIT;
             // No HTTP request context in a queued job — 'system' is a
             // deliberate non-IP sentinel, not a real client address.
             $log->ip = 'system';

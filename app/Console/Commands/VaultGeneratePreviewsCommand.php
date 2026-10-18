@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Enums\MediaConsultation\StatusEnum as ConsultationStatus;
 use App\Infrastructure\Render\PreviewFamily;
 use App\Infrastructure\Render\PreviewFamilyResolver;
 use App\Jobs\GenerateConsultationDerivative;
@@ -69,7 +70,7 @@ final class VaultGeneratePreviewsCommand extends Command
             }
 
             if ($this->option('only-missing') && ! $this->option('force')
-                && MediaConsultation::where('media_file_id', $mediaFile->id)->where('status', MediaConsultation::READY)->exists()) {
+                && MediaConsultation::where('media_file_id', $mediaFile->id)->where('status', ConsultationStatus::READY)->exists()) {
                 $skipped++;
 
                 continue;

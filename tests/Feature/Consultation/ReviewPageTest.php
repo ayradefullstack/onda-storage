@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\FileAccessLog\ActionEnum;
 use App\Models\FileAccessLog;
 use App\Models\Oeuvre;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -123,7 +124,7 @@ test('opening the review page writes one admin_consult row per file per window',
     $this->actingAs($this->admin)->get(route('admin.oeuvres.files.review', [$oeuvre, $file]))->assertOk();
     $this->actingAs($this->admin)->get(route('admin.oeuvres.files.review', [$oeuvre, $file]))->assertOk();
 
-    $rows = FileAccessLog::where('media_file_id', $file->id)->where('action', 'admin_consult')->get();
+    $rows = FileAccessLog::where('media_file_id', $file->id)->where('action', ActionEnum::ADMIN_CONSULT)->get();
 
     expect($rows)->toHaveCount(1)
         ->and($rows[0]->user_id)->toBe($this->admin->id)
@@ -139,11 +140,11 @@ test('issuing descriptors is logged once per file per window, separately from th
         $this->actingAs($this->admin)->getJson(route('admin.oeuvres.files.review.assets', [$oeuvre, $file]))->assertOk();
     }
 
-    expect(FileAccessLog::where('media_file_id', $file->id)->where('action', 'admin_consult')->count())->toBe(1);
+    expect(FileAccessLog::where('media_file_id', $file->id)->where('action', ActionEnum::ADMIN_CONSULT)->count())->toBe(1);
 
     $this->actingAs($this->admin)->get(route('admin.oeuvres.files.review', [$oeuvre, $file]))->assertOk();
 
-    expect(FileAccessLog::where('media_file_id', $file->id)->where('action', 'admin_consult')->count())->toBe(2);
+    expect(FileAccessLog::where('media_file_id', $file->id)->where('action', ActionEnum::ADMIN_CONSULT)->count())->toBe(2);
 });
 
 test('a second admin and a second file each get their own row', function () {
@@ -156,5 +157,5 @@ test('a second admin and a second file each get their own row', function () {
     $this->actingAs($this->admin)->get(route('admin.oeuvres.files.review', [$oeuvre, $second]))->assertOk();
     $this->actingAs($otherAdmin)->get(route('admin.oeuvres.files.review', [$oeuvre, $file]))->assertOk();
 
-    expect(FileAccessLog::where('action', 'admin_consult')->count())->toBe(3);
+    expect(FileAccessLog::where('action', ActionEnum::ADMIN_CONSULT)->count())->toBe(3);
 });

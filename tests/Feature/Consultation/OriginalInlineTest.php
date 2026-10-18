@@ -9,6 +9,9 @@ use App\Domain\Access\SignedMediaUrl;
 use App\Domain\Deposit\Value\RowHash;
 use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Value\UploadIntent;
+use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaConsultation\StatusEnum as ConsultationStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Infrastructure\Render\DeliveryMode;
 use App\Infrastructure\Render\PreviewFamily;
 use App\Infrastructure\Render\PreviewFamilyResolver;
@@ -133,7 +136,7 @@ test('an original_inline family is ready with no assets, and nothing is decrypte
 
     $consultation = app(GenerateDerivative::class)->handle($file);
 
-    expect($consultation->status)->toBe('ready')
+    expect($consultation->status)->toBe(ConsultationStatus::READY)
         ->and($consultation->family)->toBe('video')
         ->and($consultation->reason)->toBeNull()
         ->and($file->consultationAssets()->count())->toBe(0);
@@ -144,7 +147,7 @@ test('vault:generate-previews --all --force turns tool_missing rows of these fam
 
     $consultation = MediaConsultation::forFile($this->file);
     $consultation->family = 'pdf';
-    $consultation->status = MediaConsultation::UNSUPPORTED;
+    $consultation->status = ConsultationStatus::UNSUPPORTED;
     $consultation->reason = 'tool_missing:pdftoppm';
     $consultation->save();
 
@@ -156,7 +159,7 @@ test('vault:generate-previews --all --force turns tool_missing rows of these fam
     (new GenerateConsultationDerivative($this->file->uuid, true))->handle(app(GenerateDerivative::class));
 
     expect(MediaConsultation::where('media_file_id', $this->file->id)->first())
-        ->status->toBe('ready')
+        ->status->toBe(ConsultationStatus::READY)
         ->reason->toBeNull();
 });
 
@@ -164,7 +167,7 @@ test('the descriptor carries the mode and a signed original url, and no asset ur
     $descriptor = app(ConsultationDescriptor::class)->handle($this->oeuvre, $this->file, $this->admin);
 
     expect($descriptor['mode'])->toBe('original_inline')
-        ->and($descriptor['status'])->toBe('ready')
+        ->and($descriptor['status'])->toBe(ConsultationStatus::READY)
         ->and($descriptor['assets'])->toBe([])
         ->and($descriptor['original']['mime'])->toBe('application/pdf')
         ->and($descriptor['original']['url'])->toContain('signature=')
@@ -179,7 +182,7 @@ test('a docx above docx_max_bytes gets a too-large card and no original url', fu
 
     $descriptor = app(ConsultationDescriptor::class)->handle($this->oeuvre, $file, $this->admin);
 
-    expect($descriptor['status'])->toBe('unsupported')
+    expect($descriptor['status'])->toBe(ConsultationStatus::UNSUPPORTED)
         ->and($descriptor['reason'])->toBe('docx_too_large')
         ->and($descriptor['original'])->toBeNull();
 
@@ -195,7 +198,7 @@ test('descriptor issuance for an original_inline file is one consult_original ro
     $rows = FileAccessLog::where('media_file_id', $this->file->id)->get();
 
     expect($rows)->toHaveCount(1)
-        ->and($rows[0]->action)->toBe('consult_original')
+        ->and($rows[0]->action)->toBe(ActionEnum::CONSULT_ORIGINAL)
         ->and($rows[0]->user_id)->toBe($this->admin->id)
         ->and($rows[0]->range_header)->toBeNull();
 });
@@ -207,7 +210,7 @@ test('a derivative file is still logged as admin_consult', function () {
 
     $this->actingAs($this->admin)->getJson(route('admin.oeuvres.files.review.assets', [$this->oeuvre, $text]))->assertOk();
 
-    expect(FileAccessLog::where('media_file_id', $text->id)->pluck('action')->all())->toBe(['admin_consult']);
+    expect(FileAccessLog::where('media_file_id', $text->id)->pluck('action')->all())->toBe([ActionEnum::ADMIN_CONSULT]);
 });
 
 test('the hash chain stays valid across consult_original rows', function () {
@@ -225,7 +228,7 @@ test('the hash chain stays valid across consult_original rows', function () {
 
     $rows = FileAccessLog::orderBy('id')->get();
 
-    expect($rows->pluck('action')->all())->toBe(['consult_original', 'admin_consult', 'consult_original']);
+    expect($rows->pluck('action')->all())->toBe([ActionEnum::CONSULT_ORIGINAL, ActionEnum::ADMIN_CONSULT, ActionEnum::CONSULT_ORIGINAL]);
 
     $previous = null;
 
@@ -391,7 +394,7 @@ test('a Range read of a large file stays under the memory ceiling and under the 
     $big->dek_wrapped = $object->dekWrapped;
     $big->nonce = $object->nonce;
     $big->mac_path = $object->macPath;
-    $big->status = 'ready';
+    $big->status = MediaFileStatus::READY;
     $big->ref_count = 1;
     $big->save();
     $this->files[] = $big;
@@ -451,7 +454,7 @@ test('a file of another oeuvre is a 404 even under a valid signature', function 
 });
 
 test('a consultation that is not ready is denied', function () {
-    MediaConsultation::where('media_file_id', $this->file->id)->update(['status' => MediaConsultation::PENDING]);
+    MediaConsultation::where('media_file_id', $this->file->id)->update(['status' => ConsultationStatus::PENDING]);
 
     $this->actingAs($this->admin)->get(originalUrl($this))->assertForbidden();
 });
@@ -482,7 +485,7 @@ test('the endpoint refuses a file whose stored MIME is not one of the four famil
     $this->files[] = $file;
     config(['vault.consult.delivery.image' => 'original_inline']);
     // The job refuses to mark it ready (unsupported), so the gate denies it.
-    expect(consultGenerate($file)->status)->toBe('unsupported');
+    expect(consultGenerate($file)->status)->toBe(ConsultationStatus::UNSUPPORTED);
 
     $this->actingAs($this->admin)->get(originalUrl($this, file: $file))->assertForbidden();
 });

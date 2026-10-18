@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Oeuvre\StatusEnum;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -35,8 +36,10 @@ return new class extends Migration
             // reason, and a CHECK constraint on a value the machine already
             // guards would only duplicate it across two dialects.
             $table->text('reason')->nullable();
-            $table->string('from_status', 32);
-            $table->string('to_status', 32);
+            $table->unsignedTinyInteger('from_status')
+                ->comment(StatusEnum::dbComment());
+            $table->unsignedTinyInteger('to_status')
+                ->comment(StatusEnum::dbComment());
             $table->timestamp('created_at')->useCurrent();
 
             // An oeuvre's history in order (timeline, latest rejection).

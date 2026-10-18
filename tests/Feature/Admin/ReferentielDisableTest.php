@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Domain\Deposit\MediaFileStatus;
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\RegisterTypeCollege;
@@ -39,7 +39,7 @@ function collegeToDisable(): RegisterTypeCollege
     return RegisterTypeCollege::where('code_college', 'MUSIQUE')->firstOrFail();
 }
 
-function oeuvreUnder(RegisterTypeCollege $college, User $author, string $status): Oeuvre
+function oeuvreUnder(RegisterTypeCollege $college, User $author, OeuvreStatus $status): Oeuvre
 {
     return Oeuvre::factory()->create([
         'author_id' => $author->id,
@@ -120,7 +120,7 @@ test('disabling a college does not change existing oeuvres classified under it',
     $this->actingAs(disableAdmin())
         ->patch(route('admin.referentiel.colleges.update', $college), [
             'is_disabled' => true,
-            'status' => 0,
+            'status' => 'inactive',
         ])
         ->assertRedirect();
 
@@ -176,13 +176,13 @@ test('a registered oeuvre is unaffected by any reference-data change', function 
     // rewrite the document rules — everything this console can do.
     $this->actingAs($admin)->patch(route('admin.referentiel.colleges.update', $college), [
         'is_disabled' => true,
-        'status' => 0,
+        'status' => 'inactive',
         'name_ar' => 'اسم مختلف',
         'adhesion' => false,
     ]);
     $this->actingAs($admin)->patch(route('admin.referentiel.membres.update', $member), [
         'is_disabled' => true,
-        'status' => 0,
+        'status' => 'inactive',
         'available_in_registration' => false,
     ]);
     $this->actingAs($admin)->patch(route('admin.referentiel.documents.update', $document), [

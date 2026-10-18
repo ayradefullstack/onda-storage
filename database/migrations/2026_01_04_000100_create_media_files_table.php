@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\MediaFile\StatusEnum;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -57,9 +58,9 @@ return new class extends Migration
             $table->unsignedInteger('width')->nullable();
             $table->unsignedInteger('height')->nullable();
             $table->unsignedInteger('ref_count')->default(1);
-            $table->enum('status', [
-                'uploading', 'assembling', 'scanning', 'processing', 'ready', 'failed', 'quarantined',
-            ])->default('uploading');
+            $table->unsignedTinyInteger('status')
+                ->default(StatusEnum::UPLOADING->value)
+                ->comment(StatusEnum::dbComment());
             $table->timestamp('scanned_at')->nullable();
             $table->timestamp('verified_at')->nullable();
             $table->timestamp('purged_at')->nullable();

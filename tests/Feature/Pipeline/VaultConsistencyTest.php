@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Domain\Deposit\VaultConsistency;
 use App\Domain\Deposit\VaultConsistencyChecks;
+use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\FileAccessLog;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -71,39 +73,39 @@ test('an orphan vault file is listed and never deleted; a fresh one is given a g
 
 test('vault:mark-missing-bytes is a dry run by default and changes nothing', function () {
     $file = consistencyFile($this);
-    $file->forceFill(['status' => 'ready'])->save();
+    $file->forceFill(['status' => MediaFileStatus::READY])->save();
     @unlink(Storage::disk($file->disk)->path($file->path));
 
     $this->artisan('vault:mark-missing-bytes')->assertSuccessful();
     $this->artisan('vault:mark-missing-bytes', ['--dry-run' => true])->assertSuccessful();
 
-    expect($file->fresh()->status)->toBe('ready')
-        ->and(FileAccessLog::where('media_file_id', $file->id)->where('action', 'bytes_missing')->count())->toBe(0);
+    expect($file->fresh()->status)->toBe(MediaFileStatus::READY)
+        ->and(FileAccessLog::where('media_file_id', $file->id)->where('action', ActionEnum::BYTES_MISSING)->count())->toBe(0);
 });
 
 test('vault:mark-missing-bytes --apply marks failed, audits once per file and deletes no row', function () {
     $file = consistencyFile($this);
     $healthy = consistencyFile($this);
-    $file->forceFill(['status' => 'ready'])->save();
-    $healthy->forceFill(['status' => 'ready'])->save();
+    $file->forceFill(['status' => MediaFileStatus::READY])->save();
+    $healthy->forceFill(['status' => MediaFileStatus::READY])->save();
     @unlink(Storage::disk($file->disk)->path($file->path));
 
     $this->artisan('vault:mark-missing-bytes', ['--apply' => true])->assertSuccessful();
 
-    expect($file->fresh()->status)->toBe('failed')
-        ->and($healthy->fresh()->status)->toBe('ready')
-        ->and(FileAccessLog::where('media_file_id', $file->id)->where('action', 'bytes_missing')->count())->toBe(1)
+    expect($file->fresh()->status)->toBe(MediaFileStatus::FAILED)
+        ->and($healthy->fresh()->status)->toBe(MediaFileStatus::READY)
+        ->and(FileAccessLog::where('media_file_id', $file->id)->where('action', ActionEnum::BYTES_MISSING)->count())->toBe(1)
         ->and(MediaFile::withTrashed()->count())->toBe(2);
 
     // Running it again finds nothing left to mark.
     $this->artisan('vault:mark-missing-bytes', ['--apply' => true])->assertSuccessful();
 
-    expect(FileAccessLog::where('media_file_id', $file->id)->where('action', 'bytes_missing')->count())->toBe(1);
+    expect(FileAccessLog::where('media_file_id', $file->id)->where('action', ActionEnum::BYTES_MISSING)->count())->toBe(1);
 });
 
 test('rows already marked bytes_missing are shown as their own INFO count, not hidden', function () {
     $file = pipelineFile($this->author, $this->oeuvre, 'some bytes', 'a.pdf', 'application/pdf');
-    $file->forceFill(['status' => 'failed'])->save();
+    $file->forceFill(['status' => MediaFileStatus::FAILED])->save();
     @unlink(Storage::disk($file->disk)->path($file->path));
 
     $checks = app(VaultConsistencyChecks::class)->run();

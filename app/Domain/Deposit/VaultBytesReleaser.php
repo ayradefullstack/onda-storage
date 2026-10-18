@@ -7,6 +7,7 @@ namespace App\Domain\Deposit;
 use App\Domain\Access\AccessLogger;
 use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Value\StoredObject;
+use App\Enums\FileAccessLog\ActionEnum;
 use App\Models\MediaFile;
 use Illuminate\Support\Facades\Log;
 
@@ -75,7 +76,7 @@ final class VaultBytesReleaser
             'context_media_file' => $context->uuid,
         ]);
 
-        AccessLogger::record($context, null, $delete ? 'bytes_released' : 'bytes_kept', 'system', null);
+        AccessLogger::record($context, null, $delete ? ActionEnum::BYTES_RELEASED : ActionEnum::BYTES_KEPT, 'system', null);
 
         return $delete;
     }

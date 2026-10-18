@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Render;
 
+use App\Enums\MediaConsultation\StatusEnum as ConsultationStatus;
 use App\Models\MediaFile;
 use PhpOffice\PhpSpreadsheet\Cell\Cell;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -35,7 +36,7 @@ final class SpreadsheetRenderer implements ConsultationRenderer
         if (filesize($sourcePath) > (int) config('vault.consult.sheet_max_bytes')) {
             $result = $this->office->convertAndRasterize($mediaFile, $sourcePath, $workspace);
 
-            return $result->status === 'unsupported' ? RenderResult::unsupported('too_large') : $result;
+            return $result->status === ConsultationStatus::UNSUPPORTED ? RenderResult::unsupported('too_large') : $result;
         }
 
         if ($this->looksLikeZipBomb($sourcePath)) {

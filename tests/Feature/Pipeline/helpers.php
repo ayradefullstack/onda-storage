@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Value\UploadIntent;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\User;
@@ -20,7 +21,7 @@ function pipelineAuthor(): User
  * same pre-allocate / write / finalize path an upload uses) into this test's
  * temporary vault root.
  */
-function pipelineFile(User $author, Oeuvre $oeuvre, string $bytes, string $name, string $mime, string $status = 'ready'): MediaFile
+function pipelineFile(User $author, Oeuvre $oeuvre, string $bytes, string $name, string $mime, MediaFileStatus $status = MediaFileStatus::READY): MediaFile
 {
     $vault = app(VaultContract::class);
 

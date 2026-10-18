@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use App\Actions\Upload\InitUpload;
-use App\Domain\Deposit\MediaFileStatus;
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Jobs\ProcessMediaFile;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -31,7 +31,7 @@ function freezeAuthor(): User
     return $user;
 }
 
-function freezeOeuvre(User $author, string $status): Oeuvre
+function freezeOeuvre(User $author, OeuvreStatus $status): Oeuvre
 {
     return Oeuvre::factory()->create([
         'author_id' => $author->id,
@@ -61,7 +61,7 @@ test('InitUpload refuses an upload into a submitted oeuvre', function () {
         ->toThrow(ValidationException::class, 'This work has been submitted and can no longer receive files.');
 });
 
-test('the upload endpoint refuses a submitted, under_review or registered oeuvre', function (string $status) {
+test('the upload endpoint refuses a submitted, under_review or registered oeuvre', function (OeuvreStatus $status) {
     $author = freezeAuthor();
     $oeuvre = freezeOeuvre($author, $status);
 
@@ -107,7 +107,7 @@ test('the freeze is reported as a freeze, not as someone else\'s work', function
         ->assertForbidden();
 });
 
-test('the policy denies editing a submitted, under_review or registered oeuvre', function (string $status) {
+test('the policy denies editing a submitted, under_review or registered oeuvre', function (OeuvreStatus $status) {
     $author = freezeAuthor();
     $oeuvre = freezeOeuvre($author, $status);
 

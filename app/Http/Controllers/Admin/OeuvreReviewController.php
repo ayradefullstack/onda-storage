@@ -11,10 +11,11 @@ use App\Actions\Review\RejectOeuvre;
 use App\Domain\Deposit\Exceptions\IllegalTransition;
 use App\Domain\Deposit\Exceptions\ReasonRequired;
 use App\Domain\Deposit\Exceptions\ReviewConflict;
-use App\Domain\Deposit\OeuvreStatus;
 use App\Domain\Deposit\OeuvreStatusMachine;
 use App\Domain\Deposit\SubmissionGate;
 use App\Domain\Deposit\Value\SubmissionReason;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Http\Controllers\Author\OeuvreController as AuthorOeuvreController;
 use App\Http\Controllers\Controller;
 use App\Models\Oeuvre;
@@ -138,8 +139,8 @@ final class OeuvreReviewController extends Controller
         foreach ($verdict->blockers as $reason) {
             $status = match ($reason->code) {
                 SubmissionReason::FILE_IN_PIPELINE => (string) ($reason->params['status'] ?? ''),
-                SubmissionReason::FILE_FAILED => 'failed',
-                SubmissionReason::FILE_QUARANTINED => 'quarantined',
+                SubmissionReason::FILE_FAILED => MediaFileStatus::FAILED->key(),
+                SubmissionReason::FILE_QUARANTINED => MediaFileStatus::QUARANTINED->key(),
                 default => null,
             };
 
@@ -252,7 +253,7 @@ final class OeuvreReviewController extends Controller
      *
      * @param  \Closure(): mixed  $decision
      */
-    private function decide(Request $request, Oeuvre $oeuvre, string $target, \Closure $decision, ?string $toast = null): RedirectResponse|JsonResponse
+    private function decide(Request $request, Oeuvre $oeuvre, OeuvreStatus $target, \Closure $decision, ?string $toast = null): RedirectResponse|JsonResponse
     {
         $replayed = false;
 
@@ -313,7 +314,7 @@ final class OeuvreReviewController extends Controller
      * @throws ValidationException
      * @throws HttpResponseException
      */
-    private function replayOrRefuse(Request $request, Oeuvre $oeuvre, string $target, IllegalTransition $refusal): bool
+    private function replayOrRefuse(Request $request, Oeuvre $oeuvre, OeuvreStatus $target, IllegalTransition $refusal): bool
     {
         /** @var User $officer */
         $officer = $request->user();
@@ -366,7 +367,7 @@ final class OeuvreReviewController extends Controller
     }
 
     /**
-     * @param  array{kind: string, by: string|null, at: string|null, status: string|null}  $conflict
+     * @param  array{kind: string, by: string|null, at: string|null, status: OeuvreStatus|null}  $conflict
      *
      * @throws HttpResponseException
      */

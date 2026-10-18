@@ -1,8 +1,9 @@
 <?php
 
-use App\Domain\Deposit\MediaFileStatus;
-use App\Domain\Deposit\OeuvreStatus;
 use App\Domain\Deposit\SubmissionGate;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
+use App\Enums\UploadSession\StatusEnum as UploadSessionStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\OeuvreReview;
@@ -26,7 +27,7 @@ function dashAuthor(string $name = 'Amina'): User
     return User::factory()->withRole('author')->create(['name' => $name]);
 }
 
-function dashOeuvre(User $author, string $status = OeuvreStatus::DRAFT, array $attributes = []): Oeuvre
+function dashOeuvre(User $author, OeuvreStatus $status = OeuvreStatus::DRAFT, array $attributes = []): Oeuvre
 {
     return Oeuvre::factory()->create([
         'author_id' => $author->id,
@@ -36,7 +37,7 @@ function dashOeuvre(User $author, string $status = OeuvreStatus::DRAFT, array $a
     ]);
 }
 
-function dashClassified(User $author, string $code = 'MUSIQUE', string $status = OeuvreStatus::DRAFT): Oeuvre
+function dashClassified(User $author, string $code = 'MUSIQUE', OeuvreStatus $status = OeuvreStatus::DRAFT): Oeuvre
 {
     $college = RegisterTypeCollege::where('code_college', $code)->firstOrFail();
 
@@ -48,7 +49,7 @@ function dashClassified(User $author, string $code = 'MUSIQUE', string $status =
     ]);
 }
 
-function dashFile(Oeuvre $oeuvre, string $status = MediaFileStatus::READY, array $attributes = []): MediaFile
+function dashFile(Oeuvre $oeuvre, MediaFileStatus $status = MediaFileStatus::READY, array $attributes = []): MediaFile
 {
     return MediaFile::factory()->create([
         'oeuvre_id' => $oeuvre->id,
@@ -260,7 +261,7 @@ test('recent works follow the latest activity, file activity included, five at m
 
     expect($recent)->toHaveCount(5)
         ->and($recent[0]['uuid'])->toBe($old->uuid)
-        ->and($recent[0]['status'])->toBe(OeuvreStatus::DRAFT)
+        ->and($recent[0]['status'])->toBe(OeuvreStatus::DRAFT->key())
         ->and($recent[0]['label_source']['uuid'])->toBe($old->uuid)
         ->and($recent[0]['last_activity_at'])->not->toBeNull();
 });
@@ -273,7 +274,7 @@ test('storage is used plus live reservations against the quota row, as InitUploa
     UploadSession::factory()->create(['user_id' => $author->id, 'oeuvre_id' => $oeuvre->id, 'size_bytes' => 1_500]);
     // Released reservations: expired and aborted sessions do not count.
     UploadSession::factory()->create(['user_id' => $author->id, 'oeuvre_id' => $oeuvre->id, 'size_bytes' => 900, 'expires_at' => now()->subMinute()]);
-    UploadSession::factory()->create(['user_id' => $author->id, 'oeuvre_id' => $oeuvre->id, 'size_bytes' => 700, 'status' => 'aborted']);
+    UploadSession::factory()->create(['user_id' => $author->id, 'oeuvre_id' => $oeuvre->id, 'size_bytes' => 700, 'status' => UploadSessionStatus::ABORTED]);
     // Someone else's reservation.
     $stranger = dashAuthor('Stranger');
     UploadSession::factory()->create(['user_id' => $stranger->id, 'oeuvre_id' => dashOeuvre($stranger)->id, 'size_bytes' => 5_000]);
@@ -299,7 +300,7 @@ test('decisions are the three newest ONDA transitions, without the officer, link
     $a = dashOeuvre($author, OeuvreStatus::REGISTERED, ['title' => 'A']);
     $b = dashOeuvre($author, OeuvreStatus::REJECTED, ['title' => 'B']);
 
-    $row = fn (Oeuvre $o, string $from, string $to, int $minutesAgo) => OeuvreReview::factory()->create([
+    $row = fn (Oeuvre $o, OeuvreStatus $from, OeuvreStatus $to, int $minutesAgo) => OeuvreReview::factory()->create([
         'oeuvre_id' => $o->id, 'actor_id' => $officer->id, 'from_status' => $from, 'to_status' => $to,
         'reason' => $to === OeuvreStatus::REJECTED ? 'Une raison suffisamment longue pour un rejet.' : null,
         'created_at' => now()->subMinutes($minutesAgo),
@@ -317,7 +318,7 @@ test('decisions are the three newest ONDA transitions, without the officer, link
 
     expect($props['decisions'])->toHaveCount(3)
         ->and(array_column($props['decisions'], 'uuid'))->toBe([$rejected->uuid, $opened->uuid, $registered->uuid])
-        ->and(array_column($props['decisions'], 'to_status'))->toBe([OeuvreStatus::REJECTED, OeuvreStatus::UNDER_REVIEW, OeuvreStatus::REGISTERED])
+        ->and(array_column($props['decisions'], 'to_status'))->toBe(['rejected', 'under_review', 'registered'])
         ->and(array_column($props['decisions'], 'oeuvre_uuid'))->toBe([$b->uuid, $b->uuid, $a->uuid])
         ->and($props['decisions'][0]['at'])->toBe($rejected->created_at->toIso8601String())
         ->and(array_keys($props['decisions'][0]))->toBe(['uuid', 'oeuvre_uuid', 'label_source', 'to_status', 'at'])

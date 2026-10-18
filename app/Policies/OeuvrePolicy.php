@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\Oeuvre;
 use App\Models\User;
 
@@ -53,7 +53,7 @@ final class OeuvrePolicy
     public function update(User $user, Oeuvre $oeuvre): bool
     {
         return $user->id === $oeuvre->author_id
-            && OeuvreStatus::isAuthorEditable($oeuvre->status);
+            && $oeuvre->status->isAuthorEditable();
     }
 
     /**
@@ -65,7 +65,7 @@ final class OeuvrePolicy
     public function submit(User $user, Oeuvre $oeuvre): bool
     {
         return $user->id === $oeuvre->author_id
-            && OeuvreStatus::isAuthorEditable($oeuvre->status);
+            && $oeuvre->status->isAuthorEditable();
     }
 
     /**
@@ -81,7 +81,7 @@ final class OeuvrePolicy
     public function delete(User $user, Oeuvre $oeuvre): bool
     {
         return $user->id === $oeuvre->author_id
-            && OeuvreStatus::isAuthorEditable($oeuvre->status);
+            && $oeuvre->status->isAuthorEditable();
     }
 
     /**

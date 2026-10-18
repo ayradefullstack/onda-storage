@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions\Review;
 
-use App\Domain\Deposit\OeuvreStatus;
 use App\Domain\Deposit\OeuvreStatusMachine;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\Oeuvre;
 use App\Models\OeuvreReview;
 use App\Models\User;

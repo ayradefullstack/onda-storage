@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\MediaVariant\KindEnum;
 use App\Models\MediaFile;
 use App\Models\MediaVariant;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -22,7 +23,7 @@ class MediaVariantFactory extends Factory
     {
         return [
             'media_file_id' => MediaFile::factory(),
-            'kind' => fake()->randomElement(['poster', 'preview', 'waveform', 'thumbnail']),
+            'kind' => fake()->randomElement(KindEnum::cases()),
             'path' => 'variants/'.fake()->uuid().'.jpg',
             'nonce' => bin2hex(random_bytes(8)),
             'size_bytes' => fake()->numberBetween(1024, 512 * 1024),

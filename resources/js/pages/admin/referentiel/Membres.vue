@@ -32,7 +32,7 @@ interface MemberRow {
     code_qlt: string | null;
     college: string | null;
     code_college: string | null;
-    status: number;
+    status: 'active' | 'inactive';
     is_disabled: boolean;
     available_in_registration: boolean;
 }
@@ -78,7 +78,7 @@ const form = ref({
     name: '',
     name_ar: '',
     name_en: '',
-    status: 1,
+    status: 'active',
     is_disabled: false,
     available_in_registration: true,
 });
@@ -133,7 +133,7 @@ const createForm = ref({
     name_en: '',
     code_qlt: '',
     available_in_registration: true,
-    status: 1,
+    status: 'active',
 });
 
 const openCreate = () => {
@@ -144,7 +144,7 @@ const openCreate = () => {
         name_en: '',
         code_qlt: '',
         available_in_registration: true,
-        status: 1,
+        status: 'active',
     };
     errors.value = {};
     creating.value = true;
@@ -180,7 +180,7 @@ const hidesMember = () =>
     editing.value !== null &&
     editing.value.oeuvres_count > 0 &&
     ((form.value.is_disabled && !editing.value.is_disabled) ||
-        (form.value.status !== 1 && editing.value.status === 1) ||
+        (form.value.status !== 'active' && editing.value.status === 'active') ||
         (!form.value.available_in_registration &&
             editing.value.available_in_registration));
 </script>
@@ -302,12 +302,12 @@ const hidesMember = () =>
                                     <span
                                         :class="[
                                             'rounded px-1.5 py-0.5 text-[10px] font-medium',
-                                            row.status === 1
+                                            row.status === 'active'
                                                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                                                 : 'bg-muted text-muted-foreground',
                                         ]"
                                         >{{
-                                            row.status === 1
+                                            row.status === 'active'
                                                 ? t(
                                                       'admin.referentiel.flags.statusOn',
                                                   )
@@ -436,8 +436,10 @@ const hidesMember = () =>
                 <div class="space-y-3 rounded-lg border border-border/80 p-3">
                     <label class="flex items-start gap-2.5 text-xs">
                         <Checkbox
-                            :model-value="form.status === 1"
-                            @update:model-value="form.status = $event ? 1 : 0"
+                            :model-value="form.status === 'active'"
+                            @update:model-value="
+                                form.status = $event ? 'active' : 'inactive'
+                            "
                         />
                         <span>
                             <span class="block font-medium">{{
@@ -600,8 +602,10 @@ const hidesMember = () =>
             <div class="space-y-3 rounded-lg border border-border/80 p-3">
                 <label class="flex items-start gap-2.5 text-xs">
                     <Checkbox
-                        :model-value="createForm.status === 1"
-                        @update:model-value="createForm.status = $event ? 1 : 0"
+                        :model-value="createForm.status === 'active'"
+                        @update:model-value="
+                            createForm.status = $event ? 'active' : 'inactive'
+                        "
                     />
                     <span>
                         <span class="block font-medium">{{

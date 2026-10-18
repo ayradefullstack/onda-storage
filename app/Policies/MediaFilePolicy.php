@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use App\Domain\Deposit\OeuvreStatus;
 use App\Models\MediaFile;
 use App\Models\User;
 
@@ -58,6 +57,6 @@ final class MediaFilePolicy
     public function delete(User $user, MediaFile $mediaFile): bool
     {
         return $user->id === $mediaFile->oeuvre->author_id
-            && OeuvreStatus::isAuthorEditable($mediaFile->oeuvre->status);
+            && $mediaFile->oeuvre->status->isAuthorEditable();
     }
 }

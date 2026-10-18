@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Upload;
 
 use App\Domain\Vault\Contracts\ChunkTracker;
+use App\Enums\UploadSession\StatusEnum as UploadSessionStatus;
 use App\Models\UploadSession;
 use Illuminate\Support\Facades\Storage;
 
@@ -35,7 +36,7 @@ final class AbortUpload
 
         $this->tracker->forget($session->uuid);
 
-        $session->status = 'aborted';
+        $session->status = UploadSessionStatus::ABORTED;
         $session->save();
     }
 }

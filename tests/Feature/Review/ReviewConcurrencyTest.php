@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 use App\Domain\Deposit\Exceptions\IllegalTransition;
 use App\Domain\Deposit\Exceptions\ReviewConflict;
-use App\Domain\Deposit\OeuvreStatus;
 use App\Domain\Deposit\OeuvreStatusMachine;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\OeuvreReview;
@@ -47,7 +48,7 @@ function concurrencyOeuvre(?User $holder = null): Oeuvre
     MediaFile::factory()->create([
         'oeuvre_id' => $oeuvre->id,
         'uploaded_by' => $author->id,
-        'status' => 'ready',
+        'status' => MediaFileStatus::READY,
     ]);
 
     return $oeuvre;

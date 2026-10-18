@@ -6,6 +6,8 @@ use App\Domain\Deposit\PipelineWorkspace;
 use App\Domain\Deposit\Value\RowHash;
 use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Value\UploadIntent;
+use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Jobs\ComputeContentHash;
 use App\Jobs\ProcessMediaFile;
 use App\Models\FileAccessLog;
@@ -52,7 +54,7 @@ function failureTestUploadFixture(User $author, Oeuvre $oeuvre): MediaFile
     $mediaFile->dek_wrapped = $object->dekWrapped;
     $mediaFile->nonce = $object->nonce;
     $mediaFile->mac_path = $object->macPath;
-    $mediaFile->status = 'scanning';
+    $mediaFile->status = MediaFileStatus::SCANNING;
     $mediaFile->ref_count = 1;
     $mediaFile->save();
 
@@ -77,7 +79,7 @@ test('an exception mid-chain leaves no file in work/', function () {
     }
 
     expect(PipelineWorkspace::exists($mediaFile->uuid))->toBeFalse()
-        ->and($mediaFile->fresh()->status)->toBe('failed');
+        ->and($mediaFile->fresh()->status)->toBe(MediaFileStatus::FAILED);
 
     $disk = Storage::disk($mediaFile->disk);
     @unlink($disk->path($mediaFile->path));
@@ -93,7 +95,7 @@ test('two real deposit rows chain: the second row\'s prev_hash is the first row\
     ProcessMediaFile::dispatch($mediaFileA->uuid);
     ProcessMediaFile::dispatch($mediaFileB->uuid);
 
-    $rows = FileAccessLog::where('action', 'deposit')
+    $rows = FileAccessLog::where('action', ActionEnum::DEPOSIT)
         ->whereIn('media_file_id', [$mediaFileA->fresh()->id, $mediaFileB->fresh()->id])
         ->orderBy('id')
         ->get();

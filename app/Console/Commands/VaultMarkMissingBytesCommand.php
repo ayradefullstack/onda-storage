@@ -6,8 +6,9 @@ namespace App\Console\Commands;
 
 use App\Actions\Media\TransitionMediaFileStatus;
 use App\Domain\Access\AccessLogger;
-use App\Domain\Deposit\MediaFileStatus;
 use App\Domain\Deposit\VaultConsistency;
+use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use Illuminate\Console\Command;
 
 /**
@@ -40,7 +41,7 @@ final class VaultMarkMissingBytesCommand extends Command
         $this->table(
             ['uuid', 'status', 'oeuvre', 'bin', 'mac', 'path'],
             $rows->map(fn (array $m): array => [
-                $m['file']->uuid, $m['file']->status, $m['file']->oeuvre_id,
+                $m['file']->uuid, $m['file']->status->key(), $m['file']->oeuvre_id,
                 $m['bin'] ? 'ok' : 'MISSING', $m['mac'] ? 'ok' : 'MISSING', $m['file']->path,
             ])->all(),
         );
@@ -52,7 +53,7 @@ final class VaultMarkMissingBytesCommand extends Command
         }
 
         foreach ($rows as $m) {
-            AccessLogger::record($m['file'], null, 'bytes_missing', 'system', null);
+            AccessLogger::record($m['file'], null, ActionEnum::BYTES_MISSING, 'system', null);
             $transition->handle($m['file'], MediaFileStatus::FAILED);
         }
 

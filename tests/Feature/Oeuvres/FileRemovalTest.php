@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Domain\Deposit\MediaFileStatus;
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\User;
@@ -29,7 +29,7 @@ function removalAuthor(): User
     return $user;
 }
 
-function removalOeuvre(User $author, string $status = OeuvreStatus::DRAFT): Oeuvre
+function removalOeuvre(User $author, OeuvreStatus $status = OeuvreStatus::DRAFT): Oeuvre
 {
     return Oeuvre::factory()->create([
         'author_id' => $author->id,
@@ -42,7 +42,7 @@ function removalOeuvre(User $author, string $status = OeuvreStatus::DRAFT): Oeuv
  * A media file whose ciphertext actually exists on the vault disk, so a
  * test can assert the bytes survived the row being trashed.
  */
-function removalFileWithBytes(Oeuvre $oeuvre, string $status = MediaFileStatus::READY, string $name = 'deposit.mp4'): MediaFile
+function removalFileWithBytes(Oeuvre $oeuvre, MediaFileStatus $status = MediaFileStatus::READY, string $name = 'deposit.mp4'): MediaFile
 {
     $mediaFile = MediaFile::factory()->create([
         'oeuvre_id' => $oeuvre->id,
@@ -57,7 +57,7 @@ function removalFileWithBytes(Oeuvre $oeuvre, string $status = MediaFileStatus::
     return $mediaFile;
 }
 
-test('an author removes a ready, failed or quarantined file from a draft', function (string $status) {
+test('an author removes a ready, failed or quarantined file from a draft', function (MediaFileStatus $status) {
     $author = removalAuthor();
     $oeuvre = removalOeuvre($author);
     $mediaFile = removalFileWithBytes($oeuvre, $status);
@@ -140,7 +140,7 @@ test('a removed quarantined file is still visible to an admin via withTrashed', 
         ->and(Storage::disk('vault')->exists($evidence->path))->toBeTrue();
 });
 
-test('removing a file that is still scanning or processing is refused, naming it', function (string $status) {
+test('removing a file that is still scanning or processing is refused, naming it', function (MediaFileStatus $status) {
     $author = removalAuthor();
     $oeuvre = removalOeuvre($author);
     $mediaFile = removalFileWithBytes($oeuvre, $status, 'in-flight.mp4');
@@ -171,7 +171,7 @@ test('a file still uploading is cancelled, not removed', function () {
     expect(MediaFile::find($mediaFile->id))->not->toBeNull();
 });
 
-test('removing a file from a frozen oeuvre is refused, even by direct request', function (string $status) {
+test('removing a file from a frozen oeuvre is refused, even by direct request', function (OeuvreStatus $status) {
     $author = removalAuthor();
     $oeuvre = removalOeuvre($author, $status);
     $mediaFile = removalFileWithBytes($oeuvre);
@@ -240,6 +240,9 @@ test('the show page reports per-file removability', function () {
     $oeuvre = removalOeuvre($author);
 
     removalFileWithBytes($oeuvre, MediaFileStatus::READY, 'a.mp4');
+    // A second apart: the page orders files by created_at, and a tie would
+    // fall back to whatever index the database happens to scan.
+    $this->travel(1)->seconds();
     removalFileWithBytes($oeuvre, MediaFileStatus::SCANNING, 'b.mp4');
 
     $this->actingAs($author)

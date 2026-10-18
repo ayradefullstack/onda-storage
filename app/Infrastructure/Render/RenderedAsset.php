@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Render;
 
+use App\Enums\MediaVariant\KindEnum;
+
 /**
  * One output of a renderer. Either a plaintext staging file in the job's
  * workspace (`$path`, which the store step encrypts and deletes), or a
@@ -20,7 +22,7 @@ final readonly class RenderedAsset
         public string $kind,
         public ?int $pageIndex = null,
         public ?string $path = null,
-        public ?string $variantKind = null,
+        public ?KindEnum $variantKind = null,
         public array $meta = [],
     ) {}
 }

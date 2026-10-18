@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Domain\Deposit\Value\StoredObjectMapper;
 use App\Domain\Deposit\VaultBytesReleaser;
 use App\Domain\Deposit\VaultConsistency;
+use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Jobs\DeduplicateFile;
 use App\Jobs\RecordDeposit;
 use App\Models\FileAccessLog;
@@ -31,7 +33,7 @@ function dedupFiles(object $test, int $n): array
     $files = [];
 
     for ($i = 0; $i < $n; $i++) {
-        $file = pipelineFile($test->author, $test->oeuvre, DEDUP_BYTES, "copy-{$i}.pdf", 'application/pdf', 'scanning');
+        $file = pipelineFile($test->author, $test->oeuvre, DEDUP_BYTES, "copy-{$i}.pdf", 'application/pdf', MediaFileStatus::SCANNING);
         $file->ref_count = 1;
         $file->save();
         $files[] = $file;
@@ -191,12 +193,12 @@ test('every release decision is written to the ledger', function () {
 
     $actions = FileAccessLog::where('media_file_id', $b->id)->pluck('action')->all();
 
-    expect($actions)->toContain('bytes_released');
+    expect($actions)->toContain(ActionEnum::BYTES_RELEASED);
 
     $object = StoredObjectMapper::fromMediaFile($a->fresh());
     app(VaultBytesReleaser::class)->releaseIfUnreferenced($a, $object, 'test');
 
-    expect(FileAccessLog::where('media_file_id', $a->id)->pluck('action')->all())->toContain('bytes_kept');
+    expect(FileAccessLog::where('media_file_id', $a->id)->pluck('action')->all())->toContain(ActionEnum::BYTES_KEPT);
 });
 
 test('ref_count is recomputed from the real rows, not incremented', function () {
@@ -213,25 +215,25 @@ test('ref_count is recomputed from the real rows, not incremented', function () 
 
 test('RecordDeposit refuses a file whose bytes are missing: failed, no deposit row', function () {
     [$a] = dedupFiles($this, 1);
-    $a->forceFill(['status' => 'processing'])->save();
+    $a->forceFill(['status' => MediaFileStatus::PROCESSING])->save();
     @unlink(Storage::disk($a->disk)->path($a->path));
 
     expect(fn () => app()->call([new RecordDeposit($a->uuid), 'handle']))
         ->toThrow(RuntimeException::class, 'bytes_missing');
 
-    expect(FileAccessLog::where('media_file_id', $a->id)->where('action', 'deposit')->count())->toBe(0)
-        ->and(FileAccessLog::where('media_file_id', $a->id)->where('action', 'bytes_missing')->count())->toBe(1);
+    expect(FileAccessLog::where('media_file_id', $a->id)->where('action', ActionEnum::DEPOSIT)->count())->toBe(0)
+        ->and(FileAccessLog::where('media_file_id', $a->id)->where('action', ActionEnum::BYTES_MISSING)->count())->toBe(1);
 
     // Through the queue the same condition ends in status `failed`.
     RecordDeposit::dispatchSync($a->uuid);
 
-    expect($a->fresh()->status)->toBe('failed')
-        ->and(FileAccessLog::where('media_file_id', $a->id)->where('action', 'deposit')->count())->toBe(0);
+    expect($a->fresh()->status)->toBe(MediaFileStatus::FAILED)
+        ->and(FileAccessLog::where('media_file_id', $a->id)->where('action', ActionEnum::DEPOSIT)->count())->toBe(0);
 });
 
 test('RecordDeposit refuses a ciphertext of the wrong size', function () {
     [$a] = dedupFiles($this, 1);
-    $a->forceFill(['status' => 'processing'])->save();
+    $a->forceFill(['status' => MediaFileStatus::PROCESSING])->save();
     file_put_contents(Storage::disk($a->disk)->path($a->path), 'truncated');
 
     expect(fn () => app()->call([new RecordDeposit($a->uuid), 'handle']))

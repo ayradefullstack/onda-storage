@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Concerns\HasUuidColumn;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Models\Concerns\SerializesEnumsAsKeys;
 use Database\Factories\MediaFileFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -32,7 +34,7 @@ use Illuminate\Support\Carbon;
  * @property string $dek_wrapped
  * @property string $nonce
  * @property string $mac_path
- * @property string $status
+ * @property MediaFileStatus $status
  * @property int|null $duration_sec
  * @property int|null $width
  * @property int|null $height
@@ -47,11 +49,12 @@ use Illuminate\Support\Carbon;
 class MediaFile extends Model
 {
     /** @use HasFactory<MediaFileFactory> */
-    use HasFactory, HasUuidColumn, SoftDeletes;
+    use HasFactory, HasUuidColumn, SerializesEnumsAsKeys, SoftDeletes;
 
     protected function casts(): array
     {
         return [
+            'status' => MediaFileStatus::class,
             'size_bytes' => 'integer',
             'dek_wrapped' => 'encrypted',
             'duration_sec' => 'integer',
@@ -140,6 +143,6 @@ class MediaFile extends Model
      */
     public function scopeStored(Builder $query): Builder
     {
-        return $query->where('status', 'ready')->whereNull('purged_at');
+        return $query->where('status', MediaFileStatus::READY)->whereNull('purged_at');
     }
 }

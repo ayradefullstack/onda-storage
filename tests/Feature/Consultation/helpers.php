@@ -9,6 +9,8 @@ use App\Domain\Vault\Crypto\CtrCipher;
 use App\Domain\Vault\Crypto\HkdfKeys;
 use App\Domain\Vault\Crypto\KeyManager;
 use App\Domain\Vault\Value\UploadIntent;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\MediaVariant\KindEnum;
 use App\Infrastructure\Render\ToolLocator;
 use App\Models\ConsultationAsset;
 use App\Models\MediaConsultation;
@@ -34,7 +36,7 @@ function consultAuthor(): User
  * same pre-allocate / write / finalize path an upload uses), so every test
  * proves the round trip through the actual crypto, not a mocked row.
  */
-function consultFile(User $author, Oeuvre $oeuvre, string $bytes, string $name, string $mime, string $status = 'ready'): MediaFile
+function consultFile(User $author, Oeuvre $oeuvre, string $bytes, string $name, string $mime, MediaFileStatus $status = MediaFileStatus::READY): MediaFile
 {
     $vault = app(VaultContract::class);
 
@@ -123,7 +125,7 @@ function consultPlain(MediaFile $mediaFile, ConsultationAsset $asset): string
  * Stores a poster the way GenerateVariants does: encrypted with the file DEK
  * and a random stored nonce, as a `media_variants` row.
  */
-function consultVariant(MediaFile $mediaFile, string $kind, string $plaintext): MediaVariant
+function consultVariant(MediaFile $mediaFile, KindEnum $kind, string $plaintext): MediaVariant
 {
     $encKey = HkdfKeys::encryptionKey(app(KeyManager::class)->unwrap($mediaFile->dek_wrapped));
     $nonce = random_bytes(8);

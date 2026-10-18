@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Concerns\HasUuidColumn;
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
+use App\Enums\TypeGestion\TypeGestionEnum;
+use App\Models\Concerns\SerializesEnumsAsKeys;
 use Database\Factories\TypeGestionFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -23,11 +26,11 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property string $uuid
  * @property int $register_type_id
- * @property int $type_gestion
+ * @property TypeGestionEnum $type_gestion
  * @property string $name
  * @property string|null $name_ar
  * @property string|null $name_en
- * @property int $status
+ * @property ReferentielStatus $status
  * @property bool $is_system
  * @property-read string $name_global
  * @property Carbon|null $created_at
@@ -37,17 +40,7 @@ use Illuminate\Support\Carbon;
 class TypeGestion extends Model
 {
     /** @use HasFactory<TypeGestionFactory> */
-    use HasFactory, HasUuidColumn, SoftDeletes;
-
-    public const COLLECTIVE = 1;
-
-    public const INDIVIDUAL = 2;
-
-    public const SIMPLE = 3;
-
-    public const VALUES = [self::COLLECTIVE, self::INDIVIDUAL, self::SIMPLE];
-
-    public const STATUS_ACTIVE = 1;
+    use HasFactory, HasUuidColumn, SerializesEnumsAsKeys, SoftDeletes;
 
     protected $fillable = [
         'register_type_id',
@@ -61,8 +54,8 @@ class TypeGestion extends Model
     protected function casts(): array
     {
         return [
-            'type_gestion' => 'integer',
-            'status' => 'integer',
+            'type_gestion' => TypeGestionEnum::class,
+            'status' => ReferentielStatus::class,
             'is_system' => 'boolean',
         ];
     }
@@ -75,7 +68,7 @@ class TypeGestion extends Model
      */
     public function scopeActive(Builder $query): Builder
     {
-        return $query->where('status', self::STATUS_ACTIVE);
+        return $query->where('status', ReferentielStatus::ACTIVE);
     }
 
     /**

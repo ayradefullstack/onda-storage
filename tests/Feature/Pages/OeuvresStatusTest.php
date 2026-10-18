@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domain\Vault\Contracts\Scanner;
 use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Value\UploadIntent;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Jobs\ProcessMediaFile;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -58,7 +59,7 @@ function oeuvresStatusUploadFixture(User $author, Oeuvre $oeuvre): MediaFile
     $mediaFile->dek_wrapped = $object->dekWrapped;
     $mediaFile->nonce = $object->nonce;
     $mediaFile->mac_path = $object->macPath;
-    $mediaFile->status = 'scanning';
+    $mediaFile->status = MediaFileStatus::SCANNING;
     $mediaFile->ref_count = 1;
     $mediaFile->save();
 

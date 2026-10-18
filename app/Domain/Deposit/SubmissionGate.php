@@ -6,6 +6,7 @@ namespace App\Domain\Deposit;
 
 use App\Domain\Deposit\Value\SubmissionReason;
 use App\Domain\Deposit\Value\SubmissionVerdict;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\CollegeOeuvreFile;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -46,7 +47,7 @@ final class SubmissionGate
      * A file the pipeline has not finished with. Submitting mid-pipeline
      * would hand an officer a deposit whose files are still being checked.
      *
-     * @var list<string>
+     * @var list<MediaFileStatus>
      */
     private const IN_PIPELINE = [
         MediaFileStatus::UPLOADING,
@@ -58,13 +59,13 @@ final class SubmissionGate
     /**
      * A file the author must resolve or remove before submitting — and
      * must be told about by name, since "a file failed" is useless when
-     * the deposit holds nine of them.
+     * the deposit holds nine of them. Keyed by the status's permanent int.
      *
-     * @var array<string, string>
+     * @var array<int, string>
      */
     private const UNRESOLVED = [
-        MediaFileStatus::FAILED => SubmissionReason::FILE_FAILED,
-        MediaFileStatus::QUARANTINED => SubmissionReason::FILE_QUARANTINED,
+        MediaFileStatus::FAILED->value => SubmissionReason::FILE_FAILED,
+        MediaFileStatus::QUARANTINED->value => SubmissionReason::FILE_QUARANTINED,
     ];
 
     public function evaluate(Oeuvre $oeuvre): SubmissionVerdict
@@ -84,14 +85,15 @@ final class SubmissionGate
             if (in_array($file->status, self::IN_PIPELINE, true)) {
                 $blockers[] = new SubmissionReason(SubmissionReason::FILE_IN_PIPELINE, [
                     'name' => $file->original_name,
-                    'status' => $file->status,
+                    // The key, as the page renders it.
+                    'status' => $file->status->key(),
                 ]);
 
                 continue;
             }
 
-            if (isset(self::UNRESOLVED[$file->status])) {
-                $blockers[] = new SubmissionReason(self::UNRESOLVED[$file->status], [
+            if (isset(self::UNRESOLVED[$file->status->value])) {
+                $blockers[] = new SubmissionReason(self::UNRESOLVED[$file->status->value], [
                     'name' => $file->original_name,
                 ]);
             }

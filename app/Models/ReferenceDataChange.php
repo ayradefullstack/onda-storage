@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Concerns\HasUuidColumn;
 use App\Domain\Deposit\Value\RowHash;
+use BackedEnum;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -109,8 +110,17 @@ class ReferenceDataChange extends Model
         return $this->morphTo();
     }
 
+    /**
+     * An enum column (e.g. `status`) is recorded — and hashed into the chain —
+     * as its permanent integer value, never as its key: an application enum
+     * JSON-encodes to its key, so the int is taken explicitly here.
+     */
     private static function encode(mixed $value): ?string
     {
+        if ($value instanceof BackedEnum) {
+            $value = $value->value;
+        }
+
         return $value === null
             ? null
             : json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);

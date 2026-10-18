@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\MediaConsultation\StatusEnum;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -24,7 +25,9 @@ return new class extends Migration
             $table->unsignedInteger('page_count')->nullable();
             // Short, user-facing reason key (e.g. "tool_missing:soffice"), never a stack trace.
             $table->string('reason', 191)->nullable();
-            $table->enum('status', ['pending', 'ready', 'failed', 'unsupported'])->default('pending');
+            $table->unsignedTinyInteger('status')
+                ->default(StatusEnum::PENDING->value)
+                ->comment(StatusEnum::dbComment());
             $table->timestamp('generated_at')->nullable();
             $table->timestamps();
         });

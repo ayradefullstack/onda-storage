@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\Consultation\IssueOriginalUrl;
 use App\Domain\Access\SignedMediaUrl;
+use App\Enums\MediaVariant\KindEnum;
 use App\Models\Oeuvre;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -36,7 +37,7 @@ test('no admin-obtainable response body equals the original', function (string $
     $original = hash('sha256', $bytes);
     $file = consultFile($this->author, $this->oeuvre, $bytes, $name, $mime);
     $this->files[] = $file;
-    consultVariant($file, 'poster', "\xFF\xD8\xFF\xE0 poster-bytes");
+    consultVariant($file, KindEnum::POSTER, "\xFF\xD8\xFF\xE0 poster-bytes");
     consultGenerate($file);
 
     $bodies = [];
@@ -78,7 +79,7 @@ test('for original_inline families the original is served only by the consult or
     $original = hash('sha256', $bytes);
     $file = consultFile($this->author, $this->oeuvre, $bytes, $name, $mime);
     $this->files[] = $file;
-    consultVariant($file, 'poster', "\xFF\xD8\xFF\xE0 poster-bytes");
+    consultVariant($file, KindEnum::POSTER, "\xFF\xD8\xFF\xE0 poster-bytes");
     consultGenerate($file);
 
     $others = [];
