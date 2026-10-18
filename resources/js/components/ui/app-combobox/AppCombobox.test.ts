@@ -18,7 +18,7 @@ const i18n = createI18n({
 
 const OPTIONS: ComboboxOption[] = [
     { value: 1, label: 'Musique', labelAr: 'موسيقى', badge: 'MUS' },
-    { value: 2, label: 'Œuvres dramatiques', labelAr: 'الأعمال الدرامية' },
+    { value: 2, label: 'Oeuvres dramatiques', labelAr: 'الأعمال الدرامية' },
     { value: 3, label: 'Arts graphiques', labelAr: 'الفنون التشكيلية' },
     { value: 4, label: 'Éditeurs de musique', labelAr: 'ناشرو الموسيقى' },
     { value: 5, label: 'Sétif', labelAr: 'سطيف' },
@@ -128,7 +128,7 @@ describe('AppCombobox', () => {
         expect(labels()).toEqual(['Ghardaïa']);
 
         await type('الاعمال');
-        expect(labels()).toEqual(['Œuvres dramatiques']);
+        expect(labels()).toEqual(['Oeuvres dramatiques']);
     });
 
     it('shows the empty state, and its reset brings every option back', async () => {

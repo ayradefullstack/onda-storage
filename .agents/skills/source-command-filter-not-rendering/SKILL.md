@@ -11,7 +11,7 @@ Use this skill when the user asks to run the migrated source command `filter-not
 
 Task: on list pages, filters update the URL but the results do not appear until a manual refresh. Fix the root cause everywhere, not just on one page. Read AGENTS.md first.
 
-## Symptom (manual test, author side, page "Œuvres")
+## Symptom (manual test, author side, page "Oeuvres")
 - Choosing a status filter: the URL changes (`?status=…`), but the list does not show the filtered results.
 - "Effacer les filtres": the URL is cleared, but the list does not come back.
 - F5 on the same URL shows the correct results. **So the server filters correctly; the client does not render the new data.** It happens every time.
@@ -45,7 +45,7 @@ State the root cause in one sentence. It must be covered by a regression test in
 - **Rows keyed by the record id.**
 - **Reveal/animation:** rows inserted after the first render must be visible immediately (or re-observed). An animation must never be able to hide data. Fix it in `useReveal` / the list component itself, so every page benefits.
 - **No prefetch cache** on filter visits (or the cache key includes the full query).
-- A small loading state on the list while the visit runs (existing Skeleton or row dimming), and the existing empty state when the filter has no results ("Aucune œuvre ne correspond à ces filtres" + "Effacer les filtres").
+- A small loading state on the list while the visit runs (existing Skeleton or row dimming), and the existing empty state when the filter has no results ("Aucune oeuvre ne correspond à ces filtres" + "Effacer les filtres").
 - Browser back/forward restores the filters and the matching results.
 
 ## Part 3 — Tests

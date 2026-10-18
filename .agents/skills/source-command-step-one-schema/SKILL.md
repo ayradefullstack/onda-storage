@@ -38,7 +38,7 @@ I have already verified that the spec reproduces the dump exactly:
 Use these as hard assertions. If your seeder produces different numbers, it is wrong —
 do not adjust the expected numbers to match your output.
 
-**The one intended difference:** `step-one-select.md` adds `OEUVRE_FILM` ("Œuvres film",
+**The one intended difference:** `step-one-select.md` adds `OEUVRE_FILM` ("Oeuvres film",
 type 1, gestion 1) which is **not** in the dump. It is marked `is_disabled = true` in the
 spec's `match`. So the target is 22 colleges: the dump's 21, plus this one, disabled.
 Confirm that reading before you rely on it.

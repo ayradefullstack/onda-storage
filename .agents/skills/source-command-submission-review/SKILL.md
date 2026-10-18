@@ -248,7 +248,7 @@ Do not reformat parts you do not otherwise touch.
 
 | Column | Content |
 |---|---|
-| Œuvre | the display label, linking to the oeuvre page |
+| Oeuvre | the display label, linking to the oeuvre page |
 | Collège | localised collège name |
 | Documents | required slots satisfied, e.g. "4 / 6" |
 | Statut | badge: Brouillon · En attente · En examen · Enregistrée · Rejetée |

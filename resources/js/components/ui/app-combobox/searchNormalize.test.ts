@@ -3,8 +3,8 @@ import { matchesSearch, normalizeSearch } from './searchNormalize';
 
 describe('normalizeSearch', () => {
     it('folds case and French accents', () => {
-        expect(normalizeSearch('Éditeurs d’Œuvres')).toBe(
-            normalizeSearch('editeurs d’œuvres'),
+        expect(normalizeSearch('Éditeurs d’Oeuvres')).toBe(
+            normalizeSearch('editeurs d’oeuvres'),
         );
         expect(normalizeSearch('  Béjaïa  ')).toBe('bejaia');
         expect(normalizeSearch('ALGÉRIE')).toBe('algerie');

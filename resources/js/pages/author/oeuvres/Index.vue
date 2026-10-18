@@ -1047,7 +1047,7 @@ const resetFilters = () => list.clear();
                             {{ (props.oeuvres.from ?? 1) + index }}
                         </td>
 
-                        <!-- Œuvre display label & UUID -->
+                        <!-- Oeuvre display label & UUID -->
                         <td
                             :class="[
                                 'px-4 py-3.5',

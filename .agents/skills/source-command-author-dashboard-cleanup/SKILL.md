@@ -164,7 +164,7 @@ Do not present persisted upload states as live progress if no authoritative live
 
 Hide the block when no genuine active operations exist.
 
-### E. Œuvres récentes
+### E. Oeuvres récentes
 
 Show up to the five most recently updated works belonging to the authenticated author.
 

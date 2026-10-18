@@ -40,7 +40,7 @@ what you changed.
 
 | Column | Content |
 |---|---|
-| Œuvre | display label, linking to the oeuvre page |
+| Oeuvre | display label, linking to the oeuvre page |
 | Collège | localised collège name |
 | Documents | required slots satisfied — "4 / 6" |
 | Statut | badge: Brouillon · En attente · En examen · Enregistrée · Rejetée |

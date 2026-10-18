@@ -429,7 +429,7 @@ function clearFilters(): void {
 
         <!-- CARD 2: WORKS TABLE CARD -->
         <section
-            aria-label="Tableau des œuvres"
+            aria-label="Tableau des oeuvres"
             class="relative overflow-hidden rounded-xl border border-border/75 bg-card shadow-2xs transition-shadow duration-150"
         >
             <!-- Card Header / Table Toolbar -->

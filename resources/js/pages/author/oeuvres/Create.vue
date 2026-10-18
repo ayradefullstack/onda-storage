@@ -159,7 +159,7 @@ watch(locale, () => {
                     class="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
                     <ArrowLeft class="size-3.5 rtl:rotate-180" />
-                    <span>Retour à la liste des œuvres</span>
+                    <span>Retour à la liste des oeuvres</span>
                 </Link>
             </div>
 

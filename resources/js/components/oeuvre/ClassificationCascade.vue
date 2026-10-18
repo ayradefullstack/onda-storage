@@ -194,7 +194,7 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                         </div>
                         <p class="text-xs text-muted-foreground">
                             Sélectionnez la catégorie légale sous laquelle vous
-                            déposez votre œuvre.
+                            déposez votre oeuvre.
                         </p>
                     </div>
                 </div>
@@ -364,7 +364,7 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                             </div>
                             <p class="text-xs text-muted-foreground">
                                 Choisissez la discipline artistique ou le
-                                domaine spécifique de l'œuvre.
+                                domaine spécifique de l'oeuvre.
                             </p>
                         </div>
                     </div>
@@ -455,7 +455,7 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                             </div>
                             <p class="text-xs text-muted-foreground">
                                 Précisez votre qualité d'intervention sur
-                                l'œuvre (Auteur, Compositeur, etc.).
+                                l'oeuvre (Auteur, Compositeur, etc.).
                             </p>
                         </div>
                     </div>

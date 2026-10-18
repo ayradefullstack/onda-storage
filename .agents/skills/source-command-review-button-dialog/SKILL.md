@@ -49,7 +49,7 @@ Reproduce in the browser as admin, on an oeuvre in `submitted` and one in `under
 - **On open:** fetch the summary with a skeleton while loading. Fetch errors show inline with a "Réessayer" button.
 - **Header:** title, `<bdi dir="ltr">` reference, status badge.
 - **Body, review screen:**
-  - author, college, submission date, and a link "Ouvrir l'œuvre" (the oeuvre page, new tab);
+  - author, college, submission date, and a link "Ouvrir l'oeuvre" (the oeuvre page, new tab);
   - a checklist: required documents ✓/✗ (with the missing labels), all files ready ✓/✗ (with each file and its status), and conditional documents as an advisory note;
   - the holder line: "En cours d'examen par {name}" (or "par vous").
 - **Footer, driven by `allowed`:**

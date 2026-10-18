@@ -213,7 +213,7 @@ describe('ReviewDecisionDialog — opening', () => {
         expect(link?.getAttribute('href')).toBe(`/admin/oeuvres/${UUID}`);
         expect(link?.getAttribute('target')).toBe('_blank');
         expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
-        expect(link?.textContent).toContain("Ouvrir l'œuvre");
+        expect(link?.textContent).toContain("Ouvrir l'oeuvre");
 
         expect($('check-required')?.dataset.ok).toBe('true');
         expect($('check-ready')?.dataset.ok).toBe('true');

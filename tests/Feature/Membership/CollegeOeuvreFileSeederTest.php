@@ -119,7 +119,7 @@ test('the database rejects a second row with the same college and document_key',
 test('MUSIQUE matches §5.2', function () {
     expect(requiredDocumentsOf('MUSIQUE'))->toBe([
         [1, 'paroles', 'Paroles', ['pdf']],
-        [2, 'enregistrement_oeuvre', "Enregistrement de l'œuvre", ['mp3', 'wav', 'flac']],
+        [2, 'enregistrement_oeuvre', "Enregistrement de l'oeuvre", ['mp3', 'wav', 'flac']],
         [3, 'justificatif_exploitation', "Justificatif d'exploitation (*)", ['pdf', 'jpg', 'jpeg', 'png']],
         [4, 'autorisation_sample', 'Autorisation du sample', ['png', 'jpg', 'pdf']],
         [5, 'autorisation_compositeur', 'Autorisation du compositeur', ['pdf', 'jpg', 'jpeg', 'png']],
@@ -134,8 +134,8 @@ test('MUSIQUE matches §5.2', function () {
 
 test('EDITEUR_MUSICAL matches §5.2', function () {
     expect(requiredDocumentsOf('EDITEUR_MUSICAL'))->toBe([
-        [1, 'paroles_oeuvre', "Paroles de l'œuvre (*)", ['pdf', 'jpg', 'jpeg', 'png']],
-        [2, 'cd_commercialise', "Enregistrement de l'œuvre (*)", ['mp3', 'wav', 'flac', 'mp4']],
+        [1, 'paroles_oeuvre', "Paroles de l'oeuvre (*)", ['pdf', 'jpg', 'jpeg', 'png']],
+        [2, 'cd_commercialise', "Enregistrement de l'oeuvre (*)", ['mp3', 'wav', 'flac', 'mp4']],
         [3, 'contrat_edition', "Contrat d'édition (*)", ['pdf', 'jpg', 'jpeg', 'png']],
         [4, 'justificatif_exploitation', "Justificatif d'exploitation (*)", ['pdf', 'jpg', 'jpeg', 'png']],
     ]);

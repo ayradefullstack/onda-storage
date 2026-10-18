@@ -178,7 +178,7 @@ class CollegeOeuvreFileSeeder extends Seeder
         return [
             'MUSIQUE' => [
                 $this->document('paroles', 'Paroles', 'كلمات الأغاني', 'Lyrics', ['pdf'], conditions: ['show_when' => ['presence_parole', 'avec_paroles'], 'server' => 'required_if:presence_parole,avec_paroles', 'unconditional_for_qualite' => 'Auteur']),
-                $this->document('enregistrement_oeuvre', 'Enregistrement de l\'œuvre', 'تسجيل العمل', 'Work recording', self::AUDIO, conditions: ['server' => 'required_without:cd_commercialise']),
+                $this->document('enregistrement_oeuvre', 'Enregistrement de l\'oeuvre', 'تسجيل العمل', 'Work recording', self::AUDIO, conditions: ['server' => 'required_without:cd_commercialise']),
                 $this->document('justificatif_exploitation', 'Justificatif d\'exploitation (*)', 'إثبات الاستغلال (*)', 'Proof of exploitation (*)', self::DOCUMENT),
                 $this->document('autorisation_sample', 'Autorisation du sample', 'ترخيص العينة الموسيقية', 'Sample Authorization', ['png', 'jpg', 'pdf'], conditions: ['show_when' => ['utilisation_sample', 1], 'server' => 'required_if:utilisation_sample,1']),
                 $this->document('autorisation_compositeur', 'Autorisation du compositeur', 'ترخيص الملحن', 'Composer authorization', self::DOCUMENT, conditions: ['show_when' => ['type_oeuvre', [2, 3]], 'server' => 'required_unless:oeuvres.*.declaration.type_oeuvre,1', 'removed_for_qualite' => 'Compositeur']),
@@ -186,25 +186,25 @@ class CollegeOeuvreFileSeeder extends Seeder
             ],
             'DRAMATIQUE' => [
                 $this->document('oeuvre_dramatique', 'Oeuvre dramatique ou dramatico-musicales', 'عمل درامي أو درامي موسيقي', 'Dramatic or dramatic-musical work', self::DOCUMENT, needsReview: true),
-                $this->document('enregistrement_oeuvre', 'Enregistrement de l\'œuvre', 'تسجيل العمل', 'Work recording', self::RECORDING, needsReview: true),
+                $this->document('enregistrement_oeuvre', 'Enregistrement de l\'oeuvre', 'تسجيل العمل', 'Work recording', self::RECORDING, needsReview: true),
                 $this->document('dvd_commercialise', 'Preuve d’exploitation', 'إثبات الاستغلال', 'Proof of exploitation', self::DOCUMENT, needsReview: true),
-                $this->document('autorisation_auteur', 'Autorisation de l’auteur de l’œuvre originale', 'ترخيص من المؤلف الأصلي للعمل', 'Original work author authorization', self::DOCUMENT, conditions: ['show_when' => ['type_oeuvre', 3], 'server' => 'required_if:oeuvres.*.declaration.type_oeuvre,3']),
+                $this->document('autorisation_auteur', 'Autorisation de l’auteur de l’oeuvre originale', 'ترخيص من المؤلف الأصلي للعمل', 'Original work author authorization', self::DOCUMENT, conditions: ['show_when' => ['type_oeuvre', 3], 'server' => 'required_if:oeuvres.*.declaration.type_oeuvre,3']),
             ],
             'LITTERAIRE_EMISSION' => [
                 $this->document('oeuvre_litteraire', 'Oeuvre littéraire', 'عمل أدبي', 'Literary work', self::DOCUMENT, needsReview: true),
-                $this->document('enregistrement_oeuvre', 'Enregistrement de l\'œuvre', 'تسجيل العمل', 'Work recording', self::RECORDING, needsReview: true),
+                $this->document('enregistrement_oeuvre', 'Enregistrement de l\'oeuvre', 'تسجيل العمل', 'Work recording', self::RECORDING, needsReview: true),
                 $this->document('dvd_commercialise', 'DVD commercialisé ou enregistré', 'قرص DVD مسوق أو مسجل', 'Commercialized or recorded DVD', ['mp4', 'pdf', 'jpg', 'jpeg', 'png'], needsReview: true),
-                $this->document('autorisation_auteur', 'Autorisation de l’auteur de l’œuvre originale', 'ترخيص من المؤلف الأصلي للعمل', 'Original work author authorization', self::DOCUMENT, needsReview: true),
+                $this->document('autorisation_auteur', 'Autorisation de l’auteur de l’oeuvre originale', 'ترخيص من المؤلف الأصلي للعمل', 'Original work author authorization', self::DOCUMENT, needsReview: true),
             ],
             'LITTERAIRE_EDITION' => [
                 $this->document('livre_edite', 'Livre édité (format pdf)', 'كتاب منشور (بصيغة PDF)', 'Published book (pdf format)', self::DOCUMENT, conditions: ['show_when' => ['format_edition', 'papier'], 'server' => 'required ssi isFormatPapier(format_edition)']),
                 $this->document('numerique', 'Oeuvre format numérique', 'عمل بصيغة رقمية', 'Digital format work', self::DOCUMENT, conditions: ['show_when' => ['format_edition', 'numerique'], 'server' => 'required ssi isFormatNumerique(format_edition)']),
-                $this->document('autorisation_auteur', 'Autorisation de l’auteur de l’œuvre originale', 'ترخيص من المؤلف الأصلي للعمل', 'Original work author authorization', self::DOCUMENT, conditions: ['show_when' => ['origine', ['traduite', 'adaptee']], 'server' => 'required ssi isOrigineDerivee(origine)']),
+                $this->document('autorisation_auteur', 'Autorisation de l’auteur de l’oeuvre originale', 'ترخيص من المؤلف الأصلي للعمل', 'Original work author authorization', self::DOCUMENT, conditions: ['show_when' => ['origine', ['traduite', 'adaptee']], 'server' => 'required ssi isOrigineDerivee(origine)']),
                 $this->document('isbn_file', 'ISBN/ISNN', 'ISBN/ISNN', 'ISBN/ISNN', self::DOCUMENT),
             ],
             'POESIE' => [
                 $this->document('oeuvres_poetiques', 'oeuvres poétiques (format pdf)', 'أعمال شعرية (بصيغة PDF)', 'Poetic works (pdf format)', ['pdf'], needsReview: true),
-                $this->document('autorisation_auteur', 'Autorisation de l’auteur de l’œuvre originale', 'ترخيص من المؤلف الأصلي للعمل', 'Original work author authorization', self::DOCUMENT, conditions: ['show_when' => ['origine', ['traduite']], 'server' => 'required ssi isOrigineDerivee(origine)']),
+                $this->document('autorisation_auteur', 'Autorisation de l’auteur de l’oeuvre originale', 'ترخيص من المؤلف الأصلي للعمل', 'Original work author authorization', self::DOCUMENT, conditions: ['show_when' => ['origine', ['traduite']], 'server' => 'required ssi isOrigineDerivee(origine)']),
             ],
             'ARTS_GRAPHIQUES' => [
                 $this->document('oeuvres_plastiques_graphiques', 'Oeuvres plastiques et graphiques (png)', 'أعمال تشكيلية وغرافيكية (PNG)', 'Plastic and graphic works (png)', self::IMAGE, maxSizeKb: 102400),
@@ -217,8 +217,8 @@ class CollegeOeuvreFileSeeder extends Seeder
                 $this->document('numerique', 'Oeuvre format numérique', 'عمل بصيغة رقمية', 'Digital format work', self::DOCUMENT, conditions: ['note' => 'college unreachable at step 2'], needsReview: true),
             ],
             'EDITEUR_MUSICAL' => [
-                $this->document('paroles_oeuvre', 'Paroles de l\'œuvre (*)', 'كلمات العمل (*)', 'Work lyrics (*)', self::DOCUMENT, conditions: ['show_when' => ['presence_parole', 'avec_paroles'], 'server' => 'required_if:presence_parole,avec_paroles']),
-                $this->document('cd_commercialise', 'Enregistrement de l\'œuvre (*)', 'تسجيل العمل (*)', 'Work recording (*)', self::RECORDING, needsReview: true),
+                $this->document('paroles_oeuvre', 'Paroles de l\'oeuvre (*)', 'كلمات العمل (*)', 'Work lyrics (*)', self::DOCUMENT, conditions: ['show_when' => ['presence_parole', 'avec_paroles'], 'server' => 'required_if:presence_parole,avec_paroles']),
+                $this->document('cd_commercialise', 'Enregistrement de l\'oeuvre (*)', 'تسجيل العمل (*)', 'Work recording (*)', self::RECORDING, needsReview: true),
                 $this->document('contrat_edition', 'Contrat d\'édition (*)', 'عقد النشر (*)', 'Publishing contract (*)', self::DOCUMENT),
                 $this->document('justificatif_exploitation', 'Justificatif d\'exploitation (*)', 'إثبات الاستغلال (*)', 'Proof of exploitation (*)', self::DOCUMENT),
             ],
@@ -263,12 +263,12 @@ class CollegeOeuvreFileSeeder extends Seeder
                 $this->document('autre', 'Autre (document)', 'أخرى (مستند)', 'Other (document)', self::DOCUMENT, conditions: ['show_when' => ['types_justificatifs_videogramme', 'autre', 'in']]),
             ],
             'SIMPLE_LITTERAIRE_EDITION' => [
-                $this->document('autorisation_auteur', 'Autorisation de l’auteur de l’œuvre originale', 'ترخيص من المؤلف الأصلي للعمل', 'Original work author authorization', self::DOCUMENT, conditions: ['show_when' => ['origine', ['traduite', 'adaptee']], 'server' => 'required ssi isOrigineDerivee(origine)']),
+                $this->document('autorisation_auteur', 'Autorisation de l’auteur de l’oeuvre originale', 'ترخيص من المؤلف الأصلي للعمل', 'Original work author authorization', self::DOCUMENT, conditions: ['show_when' => ['origine', ['traduite', 'adaptee']], 'server' => 'required ssi isOrigineDerivee(origine)']),
                 $this->document('oeuvre_litteraire', 'Oeuvre littéraire', 'عمل أدبي', 'Literary work', self::DOCUMENT),
             ],
             'SIMPLE_POESIE' => [
                 $this->document('oeuvres_poetiques', 'oeuvres poétiques (format pdf)', 'أعمال شعرية (بصيغة PDF)', 'Poetic works (pdf format)', ['pdf'], needsReview: true),
-                $this->document('autorisation_auteur', 'Autorisation de l’auteur de l’œuvre originale', 'ترخيص من المؤلف الأصلي للعمل', 'Original work author authorization', self::DOCUMENT, conditions: ['show_when' => ['origine', ['traduite']], 'server' => 'required ssi isOrigineDerivee(origine)']),
+                $this->document('autorisation_auteur', 'Autorisation de l’auteur de l’oeuvre originale', 'ترخيص من المؤلف الأصلي للعمل', 'Original work author authorization', self::DOCUMENT, conditions: ['show_when' => ['origine', ['traduite']], 'server' => 'required ssi isOrigineDerivee(origine)']),
             ],
             'SIMPLE_ARTS_GRAPHIQUES' => [
                 $this->document('oeuvres_plastiques_graphiques', 'Oeuvres plastiques et graphiques (png)', 'أعمال تشكيلية وغرافيكية (PNG)', 'Plastic and graphic works (png)', self::IMAGE, maxSizeKb: 102400),
@@ -276,18 +276,18 @@ class CollegeOeuvreFileSeeder extends Seeder
             'LOGICIEL' => [
                 $this->document('code_source', 'Code source', 'شفرة المصدر', null, self::ARCHIVE, maxSizeKb: 20480),
                 $this->document('schema_bdd', 'Schéma de la base de données', 'مخطط قاعدة البيانات', null, self::DATABASE_SCHEMA, required: false, maxSizeKb: 20480),
-                $this->document('oeuvre_format_numerique', 'Œuvre format numérique', 'عمل بصيغة رقمية', 'Digital format work', self::DIGITAL_WORK, required: false, maxSizeKb: 20480),
+                $this->document('oeuvre_format_numerique', 'Oeuvre format numérique', 'عمل بصيغة رقمية', 'Digital format work', self::DIGITAL_WORK, required: false, maxSizeKb: 20480),
             ],
             'RECHERCHE_SCIENTIFIQUE' => [
-                $this->document('oeuvre_format_numerique', 'Œuvre format numérique', 'عمل بصيغة رقمية', 'Digital format work', self::DIGITAL_WORK, maxSizeKb: 20480),
+                $this->document('oeuvre_format_numerique', 'Oeuvre format numérique', 'عمل بصيغة رقمية', 'Digital format work', self::DIGITAL_WORK, maxSizeKb: 20480),
             ],
             'SITE_WEB' => [
                 $this->document('code_source', 'Code source', 'شفرة المصدر', null, self::ARCHIVE, required: false, maxSizeKb: 20480),
                 $this->document('schema_bdd', 'Schéma de la base de données', 'مخطط قاعدة البيانات', null, self::DATABASE_SCHEMA, required: false, maxSizeKb: 20480),
-                $this->document('oeuvre_format_numerique', 'Œuvre format numérique', 'عمل بصيغة رقمية', 'Digital format work', self::DIGITAL_WORK, maxSizeKb: 20480),
+                $this->document('oeuvre_format_numerique', 'Oeuvre format numérique', 'عمل بصيغة رقمية', 'Digital format work', self::DIGITAL_WORK, maxSizeKb: 20480),
             ],
             'THESES_MEMOIRES' => [
-                $this->document('oeuvre_format_numerique', 'Œuvre format numérique', 'عمل بصيغة رقمية', 'Digital format work', self::DIGITAL_WORK, maxSizeKb: 20480),
+                $this->document('oeuvre_format_numerique', 'Oeuvre format numérique', 'عمل بصيغة رقمية', 'Digital format work', self::DIGITAL_WORK, maxSizeKb: 20480),
             ],
         ];
     }

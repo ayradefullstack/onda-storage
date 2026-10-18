@@ -15,7 +15,8 @@ return [
     |
     */
 
-    'chunk_size' => (int) env('VAULT_CHUNK_SIZE', 8_388_608),
+    // Format constant — changing it makes existing ciphertext/MACs unreadable; never configurable.
+    'chunk_size' => 8_388_608,
 
     /*
     |--------------------------------------------------------------------------
@@ -38,7 +39,8 @@ return [
     |
     */
 
-    'mac_segment_size' => (int) env('VAULT_MAC_SEGMENT_SIZE', 1_048_576),
+    // Format constant — changing it makes existing ciphertext/MACs unreadable; never configurable.
+    'mac_segment_size' => 1_048_576,
 
     /*
     |--------------------------------------------------------------------------

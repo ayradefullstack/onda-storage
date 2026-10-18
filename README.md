@@ -313,9 +313,7 @@ Only the variables that matter for the vault. Defaults are in
 | `APP_KEY` | none | Also encrypts the wrapped DEKs. Never rotate it without a plan |
 | `VAULT_MASTER_KEY_PATH` | none | The KEK file, outside the repo and outside backups |
 | `VAULT_DISK_ROOT`, `INCOMING_DISK_ROOT`, `WORK_DISK_ROOT`, `VARIANTS_DISK_ROOT` | none | Outside the repo, one partition, `/` separators |
-| `VAULT_CHUNK_SIZE` | `8388608` | Do not change |
 | `VAULT_MAX_FILE_SIZE` | `5368709120` | 5 GiB per file |
-| `VAULT_MAC_SEGMENT_SIZE` | `1048576` | Do not change |
 | `VAULT_RETENTION_DAYS` | `30` | Days a soft-deleted file keeps its bytes |
 | `VAULT_TEMP_TTL_MINUTES` | `120` | Lifetime of an upload session and of temp files |
 | `VAULT_CLIENT_MAX_IN_FLIGHT` | `3` | Chunk requests across all files. **Keep below the PHP worker count** (Herd has 4, so 3) |
@@ -352,6 +350,16 @@ Other `VAULT_CONSULT_*` keys (`PDF_MAX_PAGES`, `PAGE_MAX_EDGE`, `VIDEO_PRESET`,
 `VAULT_SCAN_TIMEOUT`, `VAULT_VARIANT_TIMEOUT`, `VAULT_POSTER_FRAME_PERCENT`,
 `VAULT_PREVIEW_MAX_SECONDS`, `VAULT_PREVIEW_MAX_HEIGHT` only tune the optional
 tools.
+
+The chunk size (8 MiB) and the MAC segment size (1 MiB) are not environment
+variables. They are fixed constants in `config/vault.php`, because they are part
+of the ciphertext format: changing either makes existing files unreadable.
+
+`.env` and `.env.example` have the same keys, in the same order, each with a
+comment. Tags: `[required]` the app fails without it, `[secret]` never commit
+or share, `[prod]` change it for production, `[critical]` losing or changing it
+loses data. `tests/Unit/EnvExampleTest.php` keeps `.env.example` free of dead
+keys and of secret values.
 
 ## 8. Queue workers and scheduler
 

@@ -73,7 +73,7 @@ const COUNTS = {
 const oeuvre = (id: number, status: string) => ({
     id,
     uuid: `0000000${id}-0000-7000-8000-00000000000${id}`,
-    title: `Œuvre ${id} ·`,
+    title: `Oeuvre ${id} ·`,
     description: null,
     status,
     created_at: '2026-10-01T10:00:00Z',
@@ -157,7 +157,7 @@ async function respond(
 
 const rowTitles = (w: VueWrapper) =>
     w.findAll('[data-test="oeuvres-list"] tbody tr').map((tr) => {
-        const match = tr.text().match(/Œuvre \d+/);
+        const match = tr.text().match(/Oeuvre \d+/);
 
         return match ? match[0] : tr.text();
     });
@@ -190,7 +190,7 @@ describe('author oeuvres list — filters render without a refresh', () => {
     it('REGRESSION: an empty filter result renders its empty state, and the list comes back after', async () => {
         const w = mountIndex();
 
-        expect(rowTitles(w)).toEqual(['Œuvre 20', 'Œuvre 6', 'Œuvre 5']);
+        expect(rowTitles(w)).toEqual(['Oeuvre 20', 'Oeuvre 6', 'Oeuvre 5']);
 
         // "Brouillons (0)": the server answers with zero rows.
         await tab(w, /Brouillons/).trigger('click');
@@ -200,7 +200,7 @@ describe('author oeuvres list — filters render without a refresh', () => {
         const empty = w.find('[data-test="list-empty"]');
         expect(empty.exists()).toBe(true);
         expect(empty.text()).toContain(
-            'Aucune œuvre ne correspond à ces filtres',
+            'Aucune oeuvre ne correspond à ces filtres',
         );
         expect(w.find('[data-test="list-empty-clear"]').text()).toBe(
             'Effacer les filtres',
@@ -215,11 +215,11 @@ describe('author oeuvres list — filters render without a refresh', () => {
         // ...and when it lands, the full list is back, with no render error.
         await respond(ALL, {});
         expect(renderErrors).toEqual([]);
-        expect(rowTitles(w)).toEqual(['Œuvre 20', 'Œuvre 6', 'Œuvre 5']);
+        expect(rowTitles(w)).toEqual(['Oeuvre 20', 'Oeuvre 6', 'Oeuvre 5']);
 
         // The page keeps rendering every later response too.
         await respond(REGISTERED, { status: 'registered' });
-        expect(rowTitles(w)).toEqual(['Œuvre 6', 'Œuvre 5']);
+        expect(rowTitles(w)).toEqual(['Oeuvre 6', 'Oeuvre 5']);
         expect(renderErrors).toEqual([]);
     });
 
@@ -228,7 +228,7 @@ describe('author oeuvres list — filters render without a refresh', () => {
 
         await respond(REGISTERED, { status: 'registered' });
 
-        expect(rowTitles(w)).toEqual(['Œuvre 6', 'Œuvre 5']);
+        expect(rowTitles(w)).toEqual(['Oeuvre 6', 'Oeuvre 5']);
         // Keyed by the record: each row carries its own uuid's actions.
         expect(w.findAll('[data-test="oeuvres-list"] tbody tr')).toHaveLength(
             2,

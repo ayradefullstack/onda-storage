@@ -384,7 +384,7 @@ const statusBadge = computed(() => {
                             class="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
                         >
                             <ArrowLeft class="size-3.5 rtl:rotate-180" />
-                            <span>Retour au catalogue des œuvres</span>
+                            <span>Retour au catalogue des oeuvres</span>
                         </Link>
 
                         <div class="flex items-center gap-2">
