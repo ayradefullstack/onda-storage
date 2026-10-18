@@ -448,6 +448,34 @@ php artisan vault:doctor
   reachable over HTTP**, and that `public_html/public/storage` does not exist.
   Never run `php artisan storage:link` on a vault disk.
 
+### Migration reset (once per environment, October 2026)
+
+The migration history was consolidated into one `create_<table>_table`
+migration per table, before production. Every environment that ran the old
+migrations still lists their names in its `migrations` table, so it cannot
+simply `migrate`. Run this **once** on each deployed server and each
+teammate's machine. The old data is development data only.
+
+1. Back up the database (`mysqldump --single-transaction <db> > backup.sql`).
+2. Stop the queue workers (cPanel: comment out the worker cron lines; locally:
+   stop the `php artisan queue:work` terminal).
+3. `php artisan migrate:fresh --seed --force`
+4. Empty the four storage roots (`VAULT_DISK_ROOT`, `INCOMING_DISK_ROOT`,
+   `WORK_DISK_ROOT`, `VARIANTS_DISK_ROOT`): their files no longer match any
+   database row. **Do not touch** `VAULT_MASTER_KEY_PATH` or `APP_KEY`.
+5. `php artisan optimize:clear`, then, **on servers only**,
+   `php artisan config:cache && php artisan route:cache`. Never cache config
+   or routes on a dev machine (see CLAUDE.md).
+6. `php artisan queue:restart`, then restart the workers.
+
+> **Warning about `--seed` on a server.** `DatabaseSeeder` also runs
+> `RoleAndUserSeeder` and `VaultDemoSeeder` and creates `test@example.com`,
+> all with the password `password`. On a reachable server, change or delete
+> those accounts right after step 3.
+
+**From now on, every schema change is a new migration.** History was
+rewritten this one time, before production, and never will be again.
+
 ## 10. Testing
 
 ```powershell

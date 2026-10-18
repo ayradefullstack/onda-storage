@@ -9,7 +9,6 @@ use App\Models\RegisterTypeMember;
 use App\Models\TypeGestion;
 use Database\Seeders\CollegeOeuvreFileSeeder;
 use Database\Seeders\MembershipTypeSeeder;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -147,37 +146,24 @@ test('admin-created documents are not touched by the documents seeder', function
         ->and([$seeded->fresh()->is_required, $seeded->fresh()->title_en])->toBe($expected);
 });
 
-// --- the migration backfill -----------------------------------------------------------
+// --- seeded rows are system rows ------------------------------------------------------
 
-test('after the migration every pre-existing row is a system row', function () {
-    $path = 'database/migrations/2026_10_05_090000_add_is_system_to_referentiel_tables.php';
-
-    // Take the database back to how it was before the column existed: rows
-    // seeded, no `is_system` anywhere…
-    Artisan::call('migrate:rollback', ['--path' => $path, '--force' => true]);
-
+test('every row the seeder writes is a system row, and the column defaults hold', function () {
+    // The seeders mark every row they write; there is no migration backfill,
+    // so this is the only thing that makes the seeded set `is_system`.
     foreach (['register_types', 'type_gestions', 'register_type_colleges', 'register_type_members'] as $table) {
-        expect(Schema::hasColumn($table, 'is_system'))->toBeFalse();
+        expect(DB::table($table)->count())->toBeGreaterThan(0)
+            ->and(DB::table($table)->where('is_system', false)->count())->toBe(0);
     }
 
-    // …plus one row a seeder never wrote, so the backfill is shown to apply
-    // to whatever exists, not to the seeded set only.
+    // Every seeded gestion is active.
+    expect(DB::table('type_gestions')->where('status', '!=', 1)->count())->toBe(0);
+
+    // A row written outside the seeder takes the column default: not a system row.
     DB::table('register_types')->insert([
-        'uuid' => (string) Str::uuid(), 'name' => 'Pre-existing', 'slug' => 'pre-existing',
+        'uuid' => (string) Str::uuid(), 'name' => 'Admin-made', 'slug' => 'admin-made',
         'status' => 1, 'is_disabled' => false, 'created_at' => now(), 'updated_at' => now(),
     ]);
 
-    $types = DB::table('register_types')->count();
-    $members = DB::table('register_type_members')->count();
-
-    Artisan::call('migrate', ['--path' => $path, '--force' => true]);
-
-    expect(DB::table('register_types')->where('is_system', false)->count())->toBe(0)
-        ->and(DB::table('register_types')->where('is_system', true)->count())->toBe($types)
-        ->and(DB::table('type_gestions')->where('is_system', false)->count())->toBe(0)
-        ->and(DB::table('register_type_colleges')->where('is_system', false)->count())->toBe(0)
-        ->and(DB::table('register_type_members')->where('is_system', true)->count())->toBe($members)
-        // The new columns' defaults: gestions stay active, members gain nullable names.
-        ->and(DB::table('type_gestions')->where('status', '!=', 1)->count())->toBe(0)
-        ->and(DB::table('register_type_members')->whereNotNull('name_ar')->count())->toBe(0);
+    expect(DB::table('register_types')->where('slug', 'admin-made')->value('is_system'))->toBeFalsy();
 });

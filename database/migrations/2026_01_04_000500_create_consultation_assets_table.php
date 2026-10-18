@@ -6,14 +6,21 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
+/**
+ * One encrypted consultation derivative (a page image, a sheet, a clip) on
+ * the `variants` disk. No softDeletes: derivative bytes must go with the row.
+ */
 return new class extends Migration
 {
     public function up(): void
     {
-        // No softDeletes: derivative bytes must go with the row.
         Schema::create('consultation_assets', function (Blueprint $table) {
             $table->ondaKeys();
             $table->foreignId('media_file_id')->constrained('media_files')->cascadeOnDelete();
+            // Plain string, deliberately not an enum: GenerateDerivative parks
+            // the previous generation's rows under `old:<kind>` while it writes
+            // the new ones (the unique index below would otherwise collide).
+            // Follow-up: remove the `old:` trick, then cast `kind`.
             $table->string('kind', 24);
             // -1 would be awkward in a unique index with NULLs; a single
             // (kind) asset keeps page_index NULL and the unique below still
@@ -30,6 +37,7 @@ return new class extends Migration
             $table->json('meta')->nullable();
             $table->timestamps();
 
+            // One asset per (file, kind, page); also the file's asset listing.
             $table->unique(['media_file_id', 'kind', 'page_index']);
         });
     }

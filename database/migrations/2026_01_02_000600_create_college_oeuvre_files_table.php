@@ -29,24 +29,33 @@ return new class extends Migration
             $table->string('title');
             $table->string('title_ar')->nullable();
             $table->string('title_en')->nullable();
+            $table->unsignedSmallInteger('display_order');
+            $table->unsignedInteger('max_size_kb')->nullable();
+            $table->boolean('is_required')->default(true);
+            $table->boolean('allows_multiple')->default(true);
+            // True where `extensions` is a chosen default rather than a rule
+            // ONDA enforced — for an officer to confirm.
+            $table->boolean('needs_review')->default(false);
             // Lowercase extension list, e.g. ["pdf","jpg","jpeg","png"] — the
             // server rule, from which the client `accept` is derived.
             $table->json('extensions');
-            $table->boolean('is_required')->default(true);
-            $table->unsignedSmallInteger('display_order');
-            $table->unsignedInteger('max_size_kb')->nullable();
-            $table->boolean('allows_multiple')->default(true);
+            // DERIVED, NEVER EDITED: the MIME types `extensions` maps to
+            // through App\Support\FileFormats. CollegeOeuvreFile's `saving`
+            // hook recomputes it on every save; `referentiel:sync-mime-types`
+            // and a test guard against drift. Stored rather than computed on
+            // read because VerifyContentType runs in a queue worker against a
+            // slot that may have been retired since the upload started.
+            // Nullable with no default: the hook fills it before the insert.
+            $table->json('mime_types')->nullable();
             // ONDA's show_when / hide_when / server condition, kept verbatim
             // and not yet read: the declaration fields they test do not
             // exist here yet.
             $table->json('conditions')->nullable();
-            // True where `extensions` is a chosen default rather than a rule
-            // ONDA enforced — for an officer to confirm.
-            $table->boolean('needs_review')->default(false);
             $table->timestamps();
             $table->softDeletes();
 
-            // Named explicitly: the generated name exceeds MySQL's 64 characters.
+            // One definition per document key per college (CollegeOeuvreFileSeeder's
+            // identity). Named explicitly: the generated name exceeds MySQL's 64 characters.
             $table->unique(['register_type_college_id', 'document_key'], 'college_oeuvre_files_college_document_key_unique');
         });
     }

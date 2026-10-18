@@ -341,10 +341,7 @@ function restorePersistedUploads(): void {
 
         const fileState: UploadFileState = {
             id: persistedUpload.id,
-            // A record written before the works → oeuvres rename carries
-            // `workId`; without the fallback a tab that was mid-upload at
-            // deploy time would restore an entry no page ever matches.
-            oeuvreId: persistedUpload.oeuvreId ?? persistedUpload.workId,
+            oeuvreId: persistedUpload.oeuvreId,
             // Restored so a resumed file reappears in its own slot, not
             // slot-less while the server session still carries the slot.
             requirementId: persistedUpload.requirementId ?? null,

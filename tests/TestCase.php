@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use Database\Seeders\LanguageSeeder;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Fortify\Features;
@@ -9,6 +10,16 @@ use Tests\Support\TestEnvironmentGuard;
 
 abstract class TestCase extends BaseTestCase
 {
+    /**
+     * RefreshDatabase seeds the shipped languages after every migrate. The
+     * app falls back to a single `fallback_locale` (ltr) when `languages` is
+     * empty, but `/{locale}` routes 404 any code that is not an active row,
+     * so feature tests start from the same three rows a seeded install has.
+     */
+    protected bool $seed = true;
+
+    protected string $seeder = LanguageSeeder::class;
+
     /**
      * The temporary root this test's four vault disks point at.
      */

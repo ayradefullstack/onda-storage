@@ -1,14 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
+/**
+ * Seeded reference data (CountrySeeder). Numbered `0000_…` so the three
+ * geography tables exist before `0001_01_01_000000_create_users_table`,
+ * whose address columns reference them.
+ */
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('countries', function (Blueprint $table) {
@@ -32,9 +36,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('countries');

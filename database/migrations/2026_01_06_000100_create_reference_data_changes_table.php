@@ -48,7 +48,9 @@ return new class extends Migration
             $table->char('row_hash', 64);
             $table->timestamp('created_at')->useCurrent();
 
+            // One row's change history in order.
             $table->index(['subject_type', 'subject_id', 'created_at']);
+            // The global "what changed recently" list.
             $table->index('created_at');
         });
     }

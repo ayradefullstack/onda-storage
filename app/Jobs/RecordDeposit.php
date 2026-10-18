@@ -17,11 +17,10 @@ use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
- * The legal record. Appends a row to `file_access_logs` (see this phase's
- * report for why that table rather than a new one — the short version:
- * `database/migrations/**` is frozen, so a dedicated table wasn't buildable
- * either, and reusing the existing prev_hash/row_hash columns needed only a
- * one-value enum addition) with `action = 'deposit'`, chained by
+ * The legal record. Appends a row to `file_access_logs` (that table rather
+ * than a dedicated one: it already carries the prev_hash/row_hash chain, so
+ * the deposit event is one more `action` value in the same ledger) with
+ * `action = 'deposit'`, chained by
  * `row_hash = sha256(prev_hash . canonical_json_of_this_row)` — tampering
  * with an old row is then detectable, since its stored row_hash would no
  * longer match what a later row's chain was actually built against.

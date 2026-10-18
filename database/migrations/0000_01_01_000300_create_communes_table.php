@@ -1,20 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
+/**
+ * Seeded reference data (CommuneSeeder). See create_countries_table for why
+ * the geography tables are numbered `0000_…`.
+ */
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('wilayas', function (Blueprint $table) {
+        Schema::create('communes', function (Blueprint $table) {
             $table->ondaKeys();
-            $table->foreignId('country_id')->nullable()->constrained('countries')->nullOnDelete();
-            $table->string('code', 10);
+            $table->foreignId('wilaya_id')->constrained('wilayas')->cascadeOnDelete();
+            $table->string('post_code', 15)->nullable();
             $table->string('name_ar');
             $table->string('name_fr');
             $table->boolean('is_active')->default(true);
@@ -24,11 +27,8 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('wilayas');
+        Schema::dropIfExists('communes');
     }
 };

@@ -26,6 +26,9 @@ use Illuminate\Support\Facades\Schema;
  * college's tinyint without relying on this table's auto-increment id being
  * 1/2/3. Unique per register type, so one Auteur cannot hold two
  * "collective" labels.
+ *
+ * `status` decides whether a type has a gestion level at all (an active
+ * gestion), so a gestion can be retired without deleting it.
  */
 return new class extends Migration
 {
@@ -34,14 +37,17 @@ return new class extends Migration
         Schema::create('type_gestions', function (Blueprint $table) {
             $table->ondaKeys();
             $table->foreignId('register_type_id')->constrained('register_types')->cascadeOnUpdate()->cascadeOnDelete();
-            // Matches register_type_colleges.type_gestion: 1 collective, 2 individual, 3 simple.
-            $table->unsignedTinyInteger('type_gestion');
             $table->string('name');
             $table->string('name_ar')->nullable();
             $table->string('name_en')->nullable();
+            // Matches register_type_colleges.type_gestion: 1 collective, 2 individual, 3 simple.
+            $table->unsignedTinyInteger('type_gestion');
+            $table->unsignedTinyInteger('status')->default(1)->index();
+            $table->boolean('is_system')->default(false);
             $table->timestamps();
             $table->softDeletes();
 
+            // One label per gestion value per declarant type.
             $table->unique(['register_type_id', 'type_gestion']);
         });
     }

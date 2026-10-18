@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\Schema;
  *
  * Soft deletes: reference rows an admin may retire, which must stay
  * resolvable for anything already classified under them.
+ *
+ * `is_system` marks the rows a seeder owns (MembershipTypeSeeder sets it on
+ * every row it creates or updates); a row an admin creates keeps `false`.
  */
 return new class extends Migration
 {
@@ -30,6 +33,7 @@ return new class extends Migration
             // contradicting its own code; the code wins.
             $table->unsignedTinyInteger('status')->default(1)->index();
             $table->boolean('is_disabled')->default(false);
+            $table->boolean('is_system')->default(false);
             $table->timestamps();
             $table->softDeletes();
         });

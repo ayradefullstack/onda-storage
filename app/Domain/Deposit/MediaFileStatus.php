@@ -9,7 +9,7 @@ namespace App\Domain\Deposit;
  * (the model and its migration are frozen this phase), but eight job
  * classes writing bare `'ready'`/`'quarantined'` literals is exactly how a
  * typo becomes a silent status that never matches `MediaFile::scopeStored()`.
- * Values match the enum in `2026_09_02_100001_create_media_files_table.php`
+ * Values match the enum in `2026_01_04_000100_create_media_files_table.php`
  * exactly.
  */
 final class MediaFileStatus

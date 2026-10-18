@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Deposit;
 
 /**
- * `oeuvres.status` string constants. The column stays the enum declared in
- * `2026_09_02_100000_create_works_table.php`; these are the only names the
+ * `oeuvres.status` string constants. The column is the enum declared in
+ * `2026_01_03_000100_create_oeuvres_table.php`; these are the only names the
  * application may write, for the same reason MediaFileStatus exists — a
  * bare `'under-review'` literal is a status nothing ever matches.
  *

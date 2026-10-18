@@ -35,17 +35,18 @@ return new class extends Migration
             $table->string('name');
             $table->string('name_ar')->nullable();
             $table->string('name_en')->nullable();
+            // Droits voisins code: null for Auteur/Editeur colleges (droits
+            // d'auteur), the college code for Artiste-interprète/Producteur.
+            $table->string('code_dv')->nullable();
             $table->unsignedTinyInteger('status')->default(1)->index();
             // 1 collective, 2 individual, 3 simple protection — for every
             // college, including the ones with no type_gestion_id. Kept
             // alongside the foreign key: it is the value ONDA stores, and
             // the seeder matches colleges on it.
             $table->unsignedTinyInteger('type_gestion')->default(1)->index();
-            // Droits voisins code: null for Auteur/Editeur colleges (droits
-            // d'auteur), the college code for Artiste-interprète/Producteur.
-            $table->string('code_dv')->nullable();
             $table->boolean('adhesion')->default(true);
             $table->boolean('is_disabled')->default(false);
+            $table->boolean('is_system')->default(false);
             $table->timestamps();
             $table->softDeletes();
         });

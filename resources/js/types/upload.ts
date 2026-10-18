@@ -167,8 +167,6 @@ export type WorkerResponse = WorkerSliceResult | WorkerSliceError;
 export interface PersistedUpload {
     id: string;
     oeuvreId: number;
-    /** Pre-rename field name — read only as a fallback, never written. */
-    workId?: number;
     /** Absent on records written before per-requirement uploads. */
     requirementId?: number | null;
     sessionUuid: string;

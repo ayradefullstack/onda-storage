@@ -30,15 +30,16 @@ return new class extends Migration
             $table->ondaKeys();
             $table->foreignId('oeuvre_id')->constrained('oeuvres')->cascadeOnDelete();
             $table->foreignId('actor_id')->constrained('users')->restrictOnDelete();
-            $table->string('from_status', 32);
-            $table->string('to_status', 32);
             // Mandatory for a rejection, enforced by the status machine —
             // nullable here because a submission and a review-open carry no
             // reason, and a CHECK constraint on a value the machine already
             // guards would only duplicate it across two dialects.
             $table->text('reason')->nullable();
+            $table->string('from_status', 32);
+            $table->string('to_status', 32);
             $table->timestamp('created_at')->useCurrent();
 
+            // An oeuvre's history in order (timeline, latest rejection).
             $table->index(['oeuvre_id', 'created_at']);
         });
     }
