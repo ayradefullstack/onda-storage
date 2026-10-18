@@ -64,7 +64,10 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
             // The officer's decision on ONE file (accepted / rejected / pending).
             // Holder and file-status rules live in DecideMediaFile.
             Route::post('/{oeuvre:uuid}/files/{mediaFile:uuid}/review', [MediaFileReviewController::class, 'store'])
-                ->name('files.decide');
+                ->name('files.decide')
+                // A file the author removed answers 422 (DecideMediaFile),
+                // not a bare 404.
+                ->withTrashed();
             Route::get('/{oeuvre:uuid}/files/{mediaFile:uuid}/review/assets', [OeuvreFileReviewController::class, 'assets'])
                 ->name('files.review.assets');
             Route::get('/{oeuvre:uuid}/files/{mediaFile:uuid}/consult/{asset}', ConsultationAssetController::class)

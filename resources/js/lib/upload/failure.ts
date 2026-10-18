@@ -11,7 +11,11 @@
  *   502/503/504     temporary server problem        retry by itself, with backoff
  *   419             signed out                      stop (log in again)
  *   410             upload session expired          stop (fresh session on retry)
+ *   409 + error     deposit decided / submitted     stop for good (session aborted server-side)
  *   anything else   unknown status                  stop, and show the status code
+ *
+ * A bare 409 on `complete` (missing chunks) has no `error` key and stays the
+ * caller's own case.
  *
  * A network failure (no response at all) is handled like a temporary problem
  * by the callers; it is not a status and never reaches here.
@@ -29,7 +33,14 @@ export type UploadFailure =
     | { kind: 'temporary'; retryAfterMs: number | null }
     | { kind: 'authExpired' }
     | { kind: 'sessionGone' }
+    | { kind: 'depositClosed'; code: 'oeuvreDecided' | 'oeuvreSubmitted' }
     | { kind: 'unknown'; status: number };
+
+/** The server's 409 `error` keys (ReplacementGuard) → client codes. */
+const DEPOSIT_CLOSED: Record<string, 'oeuvreDecided' | 'oeuvreSubmitted'> = {
+    oeuvre_decided: 'oeuvreDecided',
+    oeuvre_submitted: 'oeuvreSubmitted',
+};
 
 /** How many times a busy/temporary answer is retried before the file fails. */
 export const MAX_TRANSIENT_ATTEMPTS = 8;
@@ -101,6 +112,16 @@ export function classifyFailure(error: UploadHttpError): UploadFailure {
 
         case 410:
             return { kind: 'sessionGone' };
+
+        case 409: {
+            const key = ((error.body ?? {}) as Record<string, unknown>).error;
+            const code =
+                typeof key === 'string' ? DEPOSIT_CLOSED[key] : undefined;
+
+            return code === undefined
+                ? { kind: 'unknown', status: 409 }
+                : { kind: 'depositClosed', code };
+        }
 
         default:
             return { kind: 'unknown', status: error.status };

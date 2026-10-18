@@ -53,6 +53,7 @@ import type {
     UploadFileState,
     UploadRequirement,
 } from '@/types/upload';
+import { FINAL_UPLOAD_ERRORS } from '@/types/upload';
 
 const SESSION_STORAGE_KEY = 'onda.uploads.v1';
 const MAX_CHUNK_ATTEMPTS = 4;
@@ -215,6 +216,13 @@ function failWith(
             return;
         case 'sessionGone':
             markExpired(fileState);
+
+            return;
+        case 'depositClosed':
+            // The server aborted the session: nothing to resume, ever.
+            fileState.status = 'failed';
+            setError(fileState, failure.code, chunkIndex);
+            clearPersisted(fileState.id);
 
             return;
         case 'validation':
@@ -485,7 +493,8 @@ async function uploadOneChunk(
                 if (
                     failure.kind === 'sessionGone' ||
                     failure.kind === 'authExpired' ||
-                    failure.kind === 'quota'
+                    failure.kind === 'quota' ||
+                    failure.kind === 'depositClosed'
                 ) {
                     chunk.status = 'failed';
                     failWith(fileState, failure, chunk.index);
@@ -588,7 +597,12 @@ async function finalizeFile(fileState: UploadFileState): Promise<void> {
                 continue;
             }
 
-            if (error instanceof UploadHttpError && error.status === 409) {
+            if (failure !== null && failure.kind === 'depositClosed') {
+                failWith(fileState, failure);
+            } else if (
+                error instanceof UploadHttpError &&
+                error.status === 409
+            ) {
                 fileState.status = 'failed';
                 setError(fileState, 'missingChunks');
             } else if (failure !== null) {
@@ -892,6 +906,15 @@ function resumeFile(fileId: string): void {
     const fileState = state.files.get(fileId);
 
     if (!fileState?.file) {
+        return;
+    }
+
+    // The deposit closed under it: the server aborted the session and
+    // will refuse any new one. No retry.
+    if (
+        fileState.errorCode !== null &&
+        FINAL_UPLOAD_ERRORS.includes(fileState.errorCode)
+    ) {
         return;
     }
 

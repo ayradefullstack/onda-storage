@@ -39,6 +39,15 @@ return new class extends Migration
             // The officer whose decision `review_status` holds. Null on delete: the
             // durable record of who decided is `media_file_reviews.reviewer_id`.
             $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
+            // Set only on a replacement uploaded during review: the removed,
+            // rejected file this one replaces. A plain index, NOT unique: the
+            // author may withdraw a pending replacement (soft-deleted) and
+            // upload another for the same removed file. One LIVE replacement
+            // per removed file is enforced by InitUpload's reservation under
+            // the oeuvre-row lock (MediaFile::openReplacements). Restrict: the
+            // link is evidence, and no purge path hard-deletes media_files
+            // rows (purge sets purged_at).
+            $table->foreignId('replaces_media_file_id')->nullable()->index()->constrained('media_files')->restrictOnDelete();
             // NOT redundant with college_oeuvre_file_id — same reasoning as
             // oeuvres.code_college_snapshot. Requirement rows can be edited,
             // re-keyed or retired. A file deposited against

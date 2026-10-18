@@ -31,6 +31,10 @@ use Inertia\Response;
  *   1   status counts
  *   2   actionable oeuvres + their collège
  *   1   latest rejection of the rejected ones
+ *   ≤5  replacement items, only when an oeuvre is under review: those
+ *       oeuvres + their collège, then their replacement state
+ *       (OeuvreController::replacementStates: removed files, their
+ *       reservations when there are any, the review counts)
  *   ≤10 SubmissionGate, 2 per actionable oeuvre, at most ACTION_LIMIT of them
  *   2   recent oeuvres + their collège
  *   2   quota row + live upload reservations
@@ -70,12 +74,16 @@ final class DashboardController extends Controller
             ]);
         }
 
+        $replacements = $counts[OeuvreStatus::UNDER_REVIEW->key()] > 0 ? $this->replacementActions($user) : [];
+
         return Inertia::render('author/Dashboard', [
             'counts' => $counts,
             'actions' => [
-                'items' => $this->actions($user, $gate),
+                // Files to replace come first: a deposit under review waits
+                // on them.
+                'items' => [...$replacements, ...$this->actions($user, $gate)],
                 // Every deposit still in the author's hands, shown or not.
-                'total' => $counts[OeuvreStatus::DRAFT->key()] + $counts[OeuvreStatus::REJECTED->key()],
+                'total' => $counts[OeuvreStatus::DRAFT->key()] + $counts[OeuvreStatus::REJECTED->key()] + count($replacements),
             ],
             'recent' => $this->recent($user),
             'quota' => $this->quota($user),
@@ -131,6 +139,52 @@ final class DashboardController extends Controller
                 ],
             ];
         })->values()->all();
+    }
+
+    /**
+     * Deposits under review that wait on the author: files the officer
+     * rejected that are still to be replaced (`replace`), or — once every
+     * one has a replacement — replacements waiting for the ONDA
+     * (`awaiting`). Same counts as the oeuvre page (replacementState).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function replacementActions(User $user): array
+    {
+        $oeuvres = Oeuvre::query()
+            ->where('author_id', $user->id)
+            ->where('status', OeuvreStatus::UNDER_REVIEW)
+            ->with('registerTypeCollege')
+            ->orderByDesc('submitted_at')
+            ->orderByDesc('id')
+            ->limit(self::ACTION_LIMIT)
+            ->get();
+
+        $states = OeuvreController::replacementStates($oeuvres);
+
+        return array_values($oeuvres
+            ->map(function (Oeuvre $oeuvre) use ($states): ?array {
+                $state = $states[$oeuvre->id];
+                $toReplace = $state['rejected'] + array_sum($state['open']);
+                // A replacement still uploading counts as handed in.
+                $pending = $state['pending'] + $state['uploading'];
+
+                if ($toReplace === 0 && $pending === 0) {
+                    return null;
+                }
+
+                return [
+                    'uuid' => $oeuvre->uuid,
+                    'label_source' => self::labelSource($oeuvre),
+                    'status' => $oeuvre->status,
+                    'kind' => $toReplace > 0 ? 'replace' : 'awaiting',
+                    'blockers' => [],
+                    'rejection' => null,
+                    'replacement' => ['to_replace' => $toReplace, 'pending' => $pending],
+                ];
+            })
+            ->filter()
+            ->all());
     }
 
     /**

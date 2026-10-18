@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property int $user_id
  * @property int $oeuvre_id
  * @property int|null $college_oeuvre_file_id
+ * @property int|null $replaces_media_file_id
  * @property string $filename
  * @property int $size_bytes
  * @property int $chunk_size

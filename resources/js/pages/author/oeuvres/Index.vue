@@ -114,7 +114,7 @@ const labelledOeuvres = computed(() =>
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Works', href: index() }],
+        breadcrumbs: [{ title: 'sidebar.nav.oeuvres', href: index() }],
     },
 });
 

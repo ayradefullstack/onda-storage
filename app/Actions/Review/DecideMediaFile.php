@@ -86,10 +86,15 @@ final class DecideMediaFile
         $result = DB::transaction(function () use ($file, $to, $reviewer, $reason): array {
             // Oeuvre first, then file. See the class docblock.
             $oeuvre = Oeuvre::query()->whereKey($file->oeuvre_id)->lockForUpdate()->firstOrFail();
-            $locked = MediaFile::query()->whereKey($file->getKey())->lockForUpdate()->firstOrFail();
+            // withTrashed: a file the author removed is refused by name, not 404.
+            $locked = MediaFile::withTrashed()->whereKey($file->getKey())->lockForUpdate()->firstOrFail();
 
             if ($locked->oeuvre_id !== $oeuvre->id) {
                 throw FileDecisionRefused::foreignFile();
+            }
+
+            if ($locked->trashed()) {
+                throw FileDecisionRefused::removed();
             }
 
             if ($oeuvre->status !== OeuvreStatus::UNDER_REVIEW) {

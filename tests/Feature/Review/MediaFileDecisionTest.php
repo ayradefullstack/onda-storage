@@ -469,7 +469,7 @@ test('the pages expose allowed per file, computed on the server', function () {
             ->where('files.0.allowed', ['actions' => ['reject', 'reset'], 'reason' => null])
             ->where('files.1.allowed', ['actions' => ['reject'], 'reason' => null])
             ->where('files.2.allowed', ['actions' => [], 'reason' => 'file_not_ready'])
-            ->where('review_counts', ['total' => 3, 'accepted' => 1, 'rejected' => 0]));
+            ->where('review_counts', ['total' => 3, 'accepted' => 1, 'rejected' => 0, 'pending_replacements' => 0]));
 
     test()->actingAs($other)->get(route('admin.oeuvres.show', $oeuvre))
         ->assertInertia(fn ($page) => $page->where('files.0.allowed', ['actions' => [], 'reason' => 'not_holder']));

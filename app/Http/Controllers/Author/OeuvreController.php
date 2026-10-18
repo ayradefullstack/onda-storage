@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Author;
 
 use App\Actions\Oeuvre\DeleteOeuvre;
+use App\Actions\Upload\InitUpload;
 use App\Domain\Deposit\Exceptions\RemovalRefused;
 use App\Domain\Deposit\RemovalGate;
 use App\Domain\Deposit\SlotProgressQuery;
 use App\Domain\Deposit\SubmissionGate;
 use App\Domain\Quota\QuotaPolicy;
+use App\Enums\MediaFile\ReviewStatusEnum;
 use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
@@ -25,9 +27,11 @@ use App\Models\RegisterTypeCollege;
 use App\Models\RegisterTypeMember;
 use App\Models\StorageQuota;
 use App\Models\TypeGestion;
+use App\Policies\MediaFilePolicy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -71,6 +75,16 @@ final class OeuvreController extends Controller
 
     /** @var list<OeuvreStatus> */
     public const PENDING_STATUSES = [OeuvreStatus::SUBMITTED, OeuvreStatus::UNDER_REVIEW];
+
+    /**
+     * Where the author fixes per-file decisions: under review (remove a
+     * rejected file, upload its one replacement) and once the whole deposit
+     * came back (`rejected`, editable). The counters, the slot states and
+     * the open replacement slots are computed for both.
+     *
+     * @var list<OeuvreStatus>
+     */
+    private const REVIEWED_STATUSES = [OeuvreStatus::UNDER_REVIEW, OeuvreStatus::REJECTED];
 
     /** @var list<string> */
     private const SORTS = ['newest', 'oldest', 'title', 'files'];
@@ -301,6 +315,10 @@ final class OeuvreController extends Controller
 
         $quota = StorageQuota::where('user_id', $request->user()->id)->first();
 
+        // Read by two props, so computed once. Free outside review (it
+        // returns before any query).
+        $replacement = self::replacementState($oeuvre);
+
         return Inertia::render('author/oeuvres/Show', [
             // 'id' (the numeric FK) is included deliberately — the P3
             // InitUpload endpoint takes oeuvre_id as an integer, and this is
@@ -347,7 +365,21 @@ final class OeuvreController extends Controller
                 'used_bytes' => $quota->used_bytes ?? 0,
                 'limit_bytes' => $quota->limit_bytes ?? QuotaPolicy::DEFAULT_LIMIT_BYTES,
             ],
+            // Under review: which slots are open for a replacement (a
+            // rejected file the author removed, not replaced yet, minus the
+            // replacement uploads already in flight) and where the deposit
+            // stands. Server-computed; the page never guesses.
+            'replacement' => $replacement,
+            // Under review: the three counters (accepted / waiting / to
+            // fix), when the last replacement arrived, and each slot's own
+            // state. Null outside review.
+            'review_summary' => fn (): ?array => self::reviewSummary($oeuvre, $replacement),
+            // Per document (slot), what happened to it: uploads, the ONDA's
+            // decisions, the author's removals. Signed ONDA, never a name.
+            'history' => fn (): array => self::slotHistory($oeuvre),
             'mediaFiles' => $oeuvre->mediaFiles()
+                ->with('replaces:id,original_name')
+                ->withCount('variants')
                 ->orderBy('created_at')
                 ->get()
                 ->map(fn (MediaFile $mediaFile) => [
@@ -358,7 +390,19 @@ final class OeuvreController extends Controller
                     // file's pipeline must have finished with it. A file
                     // that is merely mid-pipeline shows the control
                     // disabled with a reason, rather than not at all.
-                    'can_remove' => $editable && $removalGate->isFileRemovable($mediaFile),
+                    // Under review, only a file the officer rejected, or the
+                    // author's own replacement while still pending. Never
+                    // an accepted file (MediaFilePolicy::reviewAllowsRemoval).
+                    // An accepted file never, in any status (MediaFilePolicy::delete).
+                    'can_remove' => $mediaFile->review_status !== ReviewStatusEnum::ACCEPTED
+                        && ($editable || ($oeuvre->status === OeuvreStatus::UNDER_REVIEW && MediaFilePolicy::reviewAllowsRemoval($mediaFile)))
+                        && $removalGate->isFileRemovable($mediaFile),
+                    // The officer's decision. Never who made it: the author
+                    // is answered by ONDA.
+                    'review_status' => $mediaFile->review_status,
+                    'review_reason' => $mediaFile->review_reason,
+                    'reviewed_at' => $mediaFile->reviewed_at,
+                    'replaces' => $mediaFile->replaces === null ? null : ['original_name' => $mediaFile->replaces->original_name],
                     'college_oeuvre_file_id' => $mediaFile->college_oeuvre_file_id,
                     'original_name' => $mediaFile->original_name,
                     'extension' => $mediaFile->extension,
@@ -369,10 +413,243 @@ final class OeuvreController extends Controller
                     'width' => $mediaFile->width,
                     'height' => $mediaFile->height,
                     'sha256_plain' => $mediaFile->sha256_plain,
-                    'variant_count' => $mediaFile->variants()->count(),
+                    'variant_count' => (int) $mediaFile->variants_count,
                     'created_at' => $mediaFile->created_at,
                 ]),
         ]);
+    }
+
+    /**
+     * What the author reads first on a deposit under review: how many files
+     * the ONDA accepted, how many wait for it (pending files and replacement
+     * uploads in flight), how many the author must fix (rejected files still
+     * on the deposit, and removed ones not replaced yet), when the last
+     * replacement arrived, and each slot's state — `to_fix` before
+     * `waiting` before `accepted`; a slot with no file at all is absent.
+     * Null outside review. Three fixed queries.
+     *
+     * @param  array{open: array<int, int>, uploading: int, rejected: int, pending: int}|null  $state
+     * @return array{accepted: int, waiting: int, to_fix: int, uploading: int, last_upload_at: string|null, slots: array<int, string>}|null
+     */
+    public static function reviewSummary(Oeuvre $oeuvre, ?array $state = null): ?array
+    {
+        // Also on a deposit returned to its author: the same files carry the
+        // same decisions, and the author fixes them there before resubmitting.
+        if (! in_array($oeuvre->status, self::REVIEWED_STATUSES, true)) {
+            return null;
+        }
+
+        $state ??= self::replacementState($oeuvre);
+
+        $rows = MediaFile::query()
+            ->where('oeuvre_id', $oeuvre->id)
+            ->groupBy('college_oeuvre_file_id')
+            ->select('college_oeuvre_file_id')
+            ->selectRaw('sum(case when review_status = ? then 1 else 0 end) as accepted', [ReviewStatusEnum::ACCEPTED])
+            ->selectRaw('sum(case when review_status = ? then 1 else 0 end) as pending', [ReviewStatusEnum::PENDING])
+            ->selectRaw('sum(case when review_status = ? then 1 else 0 end) as rejected', [ReviewStatusEnum::REJECTED])
+            ->selectRaw('max(case when replaces_media_file_id is not null then created_at end) as last_replacement')
+            ->toBase()
+            ->get();
+
+        $uploadingBySlot = InitUpload::liveSessions()
+            ->where('oeuvre_id', $oeuvre->id)
+            ->whereNotNull('replaces_media_file_id')
+            ->pluck('college_oeuvre_file_id')
+            ->countBy()
+            ->all();
+
+        $slots = [];
+        $accepted = 0;
+        $pending = 0;
+        $last = null;
+
+        foreach ($rows as $row) {
+            $accepted += (int) $row->accepted;
+            $pending += (int) $row->pending;
+            $last = max($last, $row->last_replacement);
+
+            if ($row->college_oeuvre_file_id !== null) {
+                $slot = (int) $row->college_oeuvre_file_id;
+                $slots[$slot] = match (true) {
+                    (int) $row->rejected > 0 => 'to_fix',
+                    (int) $row->pending > 0 => 'waiting',
+                    default => 'accepted',
+                };
+            }
+        }
+
+        foreach ($uploadingBySlot as $slot => $count) {
+            if (($slots[(int) $slot] ?? null) !== 'to_fix') {
+                $slots[(int) $slot] = 'waiting';
+            }
+        }
+
+        foreach (array_keys($state['open']) as $slot) {
+            $slots[(int) $slot] = 'to_fix';
+        }
+
+        return [
+            'accepted' => $accepted,
+            'waiting' => $pending + $state['uploading'],
+            'to_fix' => $state['rejected'] + array_sum($state['open']),
+            'uploading' => $state['uploading'],
+            'last_upload_at' => $last === null ? null : Carbon::parse((string) $last)->toIso8601String(),
+            'slots' => $slots,
+        ];
+    }
+
+    /**
+     * Each document's (slot's) story on this deposit, oldest first: every
+     * file uploaded into it (`uploaded`, or `replacement` for a file
+     * uploaded during review), every decision the ONDA recorded on it
+     * (`accepted` / `rejected` with the reason / `reset`), and every file
+     * the author removed (`removed`). Built from `media_file_reviews` and
+     * the files themselves, removed ones included. Signed ONDA: no reviewer
+     * identity is read. Only slots with a decision or a removal appear; an
+     * untouched draft has no history. Two fixed queries.
+     *
+     * @return array<string, list<array{at: string|null, kind: string, file: string, reason: string|null}>>
+     */
+    public static function slotHistory(Oeuvre $oeuvre): array
+    {
+        if ($oeuvre->status === OeuvreStatus::DRAFT) {
+            return [];
+        }
+
+        $files = MediaFile::withTrashed()
+            ->where('oeuvre_id', $oeuvre->id)
+            ->with(['reviews:id,media_file_id,to_status,reason,decided_at'])
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get(['id', 'oeuvre_id', 'college_oeuvre_file_id', 'original_name', 'replaces_media_file_id', 'created_at', 'deleted_at']);
+
+        $history = [];
+
+        foreach ($files->groupBy(fn (MediaFile $file): string => $file->college_oeuvre_file_id === null ? 'none' : (string) $file->college_oeuvre_file_id) as $slot => $slotFiles) {
+            $events = [];
+            $eventful = false;
+
+            foreach ($slotFiles as $file) {
+                $events[] = ['at' => $file->created_at, 'kind' => $file->replaces_media_file_id === null ? 'uploaded' : 'replacement', 'file' => $file->original_name, 'reason' => null];
+
+                foreach ($file->reviews as $review) {
+                    $eventful = true;
+                    $events[] = [
+                        'at' => $review->decided_at,
+                        'kind' => match ($review->to_status) {
+                            ReviewStatusEnum::ACCEPTED => 'accepted',
+                            ReviewStatusEnum::REJECTED => 'rejected',
+                            ReviewStatusEnum::PENDING => 'reset',
+                        },
+                        'file' => $file->original_name,
+                        'reason' => $review->to_status === ReviewStatusEnum::REJECTED ? $review->reason : null,
+                    ];
+                }
+
+                if ($file->deleted_at !== null) {
+                    $eventful = true;
+                    $events[] = ['at' => $file->deleted_at, 'kind' => 'removed', 'file' => $file->original_name, 'reason' => null];
+                }
+            }
+
+            if (! $eventful) {
+                continue;
+            }
+
+            // Stable: same-second events keep their natural order.
+            $order = array_keys($events);
+            array_multisort(array_map(fn (array $event): int => $event['at']?->getTimestamp() ?? 0, $events), $order, $events);
+
+            $history[(string) $slot] = array_map(fn (array $event): array => [...$event, 'at' => $event['at']?->toIso8601String()], $events);
+        }
+
+        return $history;
+    }
+
+    /**
+     * The replacement window of an oeuvre under review, by slot.
+     *
+     * `open` maps a slot id (`college_oeuvre_file_id`; an unclassified
+     * oeuvre has no slot and takes no replacement) to how many replacements
+     * it still takes: removed rejected files
+     * with no replacement yet that no live upload session has reserved —
+     * exactly the test InitUpload applies. `uploading` counts the
+     * reservations held by replacement uploads in flight, `rejected` the
+     * rejected files still on the deposit, `pending` the replacements
+     * waiting for the officer. All zero outside review.
+     *
+     * @return array{open: array<int, int>, uploading: int, rejected: int, pending: int}
+     */
+    public static function replacementState(Oeuvre $oeuvre): array
+    {
+        return self::replacementStates([$oeuvre])[$oeuvre->id];
+    }
+
+    /**
+     * replacementState for several oeuvres, in a fixed three queries.
+     *
+     * @param  iterable<Oeuvre>  $oeuvres
+     * @return array<int, array{open: array<int, int>, uploading: int, rejected: int, pending: int}>
+     */
+    public static function replacementStates(iterable $oeuvres): array
+    {
+        $states = [];
+        $reviewed = [];
+
+        foreach ($oeuvres as $oeuvre) {
+            $states[$oeuvre->id] = ['open' => [], 'uploading' => 0, 'rejected' => 0, 'pending' => 0];
+
+            if (in_array($oeuvre->status, self::REVIEWED_STATUSES, true)) {
+                $reviewed[] = $oeuvre->id;
+            }
+        }
+
+        if ($reviewed === []) {
+            return $states;
+        }
+
+        $removed = MediaFile::openReplacements($reviewed, null, anySlot: true)
+            ->get(['media_files.id', 'oeuvre_id', 'college_oeuvre_file_id']);
+
+        $reserved = $removed->isEmpty() ? collect() : InitUpload::liveSessions()
+            ->whereIn('replaces_media_file_id', $removed->pluck('id')->all())
+            ->pluck('replaces_media_file_id')
+            ->flip();
+
+        foreach ($removed as $file) {
+            $state = $states[$file->oeuvre_id];
+
+            if ($reserved->has($file->id)) {
+                $state['uploading']++;
+            } elseif ($file->college_oeuvre_file_id !== null) {
+                // A slot-less file (unclassified oeuvre) can be removed but
+                // never replaced (InitUpload), so it opens nothing.
+                $slot = $file->college_oeuvre_file_id;
+                $state['open'][$slot] = ($state['open'][$slot] ?? 0) + 1;
+            }
+
+            $states[$file->oeuvre_id] = $state;
+        }
+
+        $counts = MediaFile::query()
+            ->whereIn('oeuvre_id', $reviewed)
+            ->groupBy('oeuvre_id')
+            ->select('oeuvre_id')
+            ->selectRaw('sum(case when review_status = ? then 1 else 0 end) as rejected', [ReviewStatusEnum::REJECTED])
+            ->selectRaw('sum(case when replaces_media_file_id is not null and review_status = ? then 1 else 0 end) as pending', [ReviewStatusEnum::PENDING])
+            ->toBase()
+            ->get();
+
+        foreach ($counts as $row) {
+            $id = (int) $row->oeuvre_id;
+
+            if (isset($states[$id])) {
+                $states[$id] = [...$states[$id], 'rejected' => (int) $row->rejected, 'pending' => (int) $row->pending];
+            }
+        }
+
+        return $states;
     }
 
     /**

@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { AlertTriangle, CheckCircle2, Info, Lock, Send } from '@lucide/vue';
+import {
+    AlertTriangle,
+    CheckCircle2,
+    CircleX,
+    Info,
+    Lock,
+    Send,
+} from '@lucide/vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,7 +18,7 @@ interface SubmissionReason {
     message: string;
 }
 
-defineProps<{
+const props = defineProps<{
     submission: {
         can_submit: boolean;
         blockers: SubmissionReason[];
@@ -25,6 +33,20 @@ defineProps<{
 defineEmits<{ submit: [] }>();
 
 const { t } = useI18n();
+
+/** A deposit returned by the ONDA is submitted "again". */
+const submitLabel = computed(() =>
+    props.status === 'rejected'
+        ? t('oeuvres.gate.resubmit')
+        : t('oeuvres.table.submit'),
+);
+
+/** Files the ONDA rejected still on the deposit (SubmissionGate). */
+const rejectedCount = computed(
+    () =>
+        props.submission.blockers.filter((b) => b.code === 'file_rejected')
+            .length,
+);
 </script>
 
 <template>
@@ -122,7 +144,7 @@ const { t } = useI18n();
                         @click="$emit('submit')"
                     >
                         <Send class="size-4 rtl:rotate-180" />
-                        <span>{{ t('oeuvres.table.submit') }}</span>
+                        <span>{{ submitLabel }}</span>
                     </Button>
                 </div>
 
@@ -176,15 +198,37 @@ const { t } = useI18n();
 
                 <div
                     v-if="!submission.can_submit"
-                    class="flex justify-end pt-1"
+                    class="flex flex-col items-end gap-1.5 pt-1"
                 >
                     <Button
                         class="h-10 cursor-not-allowed gap-2 rounded-xl text-xs opacity-50"
                         disabled
+                        :aria-describedby="
+                            rejectedCount > 0
+                                ? 'submit-blocked-reason'
+                                : undefined
+                        "
+                        data-testid="submit-disabled"
                     >
                         <Send class="size-3.5 rtl:rotate-180" />
-                        {{ t('oeuvres.table.submit') }}
+                        {{ submitLabel }}
                     </Button>
+                    <!-- Why it stays disabled: the same words as the gate. -->
+                    <p
+                        v-if="rejectedCount > 0"
+                        id="submit-blocked-reason"
+                        class="flex items-center gap-1.5 text-xs font-medium text-destructive"
+                        data-testid="submit-blocked-reason"
+                    >
+                        <CircleX class="size-3.5 shrink-0" aria-hidden="true" />
+                        {{
+                            t(
+                                'oeuvres.gate.rejectedFiles',
+                                { count: rejectedCount },
+                                rejectedCount,
+                            )
+                        }}
+                    </p>
                 </div>
             </template>
         </CardContent>

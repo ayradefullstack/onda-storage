@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { AlertCircle, CloudUpload } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { AlertCircle, CloudUpload, RefreshCcw } from '@lucide/vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Button } from '@/components/ui/button';
 import type { RequirementSlot } from '@/components/upload/requirement';
@@ -10,6 +10,7 @@ import {
     sizeLimitBytes,
     toUploadRequirement,
 } from '@/components/upload/requirement';
+import { prefersReducedMotion } from '@/composables/useReducedMotion';
 import { useUploadQueue } from '@/composables/useUploadQueue';
 import type { FileRejection } from '@/composables/useUploadQueue';
 import { formatBytes, truncateFilenameMiddle } from '@/lib/format';
@@ -23,7 +24,28 @@ const props = defineProps<{
     requirement?: RequirementSlot | null;
     compact?: boolean;
     disabled?: boolean;
+    /**
+     * Under review: this dropzone takes the replacement of a rejected file
+     * the author removed. Labelled "Remplacement attendu"; takes at most
+     * `maxFiles` files (the server's open count for the slot).
+     */
+    replacement?: boolean;
+    maxFiles?: number;
+    /** The rejected file's reason, as a reminder above a replacement zone. */
+    reminder?: string | null;
 }>();
+
+// One soft pulse when a replacement zone appears; none under reduced motion.
+const appeared = ref(false);
+
+onMounted(() => {
+    if (!props.replacement || prefersReducedMotion()) {
+        return;
+    }
+
+    appeared.value = true;
+    setTimeout(() => (appeared.value = false), 900);
+});
 
 const { t, locale } = useI18n();
 const { selectFiles } = useUploadQueue();
@@ -64,16 +86,22 @@ const acceptsVideo = computed(() =>
         : allowedExtensionList()
     ).some((extension) => VIDEO_EXTENSIONS.includes(extension.toLowerCase())),
 );
-const multiple = computed(() => props.requirement?.allows_multiple ?? true);
+const multiple = computed(
+    () =>
+        (props.requirement?.allows_multiple ?? true) &&
+        (props.maxFiles === undefined || props.maxFiles > 1),
+);
 
 function handleFiles(fileList: FileList | null): void {
     if (!fileList || fileList.length === 0 || props.disabled) {
         return;
     }
 
-    const files = multiple.value
-        ? Array.from(fileList)
-        : Array.from(fileList).slice(0, 1);
+    const all = Array.from(fileList);
+    const files = all.slice(
+        0,
+        multiple.value ? (props.maxFiles ?? all.length) : 1,
+    );
 
     rejections.value = selectFiles(
         files,
@@ -113,7 +141,45 @@ function onInputChange(event: Event): void {
 </script>
 
 <template>
-    <div>
+    <div :data-replacement="replacement ? 'true' : undefined">
+        <div v-if="replacement" class="mb-2 space-y-1.5">
+            <p
+                class="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-0.5 text-[11px] font-semibold text-destructive"
+                data-testid="replacement-expected"
+            >
+                <RefreshCcw class="size-3" aria-hidden="true" />
+                {{ t('oeuvres.replacement.expected') }}
+            </p>
+            <!-- What the new file must be: the slot's own rule, and why
+                 the previous one was refused. -->
+            <p
+                class="text-[11px] text-muted-foreground"
+                data-testid="replacement-requirement"
+            >
+                <i18n-t keypath="oeuvres.replacement.requirement" tag="span">
+                    <template #extensions>
+                        <bdi dir="ltr" class="font-mono text-foreground/80">{{
+                            extensionsLabel
+                        }}</bdi>
+                    </template>
+                    <template #size>
+                        <bdi dir="ltr" class="font-mono text-foreground/80">{{
+                            formatBytes(sizeLimit, locale)
+                        }}</bdi>
+                    </template>
+                </i18n-t>
+            </p>
+            <p
+                v-if="reminder"
+                class="line-clamp-2 rounded border-s-2 border-destructive/40 bg-muted/60 px-2 py-1 text-[11px] text-foreground"
+                data-testid="replacement-reminder"
+            >
+                <span class="font-medium"
+                    >{{ t('oeuvres.replacement.reminder') }} :
+                </span>
+                <bdi dir="auto">{{ reminder }}</bdi>
+            </p>
+        </div>
         <div
             class="group relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed text-center transition-all duration-200 select-none"
             :class="[
@@ -122,7 +188,10 @@ function onInputChange(event: Event): void {
                     : 'gap-4 p-8 sm:p-10',
                 isDragging
                     ? 'scale-[1.008] border-onda-blue-500 bg-onda-blue-500/10 shadow-lg shadow-onda-blue-500/10'
-                    : 'border-border/80 bg-muted/20 hover:border-onda-blue-500/50 hover:bg-muted/35',
+                    : replacement
+                      ? 'border-destructive/40 bg-destructive/5 hover:border-onda-blue-500/50 hover:bg-muted/35'
+                      : 'border-border/80 bg-muted/20 hover:border-onda-blue-500/50 hover:bg-muted/35',
+                replacement && appeared ? 'motion-pulse-once' : '',
                 disabled
                     ? 'pointer-events-none cursor-not-allowed opacity-40'
                     : '',

@@ -8,8 +8,9 @@ import {
     ShieldCheck,
     Sparkles,
 } from '@lucide/vue';
-import { computed, provide, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, provide, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { toast } from 'vue-sonner';
 import ConsultViewer from '@/components/consult/ConsultViewer.vue';
 import { FILE_PREVIEW } from '@/components/consult/previewContext';
 import SideViewerLayout from '@/components/consult/SideViewerLayout.vue';
@@ -20,8 +21,13 @@ import { oeuvreLabel } from '@/components/oeuvre/label';
 import OeuvreSubmitDialog from '@/components/oeuvre/OeuvreSubmitDialog.vue';
 import SubmitArea from '@/components/oeuvre/SubmitArea.vue';
 import DepositStatusBanner from '@/components/review/DepositStatusBanner.vue';
+import MobileFixBar from '@/components/review/MobileFixBar.vue';
+import ReviewSummary from '@/components/review/ReviewSummary.vue';
 import ReviewTimeline from '@/components/review/ReviewTimeline.vue';
 import type { ReviewEntry } from '@/components/review/ReviewTimeline.vue';
+import type { HistoryEvent } from '@/components/review/SlotHistory.vue';
+import ToFixPanel from '@/components/review/ToFixPanel.vue';
+import type { ToFixItem } from '@/components/review/ToFixPanel.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import DepositCard from '@/components/upload/DepositCard.vue';
@@ -33,6 +39,16 @@ import {
 } from '@/components/upload/depositJourney';
 import Dropzone from '@/components/upload/Dropzone.vue';
 import FileStatusPollNotice from '@/components/upload/FileStatusPollNotice.vue';
+import type { ReplacementState } from '@/components/upload/replacement';
+import {
+    createRemovalFlow,
+    EMPTY_REPLACEMENT,
+    fileAnchor,
+    focusReplacementDropzone,
+    openFor,
+    replacementDropzoneId,
+    revealTarget,
+} from '@/components/upload/replacement';
 import type { RequirementSlot } from '@/components/upload/requirement';
 import RequirementSlotCard from '@/components/upload/RequirementSlotCard.vue';
 import ResumeBanner from '@/components/upload/ResumeBanner.vue';
@@ -54,6 +70,7 @@ import {
 import { assets as previewAssets } from '@/routes/oeuvres/files/preview';
 import type { ConsultationDescriptor } from '@/types/consultation';
 import type { MediaFileSummary } from '@/types/upload';
+import { FINAL_UPLOAD_ERRORS } from '@/types/upload';
 
 interface OeuvreDetail {
     id: number;
@@ -103,13 +120,27 @@ const props = defineProps<{
     submission: Submission;
     /** The decision history. Carries no officer identity — see the controller. */
     reviews: ReviewEntry[];
+    /** Under review: which slots take a replacement (server-computed). */
+    replacement?: ReplacementState;
+    /** Under review: the counters and each slot's state; null otherwise. */
+    review_summary?: {
+        accepted: number;
+        waiting: number;
+        to_fix: number;
+        uploading: number;
+        last_upload_at: string | null;
+        slots: Record<string, 'to_fix' | 'waiting' | 'accepted'> | [];
+    } | null;
+    /** Per slot ("none" for no slot): the document's history. */
+    history?: Record<string, HistoryEvent[]> | [];
 }>();
 
 const { t, locale } = useI18n();
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Works', href: index() }],
+        // An i18n key: Breadcrumbs translates it in the reader's locale.
+        breadcrumbs: [{ title: 'sidebar.nav.oeuvres', href: index() }],
     },
 });
 
@@ -185,20 +216,181 @@ const openSubmitDialog = () => {
     submitDialogFor.value = { uuid: props.oeuvre.uuid, label: label.value };
 };
 
+// What depends on a file's status: the list itself, the quota, the slot
+// completeness, and the submission gate (a file reaching `ready` is exactly
+// what can unblock "Soumettre"), and under review the replacement window.
+const RELOAD_PROPS = [
+    'mediaFiles',
+    'quota',
+    'progress',
+    'submission',
+    'replacement',
+    'review_summary',
+    'history',
+] as const;
+
+// Under review the ONDA decides each file; the author may only remove a
+// rejected one and upload its replacement. Every flag comes from the server.
+const underReview = computed(() => props.oeuvre.status === 'under_review');
+// The per-file decisions are shown, and fixed, in two statuses: under
+// review, and once the whole deposit came back (rejected, editable again).
+// Accepted files stay locked in both.
+const reviewMode = computed(
+    () => underReview.value || props.oeuvre.status === 'rejected',
+);
+const replacementState = computed(() => props.replacement ?? EMPTY_REPLACEMENT);
+const removingUuid = ref<string | null>(null);
+// Polite announcements (the dropzone that just opened, …).
+const liveMessage = ref('');
+
+const slotTitle = (slotId: number | null): string | null =>
+    slotId === null
+        ? null
+        : (props.requirements.find((r) => r.id === slotId)?.title ?? null);
+
+/**
+ * "À corriger": every rejected file still on the deposit, then every slot
+ * still waiting for its replacement. Both come from the server's props.
+ */
+const toFixItems = computed<ToFixItem[]>(() => {
+    if (!reviewMode.value) {
+        return [];
+    }
+
+    const files: ToFixItem[] = props.mediaFiles
+        .filter((file) => file.review_status === 'rejected')
+        .map((file) => ({
+            target: fileAnchor(file.uuid),
+            name: file.original_name,
+            slot: slotTitle(file.college_oeuvre_file_id),
+            kind: 'file',
+        }));
+
+    const slots: ToFixItem[] = props.requirements
+        .filter((r) => openFor(replacementState.value, r.id) > 0)
+        .map((r) => ({
+            target: replacementDropzoneId(r.id),
+            name: r.title,
+            slot: r.title,
+            kind: 'slot',
+        }));
+
+    return [...files, ...slots];
+});
+
+/**
+ * Everything the ONDA asked for has been sent: nothing rejected, no slot
+ * open, nothing still uploading here, and at least one replacement waiting.
+ */
+const allSent = computed(
+    () =>
+        // Under review only: a returned deposit still has to be resubmitted.
+        underReview.value &&
+        toFixItems.value.length === 0 &&
+        replacementState.value.uploading === 0 &&
+        !queue.files.value.some(
+            (f) =>
+                f.oeuvreId === props.oeuvre.id &&
+                !['completed', 'failed', 'expired', 'quota_exceeded'].includes(
+                    f.status,
+                ),
+        ) &&
+        replacementState.value.pending > 0,
+);
+
+/** The last rejection reason of a slot: the reminder above its dropzone. */
+function reminderFor(slotId: number): string | null {
+    const events = Array.isArray(props.history)
+        ? []
+        : (props.history?.[String(slotId)] ?? []);
+
+    return (
+        [...events].reverse().find((event) => event.kind === 'rejected')
+            ?.reason ?? null
+    );
+}
+
+function slotState(slotId: number): 'to_fix' | 'waiting' | 'accepted' | null {
+    const slots = props.review_summary?.slots;
+
+    return !slots || Array.isArray(slots)
+        ? null
+        : (slots[String(slotId)] ?? null);
+}
+
+function historyFor(slotId: number): HistoryEvent[] {
+    return Array.isArray(props.history)
+        ? []
+        : (props.history?.[String(slotId)] ?? []);
+}
+
+/** "Aller au fichier": scroll, focus, one soft highlight. */
+function goTo(target: string): void {
+    revealTarget(target, prefersReducedMotion());
+}
+
+// "Remplacer" / "Supprimer" on a rejected file (see createRemovalFlow).
+const removal = createRemovalFlow({
+    url: (uuid) => destroyFile(uuid).url,
+    slotOf: (uuid) =>
+        props.mediaFiles.find((file) => file.uuid === uuid)
+            ?.college_oeuvre_file_id ?? null,
+    reload: (only, after) =>
+        router.reload(silent({ ...(only ? { only } : {}), onFinish: after })),
+    reloadProps: RELOAD_PROPS,
+    focusSlot: (slotId) =>
+        void nextTick(() => {
+            focusReplacementDropzone(slotId, prefersReducedMotion());
+            liveMessage.value = t('oeuvres.replacement.dropzoneReady', {
+                slot:
+                    props.requirements.find((r) => r.id === slotId)?.title ??
+                    '',
+            });
+        }),
+    toast,
+    t: (key) => t(key),
+});
+removal.onBusyChange((uuid) => (removingUuid.value = uuid));
+
 const removeFile = (uuid: string) => {
+    // A rejected file (in either status) and anything under review go
+    // through the JSON flow, which tells a race with the ONDA apart.
+    const rejected =
+        props.mediaFiles.find((file) => file.uuid === uuid)?.review_status ===
+        'rejected';
+
+    if (underReview.value || rejected) {
+        void removal.remove(uuid, false);
+
+        return;
+    }
+
     router.delete(destroyFile(uuid).url, { preserveScroll: true });
 };
+
+const replaceFile = (uuid: string) => void removal.remove(uuid, true);
+
+// A notification links to `#file-{uuid}`: bring that file into view.
+onMounted(() => {
+    const id = window.location.hash.slice(1);
+
+    if (!id.startsWith(fileAnchor(''))) {
+        return;
+    }
+
+    void nextTick(() =>
+        document.getElementById(id)?.scrollIntoView({
+            behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+            block: 'center',
+        }),
+    );
+});
 
 const readyAtLoadUuids = new Set(
     props.mediaFiles
         .filter((mediaFile) => mediaFile.status === 'ready')
         .map((mediaFile) => mediaFile.uuid),
 );
-
-// What depends on a file's status: the list itself, the quota, the slot
-// completeness, and the submission gate (a file reaching `ready` is exactly
-// what can unblock "Soumettre").
-const RELOAD_PROPS = ['mediaFiles', 'quota', 'progress', 'submission'] as const;
 
 const reloadFileProps = (): void => {
     router.reload(silent({ only: [...RELOAD_PROPS] }));
@@ -231,6 +423,24 @@ watch(completedForThisOeuvre, (next, previous) => {
     if (next > previous) {
         reloadFileProps();
         statusPoll.kick();
+    }
+});
+
+// The deposit was decided (or submitted) under an upload: the server
+// aborted it. The page itself is stale — reload it into its new state.
+const closedForThisOeuvre = computed(
+    () =>
+        queue.files.value.filter(
+            (f) =>
+                f.oeuvreId === props.oeuvre.id &&
+                f.errorCode !== null &&
+                FINAL_UPLOAD_ERRORS.includes(f.errorCode),
+        ).length,
+);
+
+watch(closedForThisOeuvre, (next, previous) => {
+    if (next > previous) {
+        router.reload(silent());
     }
 });
 
@@ -449,7 +659,11 @@ const statusBadge = computed(() => {
                                 @click="openSubmitDialog"
                             >
                                 <Send class="size-3.5 rtl:rotate-180" />
-                                <span>{{ t('oeuvres.table.submit') }}</span>
+                                <span>{{
+                                    oeuvre.status === 'rejected'
+                                        ? t('oeuvres.gate.resubmit')
+                                        : t('oeuvres.table.submit')
+                                }}</span>
                             </Button>
                         </div>
                     </div>
@@ -463,6 +677,22 @@ const statusBadge = computed(() => {
                     :editable="editable"
                     @resubmit="goToFiles"
                 />
+
+                <!-- Under review or returned: what was accepted, what waits,
+                     what to fix (the red alert only when something is). -->
+                <template v-if="reviewMode && review_summary">
+                    <ReviewSummary
+                        :accepted="review_summary.accepted"
+                        :waiting="review_summary.waiting"
+                        :to-fix="review_summary.to_fix"
+                    />
+                    <ToFixPanel
+                        :items="toFixItems"
+                        :all-sent="allSent"
+                        :last-upload-at="review_summary.last_upload_at"
+                        @go="goTo"
+                    />
+                </template>
 
                 <!-- Official Classification Card -->
                 <ClassificationCard
@@ -695,10 +925,22 @@ const statusBadge = computed(() => {
                                     "
                                     :quota="quota"
                                     :editable="editable"
+                                    :review-mode="reviewMode"
+                                    :replacement-open="
+                                        openFor(
+                                            replacementState,
+                                            requirement.id,
+                                        )
+                                    "
+                                    :busy-uuid="removingUuid"
+                                    :review-state="slotState(requirement.id)"
+                                    :reminder="reminderFor(requirement.id)"
+                                    :history="historyFor(requirement.id)"
                                     @pause="queue.pauseFile"
                                     @resume="queue.resumeFile"
                                     @cancel="queue.cancelFile"
                                     @remove="removeFile"
+                                    @replace="replaceFile"
                                 />
                             </li>
                         </ol>
@@ -728,6 +970,11 @@ const statusBadge = computed(() => {
                                     :entry="entry"
                                     :quota="quota"
                                     :editable="editable"
+                                    :review-mode="reviewMode"
+                                    :busy="
+                                        entry.kind === 'media' &&
+                                        removingUuid === entry.file.uuid
+                                    "
                                     @pause="queue.pauseFile"
                                     @resume="queue.resumeFile"
                                     @cancel="queue.cancelFile"
@@ -848,6 +1095,11 @@ const statusBadge = computed(() => {
                                     :entry="entry"
                                     :quota="quota"
                                     :editable="editable"
+                                    :review-mode="reviewMode"
+                                    :busy="
+                                        entry.kind === 'media' &&
+                                        removingUuid === entry.file.uuid
+                                    "
                                     @pause="queue.pauseFile"
                                     @resume="queue.resumeFile"
                                     @cancel="queue.cancelFile"
@@ -891,5 +1143,22 @@ const statusBadge = computed(() => {
             :oeuvre="submitDialogFor"
             @close="submitDialogFor = null"
         />
+
+        <!-- Below sm: "{n} fichier(s) à corriger", to the first one. -->
+        <MobileFixBar
+            v-if="reviewMode"
+            :count="toFixItems.length"
+            @go="toFixItems[0] && goTo(toFixItems[0].target)"
+        />
+        <!-- Leaves room for the bar so it never covers the last file. -->
+        <div
+            v-if="reviewMode && toFixItems.length > 0"
+            class="h-20 sm:hidden"
+            aria-hidden="true"
+        />
+
+        <p class="sr-only" aria-live="polite" data-testid="live-region">
+            {{ liveMessage }}
+        </p>
     </div>
 </template>

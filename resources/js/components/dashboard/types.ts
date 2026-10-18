@@ -18,10 +18,16 @@ export interface DashboardAction {
     uuid: string;
     label_source: LabelSource;
     status: string;
-    /** `ready` only when SubmissionGate passes and the policy allows it. */
-    kind: 'rejected' | 'incomplete' | 'ready';
+    /**
+     * `ready` only when SubmissionGate passes and the policy allows it.
+     * Under review: `replace` (files the ONDA rejected still to replace) or
+     * `awaiting` (every replacement handed in, waiting for the ONDA).
+     */
+    kind: 'rejected' | 'incomplete' | 'ready' | 'replace' | 'awaiting';
     blockers: GateReason[];
     rejection: { reason: string | null; at: string | null } | null;
+    /** Set on `replace` / `awaiting` items. */
+    replacement?: { to_replace: number; pending: number } | null;
 }
 
 export interface DashboardActions {

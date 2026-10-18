@@ -36,7 +36,9 @@ Route::middleware(['auth', 'verified', 'role:author'])->prefix('author/oeuvres')
     // own uuid, so nothing has to trust an oeuvre id from the request.
     // There is deliberately no counterpart that edits an oeuvre's
     // classification — see OeuvrePolicy::update()'s doc comment.
-    Route::delete('/files/{mediaFile:uuid}', [MediaFileController::class, 'destroy'])->name('files.destroy');
+    // withTrashed: repeating a removal answers with the current state
+    // instead of a 404 (RemoveMediaFile returns quietly for a removed file).
+    Route::delete('/files/{mediaFile:uuid}', [MediaFileController::class, 'destroy'])->name('files.destroy')->withTrashed();
 
     // Preview of the author's OWN files, through the same consultation module
     // as the admin review. The file is resolved through the oeuvre (scoped

@@ -9,6 +9,7 @@ use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Exceptions\InsufficientStorage;
 use App\Domain\Vault\Value\UploadIntent;
 use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Enums\UploadSession\StatusEnum as UploadSessionStatus;
 use App\Models\CollegeOeuvreFile;
 use App\Models\MediaFile;
@@ -22,6 +23,7 @@ use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -81,13 +83,19 @@ final class InitUpload
         // comes back. A rejected one reopens, which is what makes "fix it
         // and resubmit" possible. Hiding the upload button is not a
         // freeze — this is.
-        if (! $oeuvre->status->isAuthorEditable()) {
+        //
+        // One narrow exception (see reserveReplacementTarget): while the work is
+        // under review, a slot whose rejected file the author removed takes
+        // exactly one replacement.
+        $replacement = $oeuvre->status === OeuvreStatus::UNDER_REVIEW;
+
+        if (! $replacement && ! $oeuvre->status->isAuthorEditable()) {
             throw ValidationException::withMessages([
                 'oeuvre_id' => ['This work has been submitted and can no longer receive files.'],
             ]);
         }
 
-        if (! $user->can('update', $oeuvre)) {
+        if (! $replacement && ! $user->can('update', $oeuvre)) {
             throw new AuthorizationException('This work does not belong to you.');
         }
 
@@ -102,8 +110,25 @@ final class InitUpload
         // the critical section (a validation error, a full disk) can never
         // leave it held for its 10 s TTL.
         try {
-            return Cache::lock('upload-init:'.$user->id, 10)->block(5, function () use ($user, $oeuvre, $filename, $sizeBytes, $collegeOeuvreFileId, $mime): UploadSession {
-                return $this->reserve($user, $oeuvre, $filename, $sizeBytes, $mime, $collegeOeuvreFileId);
+            return Cache::lock('upload-init:'.$user->id, 10)->block(5, function () use ($user, $oeuvre, $filename, $sizeBytes, $collegeOeuvreFileId, $mime, $replacement): UploadSession {
+                if (! $replacement) {
+                    return $this->reserve($user, $oeuvre, $filename, $sizeBytes, $mime, $collegeOeuvreFileId);
+                }
+
+                // A replacement also holds the oeuvre row (the order every
+                // review action uses), so an officer's decision and this
+                // init cannot interleave.
+                return DB::transaction(function () use ($user, $oeuvre, $filename, $sizeBytes, $collegeOeuvreFileId, $mime): UploadSession {
+                    $locked = Oeuvre::query()->whereKey($oeuvre->getKey())->lockForUpdate()->firstOrFail();
+
+                    if ($locked->status !== OeuvreStatus::UNDER_REVIEW) {
+                        throw ValidationException::withMessages([
+                            'oeuvre_id' => ['This work has been decided and can no longer receive files.'],
+                        ]);
+                    }
+
+                    return $this->reserve($user, $locked, $filename, $sizeBytes, $mime, $collegeOeuvreFileId, replacement: true);
+                });
             });
         } catch (LockTimeoutException) {
             // A server-side hiccup, not a client error: 503 + Retry-After
@@ -122,11 +147,19 @@ final class InitUpload
      * two inits fired together cannot both fit into the same remaining
      * space. Expired and aborted sessions release their reservation.
      */
-    private function reserve(User $user, Oeuvre $oeuvre, string $filename, int $sizeBytes, string $mime, ?int $collegeOeuvreFileId): UploadSession
+    private function reserve(User $user, Oeuvre $oeuvre, string $filename, int $sizeBytes, string $mime, ?int $collegeOeuvreFileId, bool $replacement = false): UploadSession
     {
         $requirement = null;
 
         if ($oeuvre->register_type_college_id === null) {
+            // No collège, no slots: nothing a replacement could go into. Its
+            // rejected file can still be removed, not replaced.
+            if ($replacement) {
+                throw ValidationException::withMessages([
+                    'oeuvre_id' => ['This work has no collège: a rejected file can be removed but not replaced during review.'],
+                ]);
+            }
+
             if ($collegeOeuvreFileId !== null) {
                 throw ValidationException::withMessages([
                     'college_oeuvre_file_id' => ['This work has no collège, so it has no document requirements.'],
@@ -139,6 +172,8 @@ final class InitUpload
             $this->assertFileMatchesRequirement($requirement, $filename, $sizeBytes);
             $this->assertSlotAcceptsAnotherFile($oeuvre, $requirement);
         }
+
+        $replaces = $replacement ? $this->reserveReplacementTarget($oeuvre, $requirement?->id) : null;
 
         $quota = StorageQuota::where('user_id', $user->id)->first();
 
@@ -176,8 +211,11 @@ final class InitUpload
         // Set after beginUpload() rather than carried in UploadIntent: the
         // vault contract has no notion of document requirements and needs
         // none. CompleteUpload reads it back off the session.
-        if ($requirement !== null) {
-            $session->college_oeuvre_file_id = $requirement->id;
+        if ($requirement !== null || $replaces !== null) {
+            $session->college_oeuvre_file_id = $requirement?->id;
+            // The removed rejected file this replacement takes the place
+            // of, chosen and held here; CompleteUpload copies it.
+            $session->replaces_media_file_id = $replaces;
             $session->save();
         }
 
@@ -296,6 +334,44 @@ final class InitUpload
                 'size_bytes' => ["This file exceeds the {$limit} MB limit for this document."],
             ]);
         }
+    }
+
+    /**
+     * Under review, a slot takes a file only to replace one the officer
+     * rejected and the author removed. The server picks the oldest such
+     * file that no live session holds yet and returns its id, which the
+     * new session stores: that row IS the reservation. Runs under the user
+     * lock and the oeuvre row lock, so two inits for one open slot cannot
+     * pick the same file; the second finds nothing left and is refused.
+     * An aborted or expired session stops being live, which frees its file.
+     */
+    private function reserveReplacementTarget(Oeuvre $oeuvre, ?int $slotId): int
+    {
+        $target = self::unreservedReplacements($oeuvre->id, $slotId)->value('media_files.id');
+
+        if ($target === null) {
+            throw ValidationException::withMessages([
+                // The same key as the plain freeze when nothing is open on
+                // the whole deposit; the slot's key when another slot is.
+                self::unreservedReplacements($oeuvre->id, null, anySlot: true)->exists() ? 'college_oeuvre_file_id' : 'oeuvre_id' => ['This work is under review: a file can only be added to replace a rejected file you have removed.'],
+            ]);
+        }
+
+        return (int) $target;
+    }
+
+    /**
+     * Removed rejected files open for a replacement (MediaFile::openReplacements)
+     * that no live upload session has reserved. Oldest first.
+     *
+     * @return Builder<MediaFile>
+     */
+    public static function unreservedReplacements(int $oeuvreId, ?int $slotId, bool $anySlot = false): Builder
+    {
+        return MediaFile::openReplacements($oeuvreId, $slotId, $anySlot)
+            ->whereNotIn('media_files.id', self::liveSessions()
+                ->whereNotNull('replaces_media_file_id')
+                ->select('replaces_media_file_id'));
     }
 
     /**

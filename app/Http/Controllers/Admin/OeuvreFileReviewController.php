@@ -76,6 +76,12 @@ final class OeuvreFileReviewController extends Controller
                 'review_status' => $mediaFile->review_status,
                 'review_reason' => $mediaFile->review_reason,
                 'allowed' => DecideMediaFile::allowed($oeuvre, $mediaFile, $admin),
+                // A replacement uploaded during review: what it replaces, and
+                // why that file was rejected.
+                'replaces' => $mediaFile->replaces === null ? null : [
+                    'original_name' => $mediaFile->replaces->original_name,
+                    'review_reason' => $mediaFile->replaces->review_reason,
+                ],
             ],
             'siblings' => $files->map(fn (MediaFile $sibling): array => [
                 'uuid' => $sibling->uuid,

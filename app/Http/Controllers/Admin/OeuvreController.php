@@ -181,7 +181,7 @@ final class OeuvreController extends Controller
 
         // Eager: variants, slot and reviewer once for the page, not per file.
         $files = $oeuvre->mediaFiles()
-            ->with(['variants:id,media_file_id,uuid,kind', 'collegeOeuvreFile', 'reviewer:id,name'])
+            ->with(['variants:id,media_file_id,uuid,kind', 'collegeOeuvreFile', 'reviewer:id,name', 'replaces:id,uuid,original_name,review_reason'])
             ->orderBy('created_at')
             ->orderBy('id')
             ->get()
@@ -210,6 +210,12 @@ final class OeuvreController extends Controller
                     'reviewed_by' => $mediaFile->reviewer?->name,
                     // Server-computed: which file decisions to offer, and why none.
                     'allowed' => DecideMediaFile::allowed($oeuvre, $mediaFile, $admin),
+                    // A replacement uploaded during review: the file it
+                    // replaces and why that one was rejected.
+                    'replaces' => $mediaFile->replaces === null ? null : [
+                        'original_name' => $mediaFile->replaces->original_name,
+                        'review_reason' => $mediaFile->replaces->review_reason,
+                    ],
                 ];
             });
 
@@ -243,10 +249,44 @@ final class OeuvreController extends Controller
                 'is_draft' => $oeuvre->status === OeuvreStatus::DRAFT,
             ],
             'files' => $files,
+            // Evidence, read-only: the rejected files the author removed
+            // during review, and what replaced each one.
+            // A replacement the author withdrew is listed too (it carries
+            // replaces_media_file_id); a notification already sent about it
+            // is not retracted.
+            'removed_files' => MediaFile::onlyTrashed()
+                ->where('oeuvre_id', $oeuvre->id)
+                ->where(fn ($query) => $query
+                    ->where('review_status', ReviewStatusEnum::REJECTED)
+                    ->orWhereNotNull('replaces_media_file_id'))
+                ->with('replacements:id,uuid,original_name,replaces_media_file_id,deleted_at')
+                ->orderBy('deleted_at')
+                ->orderBy('id')
+                ->get()
+                ->map(function (MediaFile $removed): array {
+                    // The live replacement if there is one, else the latest.
+                    $by = $removed->replacements->first(fn (MediaFile $replacement): bool => ! $replacement->trashed())
+                        ?? $removed->replacements->last();
+
+                    return [
+                        'uuid' => $removed->uuid,
+                        'original_name' => $removed->original_name,
+                        'review_reason' => $removed->review_reason,
+                        'removed_at' => $removed->deleted_at,
+                        'withdrawn_replacement' => $removed->replaces_media_file_id !== null && $removed->review_status !== ReviewStatusEnum::REJECTED,
+                        'replaced_by' => $by === null ? null : [
+                            'uuid' => $by->uuid,
+                            'original_name' => $by->original_name,
+                            'removed' => $by->trashed(),
+                        ],
+                    ];
+                })
+                ->values(),
             'review_counts' => [
                 'total' => $files->count(),
                 'accepted' => $files->where('review_status', ReviewStatusEnum::ACCEPTED)->count(),
                 'rejected' => $files->where('review_status', ReviewStatusEnum::REJECTED)->count(),
+                'pending_replacements' => $files->filter(fn (array $file): bool => $file['replaces'] !== null && $file['review_status'] === ReviewStatusEnum::PENDING)->count(),
             ],
             // Who holds this deposit right now, and whether that is the
             // officer reading the page. The page offers an explicit

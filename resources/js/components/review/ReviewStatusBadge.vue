@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CircleCheck, CircleX, Clock } from '@lucide/vue';
+import { CircleCheck, CircleX, Clock, Lock } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +13,11 @@ import { REVIEW_STATUS } from './fileReview';
  * icons mirror ReviewStatusEnum::color() / icon(). Pulses once when the
  * decision changes under it.
  */
-const props = defineProps<{ status: string }>();
+const props = defineProps<{
+    status: string;
+    /** The author's wording ("En attente d'examen"), not the officer's. */
+    author?: boolean;
+}>();
 
 const { t } = useI18n();
 const pulsing = usePulseOnChange(() => props.status);
@@ -24,9 +28,12 @@ const VARIANTS: Record<string, BadgeVariants['variant']> = {
     [REVIEW_STATUS.REJECTED]: 'destructive',
 };
 
+// On the author's side an accepted file is locked: the icon says so.
 const icon = computed(() =>
     props.status === REVIEW_STATUS.ACCEPTED
-        ? CircleCheck
+        ? props.author
+            ? Lock
+            : CircleCheck
         : props.status === REVIEW_STATUS.REJECTED
           ? CircleX
           : Clock,
@@ -41,6 +48,12 @@ const icon = computed(() =>
         :data-status="status"
     >
         <component :is="icon" class="size-3" aria-hidden="true" />
-        {{ t(`review.file.status.${status}`) }}
+        {{
+            t(
+                author
+                    ? `oeuvres.replacement.status.${status}`
+                    : `review.file.status.${status}`,
+            )
+        }}
     </Badge>
 </template>

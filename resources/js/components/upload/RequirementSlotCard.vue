@@ -2,12 +2,17 @@
 import {
     CheckCircle2,
     CircleDashed,
+    CircleX,
+    Clock,
     FileCheck,
     Info,
     Loader2,
+    Lock,
 } from '@lucide/vue';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import SlotHistory from '@/components/review/SlotHistory.vue';
+import type { HistoryEvent } from '@/components/review/SlotHistory.vue';
 import { Card, CardContent } from '@/components/ui/card';
 import {
     Tooltip,
@@ -19,6 +24,7 @@ import DepositCard from '@/components/upload/DepositCard.vue';
 import type { DepositEntry } from '@/components/upload/depositJourney';
 import { entryKey, slotStateOf } from '@/components/upload/depositJourney';
 import Dropzone from '@/components/upload/Dropzone.vue';
+import { replacementDropzoneId } from '@/components/upload/replacement';
 import type { RequirementSlot } from '@/components/upload/requirement';
 import {
     describeConditions,
@@ -33,6 +39,25 @@ const props = defineProps<{
     entries: DepositEntry[];
     quota: { used_bytes: number; limit_bytes: number };
     editable?: boolean;
+    /**
+     * The ONDA's per-file decisions are shown: the deposit is under review,
+     * or was returned to its author (rejected).
+     */
+    reviewMode?: boolean;
+    /**
+     * How many removed rejected files of this slot wait for their
+     * replacement (the server's `replacement.open`). Above 0 the slot shows
+     * a "Remplacement attendu" dropzone; under review, only then.
+     */
+    replacementOpen?: number;
+    /** The file whose removal is in flight, if any. */
+    busyUuid?: string | null;
+    /** Under review: the slot's own state (server: review_summary.slots). */
+    reviewState?: 'to_fix' | 'waiting' | 'accepted' | null;
+    /** The last rejection reason in this slot, shown above its dropzone. */
+    reminder?: string | null;
+    /** "Historique de ce document" (server: history[slot]). */
+    history?: HistoryEvent[];
 }>();
 
 const emit = defineEmits<{
@@ -40,7 +65,20 @@ const emit = defineEmits<{
     resume: [id: string];
     cancel: [id: string];
     remove: [uuid: string];
+    replace: [uuid: string];
 }>();
+
+const replacementExpected = computed(() => (props.replacementOpen ?? 0) > 0);
+
+/**
+ * Under review (not editable) a slot takes a file only to replace a
+ * removed rejected one. On a deposit returned to its author (editable) the
+ * slot's own dropzone stays, and reads "Remplacement attendu" while such a
+ * file waits for its successor.
+ */
+const takesReplacement = computed(
+    () => !props.editable && replacementExpected.value,
+);
 
 const { t, locale } = useI18n();
 
@@ -185,8 +223,35 @@ const mayNotApply = computed(
 
                 <!-- Status Badge -->
                 <div class="shrink-0">
+                    <!-- Under review the slot reads by the ONDA's decision. -->
                     <span
-                        v-if="state === 'deposited'"
+                        v-if="reviewMode && reviewState"
+                        class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold"
+                        :class="
+                            reviewState === 'to_fix'
+                                ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                                : reviewState === 'accepted'
+                                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                  : 'border-border bg-muted/40 text-muted-foreground'
+                        "
+                        data-testid="slot-review-state"
+                        :data-state="reviewState"
+                    >
+                        <component
+                            :is="
+                                reviewState === 'to_fix'
+                                    ? CircleX
+                                    : reviewState === 'accepted'
+                                      ? Lock
+                                      : Clock
+                            "
+                            class="size-3.5"
+                            aria-hidden="true"
+                        />
+                        {{ t(`oeuvres.review.slot.${reviewState}`) }}
+                    </span>
+                    <span
+                        v-else-if="state === 'deposited'"
                         class="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300"
                     >
                         <CheckCircle2 class="size-3.5" />
@@ -212,9 +277,26 @@ const mayNotApply = computed(
             <!-- Dropzone for this slot -->
             <Dropzone
                 v-if="editable"
+                :id="
+                    replacementExpected
+                        ? replacementDropzoneId(requirement.id)
+                        : undefined
+                "
                 :oeuvre-id="oeuvreId"
                 :requirement="requirement"
                 :disabled="locked"
+                :replacement="replacementExpected"
+                :reminder="replacementExpected ? reminder : null"
+                compact
+            />
+            <Dropzone
+                v-else-if="takesReplacement"
+                :id="replacementDropzoneId(requirement.id)"
+                :oeuvre-id="oeuvreId"
+                :requirement="requirement"
+                :max-files="replacementOpen"
+                :reminder="reminder"
+                replacement
                 compact
             />
 
@@ -241,14 +323,26 @@ const mayNotApply = computed(
                             :entry="entry"
                             :quota="quota"
                             :editable="editable"
+                            :review-mode="reviewMode"
+                            can-replace
+                            :busy="
+                                entry.kind === 'media' &&
+                                busyUuid === entry.file.uuid
+                            "
                             @pause="emit('pause', $event)"
                             @resume="emit('resume', $event)"
                             @cancel="emit('cancel', $event)"
                             @remove="emit('remove', $event)"
+                            @replace="emit('replace', $event)"
                         />
                     </li>
                 </ul>
             </div>
+
+            <SlotHistory
+                v-if="history && history.length > 0"
+                :events="history"
+            />
         </CardContent>
     </Card>
 </template>

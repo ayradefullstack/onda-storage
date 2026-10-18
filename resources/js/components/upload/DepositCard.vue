@@ -23,8 +23,18 @@ import {
 import { computed, inject, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { FILE_PREVIEW } from '@/components/consult/previewContext';
+import FileRemovalDialog from '@/components/review/FileRemovalDialog.vue';
+import type { RemovalMode } from '@/components/review/FileRemovalDialog.vue';
+import RejectedFileCallout from '@/components/review/RejectedFileCallout.vue';
+import ReviewStatusBadge from '@/components/review/ReviewStatusBadge.vue';
 import { AppDialog } from '@/components/ui/app-dialog';
 import { Button } from '@/components/ui/button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
     alertToneOf,
     createEtaSmoother,
@@ -36,6 +46,7 @@ import {
 } from '@/components/upload/depositJourney';
 import type { DepositEntry } from '@/components/upload/depositJourney';
 import DepositStateTrack from '@/components/upload/DepositStateTrack.vue';
+import { fileAnchor } from '@/components/upload/replacement';
 import { usePulseOnChange } from '@/composables/usePulseOnChange';
 import {
     formatBytes,
@@ -45,11 +56,21 @@ import {
     truncateFilenameMiddle,
 } from '@/lib/format';
 import { preview } from '@/routes/oeuvres/files';
+import { FINAL_UPLOAD_ERRORS } from '@/types/upload';
 
 const props = defineProps<{
     entry: DepositEntry;
     quota?: { used_bytes: number; limit_bytes: number } | null;
     editable?: boolean;
+    /**
+     * The deposit is under review: every file shows the ONDA's decision,
+     * and a rejected one its reason with "Remplacer" / "Supprimer".
+     */
+    reviewMode?: boolean;
+    /** The file's slot takes a replacement once it is removed. */
+    canReplace?: boolean;
+    /** A removal of this file is in flight. */
+    busy?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -57,6 +78,8 @@ const emit = defineEmits<{
     resume: [id: string];
     cancel: [id: string];
     remove: [uuid: string];
+    /** Remove, then hand the slot's dropzone the focus. */
+    replace: [uuid: string];
 }>();
 
 const { t, locale } = useI18n();
@@ -222,9 +245,80 @@ const canResumeOrRetry = computed(() => {
         (f.status === 'paused' ||
             f.status === 'failed' ||
             f.status === 'expired') &&
-        f.file !== null
+        f.file !== null &&
+        // The deposit closed mid-upload: the server aborted the session.
+        (f.errorCode === null || !FINAL_UPLOAD_ERRORS.includes(f.errorCode))
     );
 });
+
+const reviewStatus = computed(() =>
+    props.reviewMode ? (mediaFile.value?.review_status ?? null) : null,
+);
+
+/**
+ * The author's own replacement, not decided yet, which the server lets
+ * them take back (`can_remove`): "Retirer ce remplacement" while it is
+ * fine, "Supprimer et réessayer" once its processing failed.
+ */
+const replacementAction = computed<RemovalMode | null>(() => {
+    const m = mediaFile.value;
+
+    if (!props.reviewMode || !m?.replaces || !m.can_remove) {
+        return null;
+    }
+
+    if (reviewStatus.value !== 'pending') {
+        return null;
+    }
+
+    return m.status === 'failed' || m.status === 'quarantined'
+        ? 'retry'
+        : 'withdraw';
+});
+
+/**
+ * The plain trash icon, on an editable deposit only. Never on a file the
+ * ONDA accepted (locked, whatever the deposit's status), nor on a rejected
+ * one (its callout carries "Supprimer et remplacer"), nor on a replacement
+ * that has its own "Retirer" action.
+ */
+const showTrash = computed(() => {
+    const m = mediaFile.value;
+
+    return (
+        !!m &&
+        !!props.editable &&
+        m.review_status !== 'accepted' &&
+        reviewStatus.value !== 'rejected' &&
+        replacementAction.value === null
+    );
+});
+
+const replacementConfirmOpen = ref(false);
+
+watch(
+    () => props.busy,
+    (busy, wasBusy) => {
+        if (wasBusy && !busy) {
+            replacementConfirmOpen.value = false;
+        }
+    },
+);
+
+function confirmReplacementAction(): void {
+    const m = mediaFile.value;
+
+    if (!m || props.busy) {
+        return;
+    }
+
+    // "retry" is a remove, then the slot's dropzone gets the focus.
+    if (replacementAction.value === 'retry') {
+        emit('replace', m.uuid);
+    } else {
+        emit('remove', m.uuid);
+    }
+}
 
 interface ErrorText {
     key: string;
@@ -333,21 +427,42 @@ async function copyFingerprint(): Promise<void> {
 
 <template>
     <div
-        class="group/card relative overflow-hidden rounded-2xl border p-4 transition-all duration-300"
+        class="group/card relative overflow-hidden rounded-2xl border p-4 transition-all duration-300 outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
         :class="[
-            alertTone === 'error'
+            reviewStatus === 'rejected'
                 ? 'border-destructive/40 bg-destructive/5'
-                : alertTone === 'quarantine'
-                  ? 'border-amber-500/50 bg-amber-500/5'
-                  : isReady
-                    ? 'border-emerald-500/30 bg-card/80 shadow-xs'
-                    : uploadFile?.status === 'uploading'
-                      ? 'border-onda-blue-500/50 bg-card shadow-sm ring-1 ring-onda-blue-500/20'
-                      : 'border-border/80 bg-card/60',
+                : reviewStatus === 'accepted'
+                  ? 'border-emerald-500/30 bg-emerald-500/5'
+                  : alertTone === 'error'
+                    ? 'border-destructive/40 bg-destructive/5'
+                    : alertTone === 'quarantine'
+                      ? 'border-amber-500/50 bg-amber-500/5'
+                      : isReady
+                        ? 'border-emerald-500/30 bg-card/80 shadow-xs'
+                        : uploadFile?.status === 'uploading'
+                          ? 'border-onda-blue-500/50 bg-card shadow-sm ring-1 ring-onda-blue-500/20'
+                          : 'border-border/80 bg-card/60',
             selected ? 'ring-2 ring-primary' : '',
+            mediaFile ? 'scroll-mt-24' : '',
         ]"
+        :id="mediaFile ? fileAnchor(mediaFile.uuid) : undefined"
+        :tabindex="mediaFile && reviewMode ? -1 : undefined"
         :data-selected="selected ? 'true' : undefined"
+        :data-review-status="reviewStatus ?? undefined"
     >
+        <!-- The decision at a glance: a start-side bar, never colour alone
+             (the badge carries the icon and the words). -->
+        <span
+            v-if="reviewStatus === 'rejected' || reviewStatus === 'accepted'"
+            class="pointer-events-none absolute inset-y-0 start-0 w-1"
+            :class="
+                reviewStatus === 'rejected'
+                    ? 'bg-destructive'
+                    : 'bg-emerald-500'
+            "
+            aria-hidden="true"
+            data-testid="review-accent"
+        />
         <!-- File Header Row -->
         <div class="flex items-center justify-between gap-3">
             <div class="flex min-w-0 flex-1 items-center gap-3">
@@ -369,11 +484,54 @@ async function copyFingerprint(): Promise<void> {
 
                 <!-- Name & Meta -->
                 <div class="min-w-0 flex-1">
+                    <div class="flex min-w-0 items-center gap-2">
+                        <p
+                            class="truncate text-sm font-semibold tracking-tight text-foreground"
+                            :title="filename"
+                        >
+                            <bdi>{{ displayName }}</bdi>
+                        </p>
+                        <TooltipProvider
+                            v-if="reviewStatus === 'accepted'"
+                            :delay-duration="150"
+                        >
+                            <Tooltip>
+                                <TooltipTrigger as-child>
+                                    <span
+                                        class="inline-flex shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                                        tabindex="0"
+                                        :aria-label="
+                                            t('oeuvres.replacement.lockedHint')
+                                        "
+                                        data-testid="accepted-lock"
+                                    >
+                                        <ReviewStatusBadge
+                                            :status="reviewStatus"
+                                            author
+                                        />
+                                    </span>
+                                </TooltipTrigger>
+                                <TooltipContent class="max-w-xs">
+                                    {{ t('oeuvres.replacement.lockedHint') }}
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                        <ReviewStatusBadge
+                            v-else-if="reviewStatus"
+                            :status="reviewStatus"
+                            author
+                            class="shrink-0"
+                        />
+                    </div>
                     <p
-                        class="truncate text-sm font-semibold tracking-tight text-foreground"
-                        :title="filename"
+                        v-if="mediaFile?.replaces"
+                        class="mt-0.5 truncate text-[11px] text-muted-foreground"
+                        data-testid="replaces-label"
                     >
-                        <bdi>{{ displayName }}</bdi>
+                        {{ t('oeuvres.replacement.replaces') }}
+                        <bdi class="font-medium text-foreground/80">{{
+                            mediaFile.replaces.original_name
+                        }}</bdi>
                     </p>
 
                     <div
@@ -493,7 +651,7 @@ async function copyFingerprint(): Promise<void> {
                     </Button>
                 </template>
 
-                <template v-else-if="mediaFile && editable">
+                <template v-else-if="mediaFile && showTrash">
                     <Button
                         variant="ghost"
                         size="icon-sm"
@@ -792,6 +950,47 @@ async function copyFingerprint(): Promise<void> {
                 </div>
             </div>
         </template>
+
+        <!-- UNDER REVIEW: the author's own replacement, not decided yet. -->
+        <div
+            v-if="replacementAction && mediaFile"
+            class="mt-3 flex justify-end"
+            data-testid="replacement-action"
+        >
+            <Button
+                size="sm"
+                variant="outline"
+                class="h-8 cursor-pointer gap-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
+                @click="replacementConfirmOpen = true"
+            >
+                <RotateCcw
+                    v-if="replacementAction === 'retry'"
+                    class="size-3.5"
+                />
+                <Trash2 v-else class="size-3.5" />
+                {{ t(`oeuvres.removal.${replacementAction}.action`) }}
+            </Button>
+            <FileRemovalDialog
+                v-model:open="replacementConfirmOpen"
+                :mode="replacementAction"
+                :file-name="mediaFile.original_name"
+                :busy="busy"
+                @confirm="confirmReplacementAction"
+            />
+        </div>
+
+        <!-- UNDER REVIEW: a file the ONDA rejected, and what may be done. -->
+        <RejectedFileCallout
+            v-if="reviewStatus === 'rejected' && mediaFile"
+            :file-name="mediaFile.original_name"
+            :reason="mediaFile.review_reason ?? null"
+            :reviewed-at="mediaFile.reviewed_at ?? null"
+            :can-remove="mediaFile.can_remove"
+            :can-replace="canReplace ?? false"
+            :busy="busy"
+            @replace="emit('replace', mediaFile.uuid)"
+            @remove="emit('remove', mediaFile.uuid)"
+        />
 
         <!-- REMOVE DIALOG -->
         <AppDialog v-model:open="removeConfirmOpen" size="md">

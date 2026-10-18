@@ -6,6 +6,7 @@ import {
     Clock,
     FileCheck2,
     Info,
+    RefreshCcw,
     SearchCheck,
     ShieldCheck,
 } from '@lucide/vue';
@@ -23,6 +24,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { fileAnchor } from '@/components/upload/replacement';
 import {
     index as notificationsIndex,
     read as markRead,
@@ -49,6 +51,8 @@ interface NotificationData {
     label_source?: LabelSource;
     reason?: string;
     url?: string;
+    /** On a file notification: the file the row is about. */
+    file_uuid?: string;
 }
 
 interface NotificationRow {
@@ -135,7 +139,11 @@ function markAllAsRead(): void {
     void request(markAllRead().url, 'POST');
 }
 
-/** Same-origin path of the page a row points at, or null. */
+/**
+ * Same-origin path of the page a row points at, or null. A file rejection
+ * opens the deposit scrolled to that file (`#file-{uuid}`, which the page
+ * brings into view); opening a row never changes any data.
+ */
 function target(item: NotificationRow): string | null {
     if (!item.data.url) {
         return null;
@@ -143,8 +151,12 @@ function target(item: NotificationRow): string | null {
 
     try {
         const url = new URL(item.data.url, window.location.origin);
+        const hash =
+            item.data.type === 'file_rejected' && item.data.file_uuid
+                ? `#${fileAnchor(item.data.file_uuid)}`
+                : url.hash;
 
-        return `${url.pathname}${url.search}`;
+        return `${url.pathname}${url.search}${hash}`;
     } catch {
         return null;
     }
@@ -203,6 +215,8 @@ function icon(item: NotificationRow): Component {
         case 'submitted':
         case 'resubmitted':
             return FileCheck2;
+        case 'replacement':
+            return RefreshCcw;
         default:
             return Info;
     }
@@ -215,6 +229,7 @@ function iconColor(item: NotificationRow): string {
         case 'rejected':
             return 'bg-destructive/10 text-destructive';
         case 'under_review':
+        case 'replacement':
             return 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400';
         default:
             return 'bg-onda-blue-500/10 text-onda-blue-600 dark:bg-onda-blue-500/20 dark:text-onda-blue-400';

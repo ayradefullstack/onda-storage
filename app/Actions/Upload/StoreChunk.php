@@ -21,6 +21,7 @@ final class StoreChunk
     public function __construct(
         private readonly VaultContract $vault,
         private readonly ChunkTracker $tracker,
+        private readonly ReplacementGuard $replacementGuard,
     ) {}
 
     /**
@@ -30,6 +31,8 @@ final class StoreChunk
     {
         $this->assertNotMultipart($request);
         $this->assertAcceptingChunks($session);
+        // A replacement whose oeuvre was decided meanwhile: 409, session aborted.
+        $this->replacementGuard->assertStillOpen($session);
         $this->assertIndexInRange($session, $index);
 
         $bytes = (string) $request->getContent();

@@ -179,6 +179,23 @@ final class OeuvreReviewController extends Controller
                 'filesNotReady' => $notReady,
                 'conditionalMissing' => $names($verdict->advisories, SubmissionReason::SLOT_EMPTY_CONDITIONAL),
                 'filesNotAccepted' => $notAccepted,
+                // Advisory, never blocking: slots whose rejected file the
+                // author removed and has not replaced (or is still
+                // uploading). A required one is already a requiredMissing
+                // blocker; an optional one is the author's choice. null =
+                // the unclassified oeuvre's single area.
+                // A slot already named in requiredMissing is a blocker, not
+                // an advisory: it is not repeated here.
+                'openReplacementSlots' => $underReview
+                    ? MediaFile::openReplacements($oeuvre->id, null, anySlot: true)
+                        ->with('collegeOeuvreFile')
+                        ->get(['media_files.id', 'college_oeuvre_file_id'])
+                        ->map(fn (MediaFile $file): ?string => $file->collegeOeuvreFile === null ? null : trim($file->collegeOeuvreFile->title_global))
+                        ->reject(fn (?string $label): bool => $label !== null && in_array($label, $names($verdict->blockers, SubmissionReason::SLOT_EMPTY), true))
+                        ->unique()
+                        ->values()
+                        ->all()
+                    : [],
             ],
             // For the reject screen's "Inclure les fichiers rejetés" chip.
             'rejectedFiles' => $oeuvre->mediaFiles()

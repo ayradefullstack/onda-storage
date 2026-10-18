@@ -46,8 +46,8 @@ const { t, locale } = useI18n();
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Works', href: index() },
-            { title: 'New work', href: create() },
+            { title: 'sidebar.nav.oeuvres', href: index() },
+            { title: 'oeuvres.create.title', href: create() },
         ],
     },
 });

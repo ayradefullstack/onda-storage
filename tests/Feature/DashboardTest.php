@@ -392,9 +392,11 @@ test('the query count does not grow with the shelf', function () {
 
     // 3 oeuvres hold one actionable deposit (gate: 2 queries); from five
     // actionable ones on, the cap holds and the count stops moving. The
-    // budget is enumerated in DashboardController's doc comment.
+    // budget is enumerated in DashboardController's doc comment. One of the
+    // three is under review: its replacement item costs a fixed 4 more
+    // (oeuvres, collège, removed files, review counts).
     expect(Oeuvre::where('author_id', $author->id)->count())->toBe(60)
-        ->and($withThree)->toBe(13)
-        ->and($withThirty)->toBe(21)
+        ->and($withThree)->toBe(17)
+        ->and($withThirty)->toBe(25)
         ->and($withSixty)->toBe($withThirty);
 })->group('query-count');

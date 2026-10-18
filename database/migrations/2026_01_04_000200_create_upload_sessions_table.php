@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Schema;
  * ephemeral scaffolding, not a legal record — swept after expiry and
  * hard-deleted by CompleteUpload.
  *
- * `college_oeuvre_file_id` is carried from InitUpload to CompleteUpload,
- * which copies it onto the MediaFile row.
+ * `college_oeuvre_file_id` and `replaces_media_file_id` are carried from
+ * InitUpload to CompleteUpload, which copies them onto the MediaFile row.
  */
 return new class extends Migration
 {
@@ -24,6 +24,11 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('oeuvre_id')->constrained('oeuvres')->cascadeOnDelete();
             $table->foreignId('college_oeuvre_file_id')->nullable()->constrained('college_oeuvre_files')->cascadeOnUpdate()->nullOnDelete();
+            // Set only on a replacement upload during review: the removed
+            // rejected file this session reserves (InitUpload picks it,
+            // CompleteUpload copies it onto media_files.replaces_media_file_id).
+            // A live session (not finished, not expired) holds the reservation.
+            $table->foreignId('replaces_media_file_id')->nullable()->constrained('media_files')->restrictOnDelete();
             $table->string('filename');
             $table->unsignedBigInteger('size_bytes');
             $table->unsignedInteger('chunk_size');

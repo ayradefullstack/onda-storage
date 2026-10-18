@@ -64,6 +64,11 @@ export interface DecisionSummary {
         conditionalMissing: string[];
         /** Every file an officer has not accepted (pending or rejected). */
         filesNotAccepted?: { name: string; reviewStatus: string }[];
+        /**
+         * Advisory, never blocking: slots whose rejected file the author
+         * removed without a replacement yet (null = the unclassified area).
+         */
+        openReplacementSlots?: (string | null)[];
     };
     /** Rejected files and their reasons: the reject screen's quick insert. */
     rejectedFiles?: { name: string; reason: string }[];
@@ -156,7 +161,7 @@ export function insertAtCursor(
     };
 }
 
-function xsrfToken(): string | null {
+export function xsrfToken(): string | null {
     if (typeof document === 'undefined') {
         return null;
     }

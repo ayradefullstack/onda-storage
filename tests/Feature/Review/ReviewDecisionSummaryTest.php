@@ -113,6 +113,7 @@ test('under review and held by me: approve and reject, both of which the server 
             'filesNotReady' => [],
             'conditionalMissing' => [],
             'filesNotAccepted' => [],
+            'openReplacementSlots' => [],
         ]);
 
     $this->actingAs($admin)->postJson(route('admin.oeuvres.approve', $oeuvre))->assertOk();

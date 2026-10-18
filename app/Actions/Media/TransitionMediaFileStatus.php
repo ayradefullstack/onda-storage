@@ -6,6 +6,7 @@ namespace App\Actions\Media;
 
 use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Events\MediaFileStatusChanged;
+use App\Events\ReplacementFileReady;
 use App\Models\MediaFile;
 
 /**
@@ -26,5 +27,9 @@ final class TransitionMediaFileStatus
         $mediaFile->save();
 
         MediaFileStatusChanged::dispatch($mediaFile->uuid, $previousStatus, $newStatus);
+
+        if ($newStatus === MediaFileStatus::READY && $mediaFile->replaces_media_file_id !== null) {
+            ReplacementFileReady::dispatch($mediaFile->uuid);
+        }
     }
 }

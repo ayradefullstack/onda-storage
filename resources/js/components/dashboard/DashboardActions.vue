@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { CircleAlert, CircleCheck, CircleDashed, ListTodo } from '@lucide/vue';
+import {
+    CircleAlert,
+    CircleCheck,
+    CircleDashed,
+    Clock,
+    ListTodo,
+    RefreshCcw,
+} from '@lucide/vue';
 import { useI18n } from 'vue-i18n';
 import type {
     DashboardAction,
@@ -30,6 +37,8 @@ const ICONS = {
     rejected: CircleAlert,
     incomplete: CircleDashed,
     ready: CircleCheck,
+    replace: RefreshCcw,
+    awaiting: Clock,
 } as const;
 
 const ICON_CLASS = {
@@ -37,6 +46,8 @@ const ICON_CLASS = {
     incomplete:
         'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400',
     ready: 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
+    replace: 'bg-destructive/10 text-destructive',
+    awaiting: 'bg-muted text-muted-foreground',
 } as const;
 
 // Every action opens the oeuvre page: that is where the files are added,
@@ -45,6 +56,8 @@ const ACTION_KEY = {
     rejected: 'dashboard.actions.fix',
     incomplete: 'dashboard.actions.complete',
     ready: 'dashboard.actions.submit',
+    replace: 'dashboard.actions.replace',
+    awaiting: 'dashboard.actions.view',
 } as const;
 </script>
 
@@ -120,6 +133,28 @@ const ACTION_KEY = {
                         class="text-xs text-emerald-700 dark:text-emerald-400"
                     >
                         {{ t('dashboard.actions.ready') }}
+                    </p>
+
+                    <p
+                        v-else-if="item.kind === 'replace'"
+                        class="text-xs text-destructive"
+                        data-testid="action-to-replace"
+                    >
+                        {{
+                            t(
+                                'dashboard.actions.toReplace',
+                                { count: item.replacement?.to_replace ?? 0 },
+                                item.replacement?.to_replace ?? 0,
+                            )
+                        }}
+                    </p>
+
+                    <p
+                        v-else-if="item.kind === 'awaiting'"
+                        class="text-xs text-muted-foreground"
+                        data-testid="action-awaiting-note"
+                    >
+                        {{ t('dashboard.actions.awaiting') }}
                     </p>
 
                     <ul

@@ -7,6 +7,7 @@ import FileReviewLayout from '@/components/consult/FileReviewLayout.vue';
 import FileDecisionActions from '@/components/review/FileDecisionActions.vue';
 import { nextToReview, REVIEW_STATUS } from '@/components/review/fileReview';
 import type { FileAllowed } from '@/components/review/fileReview';
+import ReplacementInfo from '@/components/review/ReplacementInfo.vue';
 import ReviewStatusBadge from '@/components/review/ReviewStatusBadge.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,10 @@ const props = defineProps<{
         review_status: string;
         review_reason: string | null;
         allowed: FileAllowed;
+        replaces?: {
+            original_name: string;
+            review_reason: string | null;
+        } | null;
     };
     siblings: {
         uuid: string;
@@ -51,8 +56,8 @@ const props = defineProps<{
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Admin', href: dashboard() },
-            { title: 'Works', href: oeuvresIndex() },
+            { title: 'sidebar.nav.adminSection', href: dashboard() },
+            { title: 'admin.oeuvres.title', href: oeuvresIndex() },
         ],
     },
 });
@@ -135,6 +140,7 @@ const unsupported = computed(
         </template>
 
         <template #before-viewer>
+            <ReplacementInfo v-if="file.replaces" :replaces="file.replaces" />
             <p
                 v-if="
                     file.review_status === REVIEW_STATUS.REJECTED &&

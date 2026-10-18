@@ -6,6 +6,7 @@ namespace App\Domain\Deposit;
 
 use App\Domain\Deposit\Value\SubmissionReason;
 use App\Domain\Deposit\Value\SubmissionVerdict;
+use App\Enums\MediaFile\ReviewStatusEnum;
 use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\CollegeOeuvreFile;
 use App\Models\MediaFile;
@@ -75,13 +76,28 @@ final class SubmissionGate
 
         $files = $oeuvre->mediaFiles()
             ->orderBy('created_at')
-            ->get(['id', 'college_oeuvre_file_id', 'original_name', 'status']);
+            ->get(['id', 'uuid', 'college_oeuvre_file_id', 'original_name', 'status', 'review_status', 'review_reason']);
 
         if ($files->isEmpty()) {
             $blockers[] = new SubmissionReason(SubmissionReason::NO_FILES);
         }
 
         foreach ($files as $file) {
+            // A deposit returned to the author is resubmitted only once every
+            // file the ONDA rejected is gone (removed, and replaced where the
+            // slot needs it): otherwise the officer would get the same
+            // rejected file back. Named, with the ONDA's own reason. Asked
+            // only of a deposit the author can still edit — under review a
+            // rejected file is the officer's business, not a gate blocker.
+            if ($oeuvre->isAuthorEditable() && $file->review_status === ReviewStatusEnum::REJECTED) {
+                $blockers[] = new SubmissionReason(SubmissionReason::FILE_REJECTED, [
+                    'name' => $file->original_name,
+                    'uuid' => $file->uuid,
+                    'slot_id' => $file->college_oeuvre_file_id,
+                    'reason' => $file->review_reason,
+                ]);
+            }
+
             if (in_array($file->status, self::IN_PIPELINE, true)) {
                 $blockers[] = new SubmissionReason(SubmissionReason::FILE_IN_PIPELINE, [
                     'name' => $file->original_name,

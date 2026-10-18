@@ -6,7 +6,8 @@ import type { DecisionSummary } from './decisions';
 
 /**
  * What a registration requires, by name: the required documents, every
- * file ready, and — never blocking — the conditional documents left empty,
+ * file ready, and — never blocking — the conditional documents left empty
+ * and the slots whose rejected file was removed without a replacement,
  * which are the officer's call. The same SubmissionGate the approve route
  * asks again under a lock produced every line.
  */
@@ -20,6 +21,11 @@ const requiredOk = computed(() => props.checklist.requiredMissing.length === 0);
 const notAccepted = computed(() => props.checklist.filesNotAccepted ?? []);
 const acceptedOk = computed(
     () => !props.checklist.noFiles && notAccepted.value.length === 0,
+);
+const openReplacements = computed(() =>
+    (props.checklist.openReplacementSlots ?? []).map(
+        (slot) => slot ?? t('review.accept.unclassifiedSlot'),
+    ),
 );
 const filesOk = computed(
     () =>
@@ -149,6 +155,25 @@ const filesOk = computed(
                 </div>
             </li>
         </ul>
+
+        <div
+            v-if="openReplacements.length > 0"
+            class="flex items-start gap-2 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground"
+            data-testid="check-open-replacements"
+        >
+            <Info class="mt-0.5 size-3.5 shrink-0" />
+            <div class="min-w-0">
+                <p class="font-medium text-foreground">
+                    {{ t('review.accept.openReplacements') }}
+                </p>
+                <p class="mt-0.5 text-foreground/80">
+                    <bdi>{{ openReplacements.join(' · ') }}</bdi>
+                </p>
+                <p class="mt-0.5">
+                    {{ t('review.accept.openReplacementsHint') }}
+                </p>
+            </div>
+        </div>
 
         <div
             v-if="checklist.conditionalMissing.length > 0"

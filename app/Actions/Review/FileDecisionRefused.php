@@ -22,6 +22,11 @@ final class FileDecisionRefused extends RuntimeException
             : "This file is still \"{$status->key()}\"; it can be decided once the pipeline has finished with it.");
     }
 
+    public static function removed(): self
+    {
+        return new self('This file was removed by the author; it can no longer be decided.');
+    }
+
     public static function foreignFile(): self
     {
         return new self('This file does not belong to this deposit.');

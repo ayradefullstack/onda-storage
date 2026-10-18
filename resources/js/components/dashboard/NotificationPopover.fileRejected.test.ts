@@ -129,7 +129,10 @@ describe('NotificationPopover — file_rejected', () => {
         item.click();
         await settle();
 
-        expect(inertia.visit).toHaveBeenCalledWith('/author/oeuvres/0199-abcd');
+        // Opens the deposit scrolled to the file (the page reads the hash).
+        expect(inertia.visit).toHaveBeenCalledWith(
+            '/author/oeuvres/0199-abcd#file-f1',
+        );
     });
 
     it('renders in Arabic', async () => {

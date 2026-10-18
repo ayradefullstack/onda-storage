@@ -100,8 +100,8 @@ const COLUMN_COUNT = 9;
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Admin', href: dashboard() },
-            { title: 'Works', href: oeuvresIndex() },
+            { title: 'sidebar.nav.adminSection', href: dashboard() },
+            { title: 'admin.oeuvres.title', href: oeuvresIndex() },
         ],
     },
 });

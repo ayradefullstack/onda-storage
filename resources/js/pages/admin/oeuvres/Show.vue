@@ -4,6 +4,7 @@ import {
     ExternalLink,
     FileEdit,
     MessageSquareWarning,
+    RefreshCcw,
     UserCheck,
 } from '@lucide/vue';
 import { computed, onMounted, ref } from 'vue';
@@ -20,6 +21,9 @@ import ExamineButton from '@/components/review/ExamineButton.vue';
 import FileDecisionActions from '@/components/review/FileDecisionActions.vue';
 import { REVIEW_STATUS } from '@/components/review/fileReview';
 import type { FileAllowed } from '@/components/review/fileReview';
+import RemovedFilesSection from '@/components/review/RemovedFilesSection.vue';
+import type { RemovedFile } from '@/components/review/RemovedFilesSection.vue';
+import ReplacementInfo from '@/components/review/ReplacementInfo.vue';
 import ReviewDecisionDialog from '@/components/review/ReviewDecisionDialog.vue';
 import ReviewStatusBadge from '@/components/review/ReviewStatusBadge.vue';
 import ReviewTimeline from '@/components/review/ReviewTimeline.vue';
@@ -58,6 +62,8 @@ interface MediaFileDetail {
     reviewed_by: string | null;
     /** Server-computed: DecideMediaFile::allowed(). */
     allowed: FileAllowed;
+    /** A replacement uploaded during review: the file it replaces. */
+    replaces?: { original_name: string; review_reason: string | null } | null;
 }
 
 const props = defineProps<{
@@ -73,7 +79,14 @@ const props = defineProps<{
         is_draft?: boolean;
     };
     files: MediaFileDetail[];
-    review_counts: { total: number; accepted: number; rejected: number };
+    review_counts: {
+        total: number;
+        accepted: number;
+        rejected: number;
+        pending_replacements?: number;
+    };
+    /** Rejected files the author removed during review (read-only). */
+    removed_files?: RemovedFile[];
     holder: { uuid: string; name: string; is_you: boolean } | null;
     can_decide: boolean;
     /** The dialog fetches its own checklist; kept for the props contract. */
@@ -87,8 +100,8 @@ const { t, locale } = useI18n();
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Admin', href: dashboard() },
-            { title: 'Works', href: oeuvresIndex() },
+            { title: 'sidebar.nav.adminSection', href: dashboard() },
+            { title: 'admin.oeuvres.title', href: oeuvresIndex() },
         ],
     },
 });
@@ -160,10 +173,15 @@ const DECISION_PROPS = [
     'reviews',
     'files',
     'review_counts',
+    'removed_files',
 ];
 
 // A file decision moves only that file's row and the counter.
 const FILE_PROPS = ['files', 'review_counts'];
+
+const pendingReplacements = computed(
+    () => props.review_counts.pending_replacements ?? 0,
+);
 
 function onFileDecided(): void {
     router.reload(silent({ only: FILE_PROPS }));
@@ -292,6 +310,23 @@ const previousRejection = computed(() =>
             </AlertDescription>
         </Alert>
 
+        <Alert
+            v-if="oeuvre.status === 'under_review' && pendingReplacements > 0"
+            role="status"
+            data-testid="replacement-banner"
+        >
+            <RefreshCcw />
+            <AlertDescription>
+                {{
+                    t(
+                        'review.replacement.banner',
+                        { count: pendingReplacements },
+                        pendingReplacements,
+                    )
+                }}
+            </AlertDescription>
+        </Alert>
+
         <EmptyState
             v-if="files.length === 0"
             :title="t('admin.oeuvres.noFiles')"
@@ -358,6 +393,7 @@ const previousRejection = computed(() =>
                         :style="{ '--motion-index': i }"
                         :data-selected="file.uuid === selectedUuid"
                         data-testid="file-row"
+                        :id="`file-row-${file.uuid}`"
                         :data-file="file.uuid"
                     >
                         <div class="flex items-center gap-1">
@@ -391,6 +427,10 @@ const previousRejection = computed(() =>
                             </a>
                         </div>
                         <div class="space-y-1.5 px-3 pb-2">
+                            <ReplacementInfo
+                                v-if="file.replaces"
+                                :replaces="file.replaces"
+                            />
                             <p
                                 v-if="
                                     file.review_status ===
@@ -415,6 +455,11 @@ const previousRejection = computed(() =>
                         </div>
                     </li>
                 </ul>
+
+                <RemovedFilesSection
+                    :files="removed_files ?? []"
+                    :href-for="(uuid: string) => `#file-row-${uuid}`"
+                />
 
                 <!-- Facts of the file shown in the viewer, and only that one. -->
                 <MediaFileInspectionCard

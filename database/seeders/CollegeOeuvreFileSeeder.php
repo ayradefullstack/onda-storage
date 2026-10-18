@@ -177,7 +177,7 @@ class CollegeOeuvreFileSeeder extends Seeder
     {
         return [
             'MUSIQUE' => [
-                $this->document('paroles', 'Paroles', 'كلمات الأغاني', 'Lyrics', ['pdf'], conditions: ['show_when' => ['presence_parole', 'avec_paroles'], 'server' => 'required_if:presence_parole,avec_paroles', 'unconditional_for_qualite' => 'Auteur']),
+                $this->document('paroles', 'Paroles', 'كلمات الأغاني', 'Lyrics', ['pdf', 'mp4', 'mov'], conditions: ['show_when' => ['presence_parole', 'avec_paroles'], 'server' => 'required_if:presence_parole,avec_paroles', 'unconditional_for_qualite' => 'Auteur']),
                 $this->document('enregistrement_oeuvre', 'Enregistrement de l\'oeuvre', 'تسجيل العمل', 'Work recording', self::AUDIO, conditions: ['server' => 'required_without:cd_commercialise']),
                 $this->document('justificatif_exploitation', 'Justificatif d\'exploitation (*)', 'إثبات الاستغلال (*)', 'Proof of exploitation (*)', self::DOCUMENT),
                 $this->document('autorisation_sample', 'Autorisation du sample', 'ترخيص العينة الموسيقية', 'Sample Authorization', ['png', 'jpg', 'pdf'], conditions: ['show_when' => ['utilisation_sample', 1], 'server' => 'required_if:utilisation_sample,1']),
