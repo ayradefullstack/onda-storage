@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domain\Access\AccessLogger;
 use App\Domain\Deposit\Value\RowHash;
 use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaFile\ReviewStatusEnum;
 use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
 use App\Models\FileAccessLog;
@@ -131,4 +132,22 @@ test('the reference-data trail records and hashes an enum change as its permanen
             'old_value' => '1',
             'new_value' => '2',
         ], $row->row_hash))->toBeTrue();
+});
+
+// --- media_files.review_status: a second enum on the same row ------------------
+
+test('review_status is stored as its int, cast to its enum and serialised as its key', function () {
+    $file = MediaFile::factory()->create();
+
+    // The column default is PENDING.
+    expect(DB::table('media_files')->where('id', $file->id)->value('review_status'))->toBe(ReviewStatusEnum::PENDING->value)
+        ->and($file->fresh()->review_status)->toBe(ReviewStatusEnum::PENDING)
+        ->and($file->fresh()->toArray()['review_status'])->toBe('pending');
+
+    $file->forceFill(['review_status' => ReviewStatusEnum::REJECTED])->save();
+
+    expect(DB::table('media_files')->where('id', $file->id)->value('review_status'))->toBe(3)
+        ->and(json_decode($file->fresh()->toJson(), true)['review_status'])->toBe('rejected')
+        // The pipeline status is a different column and did not move.
+        ->and($file->fresh()->status)->toBe($file->status);
 });

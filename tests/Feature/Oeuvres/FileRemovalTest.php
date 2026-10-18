@@ -308,6 +308,9 @@ test('no route exists that changes an existing oeuvre\'s classification', functi
         'GET oeuvres.files.status',
         'GET oeuvres.show',
         'POST admin.oeuvres.approve',
+        // A per-file review decision: writes media_files.review_status and
+        // media_file_reviews, never the oeuvre's classification.
+        'POST admin.oeuvres.files.decide',
         'POST admin.oeuvres.reject',
         'POST admin.oeuvres.review',
         'POST author.oeuvres.submit',

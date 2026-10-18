@@ -96,9 +96,11 @@ test('every enum column is a commented tinyint whose owning model casts it to th
     $columns = enumColumnsFromMigrations();
     $models = modelsByTable();
 
-    // The approved set (Phase 2a): 16 columns over 13 tables.
-    expect($columns)->toHaveCount(16)
-        ->and(collect($columns)->pluck('table')->unique())->toHaveCount(13);
+    // The approved set (Phase 2a): 16 columns over 13 tables, plus the file
+    // review decision: media_files.review_status and media_file_reviews
+    // from_status / to_status.
+    expect($columns)->toHaveCount(19)
+        ->and(collect($columns)->pluck('table')->unique())->toHaveCount(14);
 
     foreach ($columns as ['table' => $table, 'column' => $column, 'enum' => $enum]) {
         expect(enum_exists($enum))->toBeTrue("{$table}.{$column}: {$enum} does not exist")
@@ -139,9 +141,9 @@ test('app code holds no status, action, kind or direction string literal for an 
         'pending', 'aborted', 'completed', 'unsupported',
         'stream', 'download', 'preview', 'delete', 'purge', 'deposit', 'inspect', 'admin_consult',
         'bytes_released', 'bytes_kept', 'bytes_missing', 'consult_original',
-        'poster', 'waveform', 'thumbnail', 'ltr', 'rtl',
+        'poster', 'waveform', 'thumbnail', 'ltr', 'rtl', 'accepted',
     ]);
-    $columns = 'status|from_status|to_status|action|direction|type_gestion';
+    $columns = 'status|review_status|from_status|to_status|action|direction|type_gestion';
 
     $patterns = [
         // ->where('status', 'ready'), ->whereIn('oeuvres.status', ['draft', …])

@@ -17,7 +17,11 @@ import { useSideViewer } from '@/components/consult/useSideViewer';
 import { oeuvreLabel } from '@/components/oeuvre/label';
 import type { Problem } from '@/components/review/decisions';
 import ExamineButton from '@/components/review/ExamineButton.vue';
+import FileDecisionActions from '@/components/review/FileDecisionActions.vue';
+import { REVIEW_STATUS } from '@/components/review/fileReview';
+import type { FileAllowed } from '@/components/review/fileReview';
 import ReviewDecisionDialog from '@/components/review/ReviewDecisionDialog.vue';
+import ReviewStatusBadge from '@/components/review/ReviewStatusBadge.vue';
 import ReviewTimeline from '@/components/review/ReviewTimeline.vue';
 import type { ReviewEntry } from '@/components/review/ReviewTimeline.vue';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -46,6 +50,14 @@ interface MediaFileDetail {
     verified_at: string | null;
     created_at: string;
     variants: string[];
+    slot: string | null;
+    /** The officer's decision (not the pipeline `status`). */
+    review_status: string;
+    review_reason: string | null;
+    reviewed_at: string | null;
+    reviewed_by: string | null;
+    /** Server-computed: DecideMediaFile::allowed(). */
+    allowed: FileAllowed;
 }
 
 const props = defineProps<{
@@ -61,6 +73,7 @@ const props = defineProps<{
         is_draft?: boolean;
     };
     files: MediaFileDetail[];
+    review_counts: { total: number; accepted: number; rejected: number };
     holder: { uuid: string; name: string; is_you: boolean } | null;
     can_decide: boolean;
     /** The dialog fetches its own checklist; kept for the props contract. */
@@ -146,7 +159,21 @@ const DECISION_PROPS = [
     'advisories',
     'reviews',
     'files',
+    'review_counts',
 ];
+
+// A file decision moves only that file's row and the counter.
+const FILE_PROPS = ['files', 'review_counts'];
+
+function onFileDecided(): void {
+    router.reload(silent({ only: FILE_PROPS }));
+}
+
+const acceptedRatio = computed(() =>
+    props.review_counts.total === 0
+        ? 0
+        : props.review_counts.accepted / props.review_counts.total,
+);
 
 function onDecision(): void {
     router.reload(silent({ only: DECISION_PROPS }));
@@ -278,18 +305,51 @@ const previousRejection = computed(() =>
             :new-tab-href="selectedFile ? reviewUrl(selectedFile) : null"
         >
             <div class="space-y-4">
-                <h2 class="text-sm font-medium">
-                    {{ t('admin.oeuvres.filesTitle') }}
-                    <span class="text-muted-foreground tabular-nums"
-                        >({{ files.length }})</span
+                <div class="space-y-1.5">
+                    <div class="flex items-baseline justify-between gap-2">
+                        <h2 class="text-sm font-medium">
+                            {{ t('admin.oeuvres.filesTitle') }}
+                            <span class="text-muted-foreground tabular-nums"
+                                >({{ files.length }})</span
+                            >
+                        </h2>
+                        <p
+                            class="text-xs text-muted-foreground tabular-nums"
+                            data-testid="review-counter"
+                        >
+                            <bdi dir="ltr">{{
+                                t('review.file.counter', {
+                                    accepted: review_counts.accepted,
+                                    total: review_counts.total,
+                                })
+                            }}</bdi>
+                        </p>
+                    </div>
+                    <div
+                        class="h-1 overflow-hidden rounded-full bg-muted"
+                        role="progressbar"
+                        aria-valuemin="0"
+                        :aria-valuemax="review_counts.total"
+                        :aria-valuenow="review_counts.accepted"
+                        :aria-label="
+                            t('review.file.counter', {
+                                accepted: review_counts.accepted,
+                                total: review_counts.total,
+                            })
+                        "
                     >
-                </h2>
+                        <div
+                            class="motion-progress h-full origin-left bg-emerald-500 rtl:origin-right"
+                            :style="{ transform: `scaleX(${acceptedRatio})` }"
+                        />
+                    </div>
+                </div>
 
                 <ul class="space-y-1" data-testid="file-list">
                     <li
                         v-for="(file, i) in files"
                         :key="file.uuid"
-                        class="motion-fade-up flex items-center gap-1 rounded-md border transition-colors"
+                        class="motion-fade-up rounded-md border transition-colors"
                         :class="
                             file.uuid === selectedUuid
                                 ? 'border-primary bg-accent'
@@ -297,28 +357,62 @@ const previousRejection = computed(() =>
                         "
                         :style="{ '--motion-index': i }"
                         :data-selected="file.uuid === selectedUuid"
+                        data-testid="file-row"
+                        :data-file="file.uuid"
                     >
-                        <button
-                            type="button"
-                            class="min-w-0 flex-1 cursor-pointer truncate rounded-md px-3 py-2 text-start text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-                            :aria-current="file.uuid === selectedUuid"
-                            :title="file.original_name"
-                            @click="show(file.uuid)"
-                        >
-                            <bdi dir="ltr">{{
-                                truncateFilenameMiddle(file.original_name, 44)
-                            }}</bdi>
-                        </button>
-                        <a
-                            :href="reviewUrl(file)"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="shrink-0 rounded-md p-2 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
-                            :title="t('consult.openInNewTab')"
-                            :aria-label="t('consult.openInNewTab')"
-                        >
-                            <ExternalLink class="size-4" />
-                        </a>
+                        <div class="flex items-center gap-1">
+                            <button
+                                type="button"
+                                class="min-w-0 flex-1 cursor-pointer truncate rounded-md px-3 py-2 text-start text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                                :aria-current="file.uuid === selectedUuid"
+                                :title="file.original_name"
+                                @click="show(file.uuid)"
+                            >
+                                <bdi dir="ltr">{{
+                                    truncateFilenameMiddle(
+                                        file.original_name,
+                                        44,
+                                    )
+                                }}</bdi>
+                            </button>
+                            <ReviewStatusBadge
+                                :status="file.review_status"
+                                class="shrink-0"
+                            />
+                            <a
+                                :href="reviewUrl(file)"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="shrink-0 rounded-md p-2 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40"
+                                :title="t('consult.openInNewTab')"
+                                :aria-label="t('consult.openInNewTab')"
+                            >
+                                <ExternalLink class="size-4" />
+                            </a>
+                        </div>
+                        <div class="space-y-1.5 px-3 pb-2">
+                            <p
+                                v-if="
+                                    file.review_status ===
+                                        REVIEW_STATUS.REJECTED &&
+                                    file.review_reason
+                                "
+                                class="rounded border-s-2 border-destructive/40 bg-muted/60 px-2 py-1 text-xs whitespace-pre-line text-foreground"
+                                data-testid="file-reject-reason"
+                            >
+                                <span class="sr-only"
+                                    >{{ t('review.file.rejectedReason') }} :
+                                </span>
+                                <bdi dir="auto">{{ file.review_reason }}</bdi>
+                            </p>
+                            <FileDecisionActions
+                                :oeuvre="oeuvre.uuid"
+                                :file="file"
+                                :allowed="file.allowed"
+                                @decided="onFileDecided"
+                                @stale="onDecision"
+                            />
+                        </div>
                     </li>
                 </ul>
 

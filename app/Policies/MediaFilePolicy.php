@@ -37,6 +37,17 @@ final class MediaFilePolicy
         return $user->id === $mediaFile->oeuvre->author_id;
     }
 
+    /**
+     * Deciding on one file of a deposit (accept / reject / reset). Admin
+     * only; whether this admin holds the review and whether the file can
+     * take the decision are DecideMediaFile's questions, asked under a lock
+     * so a refusal can say why (409 / 422) instead of collapsing into a 403.
+     */
+    public function review(User $user, MediaFile $mediaFile): bool
+    {
+        return $user->hasRole('admin');
+    }
+
     public function update(User $user, MediaFile $mediaFile): bool
     {
         return $user->id === $mediaFile->oeuvre->author_id;

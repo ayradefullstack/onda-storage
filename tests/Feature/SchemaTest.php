@@ -8,6 +8,7 @@ use App\Models\Country;
 use App\Models\FileAccessLog;
 use App\Models\MediaConsultation;
 use App\Models\MediaFile;
+use App\Models\MediaFileReview;
 use App\Models\MediaVariant;
 use App\Models\Oeuvre;
 use App\Models\OeuvreReview;
@@ -148,4 +149,15 @@ test('storage_quotas.user_id is unique', function () {
 
     expect(fn () => StorageQuota::factory()->create(['user_id' => $quota->user_id]))
         ->toThrow(QueryException::class);
+});
+
+test('media_file_reviews is append-only history: no deleted_at, no SoftDeletes', function () {
+    expect(Schema::hasTable('media_file_reviews'))->toBeTrue()
+        ->and(Schema::hasColumn('media_file_reviews', 'deleted_at'))->toBeFalse()
+        ->and(in_array(SoftDeletes::class, class_uses_recursive(MediaFileReview::class), true))->toBeFalse()
+        ->and(Schema::getColumnListing('media_file_reviews'))->toEqualCanonicalizing([
+            'id', 'uuid', 'media_file_id', 'oeuvre_id', 'reviewer_id', 'reason', 'from_status', 'to_status',
+            'was_consulted', 'decided_at', 'created_at', 'updated_at',
+        ])
+        ->and(Schema::hasColumns('media_files', ['review_status', 'reviewed_by', 'reviewed_at', 'review_reason']))->toBeTrue();
 });

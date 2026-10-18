@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\MediaFile\ReviewStatusEnum;
 use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\MediaFile;
@@ -58,6 +59,8 @@ function summaryOeuvre(OeuvreStatus $status, ?User $holder = null, MediaFileStat
         'uploaded_by' => $author->id,
         'original_name' => 'partition.pdf',
         'status' => $fileStatus,
+        // Reviewed by an officer: registration needs every file accepted.
+        'review_status' => $fileStatus === MediaFileStatus::READY ? ReviewStatusEnum::ACCEPTED : ReviewStatusEnum::PENDING,
     ]);
 
     return $oeuvre;
@@ -109,6 +112,7 @@ test('under review and held by me: approve and reject, both of which the server 
             'requiredMissing' => [],
             'filesNotReady' => [],
             'conditionalMissing' => [],
+            'filesNotAccepted' => [],
         ]);
 
     $this->actingAs($admin)->postJson(route('admin.oeuvres.approve', $oeuvre))->assertOk();

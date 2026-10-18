@@ -306,6 +306,7 @@ function iconColor(item: NotificationRow): string {
                             : 'bg-onda-blue-500/5 dark:bg-onda-blue-950/30',
                     ]"
                     data-testid="notification-item"
+                    :data-type="item.data.type"
                     :data-read="item.read_at !== null"
                     @select="open(item)"
                 >

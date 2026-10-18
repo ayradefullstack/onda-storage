@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Domain\Deposit\Exceptions\IllegalTransition;
 use App\Domain\Deposit\Exceptions\ReviewConflict;
 use App\Domain\Deposit\OeuvreStatusMachine;
+use App\Enums\MediaFile\ReviewStatusEnum;
 use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\MediaFile;
@@ -49,6 +50,8 @@ function concurrencyOeuvre(?User $holder = null): Oeuvre
         'oeuvre_id' => $oeuvre->id,
         'uploaded_by' => $author->id,
         'status' => MediaFileStatus::READY,
+        // Reviewed by an officer: registration needs every file accepted.
+        'review_status' => ReviewStatusEnum::ACCEPTED,
     ]);
 
     return $oeuvre;

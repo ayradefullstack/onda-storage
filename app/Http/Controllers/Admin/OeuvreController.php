@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Review\DecideMediaFile;
 use App\Domain\Access\AccessLogger;
 use App\Domain\Deposit\SlotProgressQuery;
 use App\Domain\Deposit\SubmissionGate;
 use App\Domain\Deposit\Value\SubmissionReason;
 use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaFile\ReviewStatusEnum;
 use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Http\Controllers\Author\OeuvreController as AuthorOeuvreController;
@@ -177,10 +179,13 @@ final class OeuvreController extends Controller
 
         $oeuvre->load(['author:id,uuid,name,first_name,last_name', 'registerTypeCollege', 'reviewer:id,uuid,name']);
 
+        // Eager: variants, slot and reviewer once for the page, not per file.
         $files = $oeuvre->mediaFiles()
+            ->with(['variants:id,media_file_id,uuid,kind', 'collegeOeuvreFile', 'reviewer:id,name'])
             ->orderBy('created_at')
+            ->orderBy('id')
             ->get()
-            ->map(function (MediaFile $mediaFile) {
+            ->map(function (MediaFile $mediaFile) use ($oeuvre, $admin) {
                 return [
                     'uuid' => $mediaFile->uuid,
                     'original_name' => $mediaFile->original_name,
@@ -196,7 +201,15 @@ final class OeuvreController extends Controller
                     'scanned_at' => $mediaFile->scanned_at,
                     'verified_at' => $mediaFile->verified_at,
                     'created_at' => $mediaFile->created_at,
-                    'variants' => $mediaFile->variants()->get(['uuid', 'kind'])->pluck('kind'),
+                    'variants' => $mediaFile->variants->pluck('kind'),
+                    'slot' => $mediaFile->collegeOeuvreFile?->title,
+                    // The officer's decision on this file (not the pipeline status above).
+                    'review_status' => $mediaFile->review_status,
+                    'review_reason' => $mediaFile->review_reason,
+                    'reviewed_at' => $mediaFile->reviewed_at,
+                    'reviewed_by' => $mediaFile->reviewer?->name,
+                    // Server-computed: which file decisions to offer, and why none.
+                    'allowed' => DecideMediaFile::allowed($oeuvre, $mediaFile, $admin),
                 ];
             });
 
@@ -230,6 +243,11 @@ final class OeuvreController extends Controller
                 'is_draft' => $oeuvre->status === OeuvreStatus::DRAFT,
             ],
             'files' => $files,
+            'review_counts' => [
+                'total' => $files->count(),
+                'accepted' => $files->where('review_status', ReviewStatusEnum::ACCEPTED)->count(),
+                'rejected' => $files->where('review_status', ReviewStatusEnum::REJECTED)->count(),
+            ],
             // Who holds this deposit right now, and whether that is the
             // officer reading the page. The page offers an explicit
             // take-over rather than silently letting a second officer

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\MediaFile\ReviewStatusEnum;
 use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\MediaFile;
@@ -46,6 +47,8 @@ function notifyOeuvre(User $author, OeuvreStatus $status = OeuvreStatus::DRAFT, 
         'oeuvre_id' => $oeuvre->id,
         'uploaded_by' => $author->id,
         'status' => MediaFileStatus::READY,
+        // Reviewed by an officer: registration needs every file accepted.
+        'review_status' => ReviewStatusEnum::ACCEPTED,
     ]);
 
     return $oeuvre;
@@ -109,6 +112,8 @@ test('the submission notification carries label, author, college and file count'
         'oeuvre_id' => $oeuvre->id,
         'uploaded_by' => $author->id,
         'status' => MediaFileStatus::READY,
+        // Reviewed by an officer: registration needs every file accepted.
+        'review_status' => ReviewStatusEnum::ACCEPTED,
     ]);
 
     $this->actingAs($author)->post(route('author.oeuvres.submit', $oeuvre));

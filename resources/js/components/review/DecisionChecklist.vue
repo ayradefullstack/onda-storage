@@ -17,6 +17,10 @@ const props = defineProps<{
 const { t } = useI18n();
 
 const requiredOk = computed(() => props.checklist.requiredMissing.length === 0);
+const notAccepted = computed(() => props.checklist.filesNotAccepted ?? []);
+const acceptedOk = computed(
+    () => !props.checklist.noFiles && notAccepted.value.length === 0,
+);
 const filesOk = computed(
     () =>
         !props.checklist.noFiles && props.checklist.filesNotReady.length === 0,
@@ -96,6 +100,49 @@ const filesOk = computed(
                             >
                             <span class="shrink-0 text-muted-foreground">
                                 — {{ t(`media.status.${file.status}`) }}
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            <li
+                class="flex items-start gap-2.5"
+                data-testid="check-accepted"
+                :data-ok="acceptedOk"
+            >
+                <CheckCircle2
+                    v-if="acceptedOk"
+                    class="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+                />
+                <XCircle
+                    v-else
+                    class="mt-0.5 size-4 shrink-0 text-destructive"
+                />
+                <div class="min-w-0">
+                    <p class="font-medium text-foreground">
+                        {{ t('review.accept.checkAccepted') }}
+                    </p>
+                    <ul
+                        v-if="notAccepted.length > 0"
+                        class="mt-1 space-y-0.5 text-xs"
+                    >
+                        <li
+                            v-for="(file, i) in notAccepted"
+                            :key="`${file.name}-${i}`"
+                            class="flex min-w-0 items-center gap-1.5 text-destructive"
+                            data-testid="check-not-accepted"
+                        >
+                            <bdi
+                                dir="ltr"
+                                class="truncate"
+                                :title="file.name"
+                                >{{ file.name }}</bdi
+                            >
+                            <span class="shrink-0 text-muted-foreground">
+                                —
+                                {{
+                                    t(`review.file.status.${file.reviewStatus}`)
+                                }}
                             </span>
                         </li>
                     </ul>

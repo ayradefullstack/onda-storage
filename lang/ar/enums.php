@@ -25,6 +25,11 @@ return [
             'failed' => 'فشل',
             'quarantined' => 'قيد المراجعة',
         ],
+        'review_status' => [
+            'pending' => 'قيد الانتظار',
+            'accepted' => 'مقبول',
+            'rejected' => 'مرفوض',
+        ],
     ],
     'upload_session' => [
         'status' => [

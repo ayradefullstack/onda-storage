@@ -25,6 +25,11 @@ return [
             'failed' => 'Failed',
             'quarantined' => 'Held for review',
         ],
+        'review_status' => [
+            'pending' => 'To review',
+            'accepted' => 'Accepted',
+            'rejected' => 'Rejected',
+        ],
     ],
     'upload_session' => [
         'status' => [

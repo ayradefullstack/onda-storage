@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AuthorController;
 use App\Http\Controllers\Admin\ConsultationAssetController;
 use App\Http\Controllers\Admin\ConsultOriginalController;
 use App\Http\Controllers\Admin\LanguageController;
+use App\Http\Controllers\Admin\MediaFileReviewController;
 use App\Http\Controllers\Admin\MediaVariantController;
 use App\Http\Controllers\Admin\OeuvreController;
 use App\Http\Controllers\Admin\OeuvreFileReviewController;
@@ -60,6 +61,10 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         Route::scopeBindings()->group(function () {
             Route::get('/{oeuvre:uuid}/files/{mediaFile:uuid}/review', [OeuvreFileReviewController::class, 'show'])
                 ->name('files.review');
+            // The officer's decision on ONE file (accepted / rejected / pending).
+            // Holder and file-status rules live in DecideMediaFile.
+            Route::post('/{oeuvre:uuid}/files/{mediaFile:uuid}/review', [MediaFileReviewController::class, 'store'])
+                ->name('files.decide');
             Route::get('/{oeuvre:uuid}/files/{mediaFile:uuid}/review/assets', [OeuvreFileReviewController::class, 'assets'])
                 ->name('files.review.assets');
             Route::get('/{oeuvre:uuid}/files/{mediaFile:uuid}/consult/{asset}', ConsultationAssetController::class)

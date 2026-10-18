@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Concerns\HasUuidColumn;
+use App\Enums\MediaFile\ReviewStatusEnum;
 use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\Concerns\SerializesEnumsAsKeys;
 use Database\Factories\MediaFileFactory;
@@ -35,6 +36,10 @@ use Illuminate\Support\Carbon;
  * @property string $nonce
  * @property string $mac_path
  * @property MediaFileStatus $status
+ * @property ReviewStatusEnum $review_status
+ * @property int|null $reviewed_by
+ * @property Carbon|null $reviewed_at
+ * @property string|null $review_reason
  * @property int|null $duration_sec
  * @property int|null $width
  * @property int|null $height
@@ -55,6 +60,8 @@ class MediaFile extends Model
     {
         return [
             'status' => MediaFileStatus::class,
+            'review_status' => ReviewStatusEnum::class,
+            'reviewed_at' => 'datetime',
             'size_bytes' => 'integer',
             'dek_wrapped' => 'encrypted',
             'duration_sec' => 'integer',
@@ -117,6 +124,27 @@ class MediaFile extends Model
     public function consultationAssets(): HasMany
     {
         return $this->hasMany(ConsultationAsset::class);
+    }
+
+    /**
+     * The officer whose decision `review_status` holds (withTrashed: a
+     * retired officer still names their decision).
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by')->withTrashed();
+    }
+
+    /**
+     * The file's decision history, oldest first.
+     *
+     * @return HasMany<MediaFileReview, $this>
+     */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(MediaFileReview::class)->orderBy('decided_at')->orderBy('id');
     }
 
     /**

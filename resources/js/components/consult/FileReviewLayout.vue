@@ -22,6 +22,10 @@ import FullscreenButton from './FullscreenButton.vue';
  * The viewer takes everything the header leaves (100dvh). With `details`,
  * choosing the Details tab does not replace the viewer: the receipt opens
  * as a panel beside it from `xl` up and stacks under it on smaller screens.
+ *
+ * Two optional slots, used only by the admin page: `header-actions` (the
+ * file decision, after the badges) and `before-viewer` (notices between
+ * the header and the viewer).
  */
 const props = defineProps<{
     oeuvre: { uuid: string; title: string | null; created_at: string };
@@ -31,7 +35,12 @@ const props = defineProps<{
         extension: string;
         status: string;
     };
-    siblings: { uuid: string; original_name: string; slot: string | null }[];
+    siblings: {
+        uuid: string;
+        original_name: string;
+        slot: string | null;
+        review_status?: string;
+    }[];
     consultation: ConsultationDescriptor;
     /** The oeuvre page this one came from. */
     backHref: string;
@@ -168,6 +177,8 @@ async function copyHash(): Promise<void> {
                     {{ t(`consult.status.${consultation.status}`) }}
                 </Badge>
 
+                <slot name="header-actions" />
+
                 <div class="ms-auto flex items-center gap-1">
                     <FullscreenButton :target="stage" />
                     <Button
@@ -253,6 +264,8 @@ async function copyHash(): Promise<void> {
                 </div>
             </dl>
         </header>
+
+        <slot name="before-viewer" />
 
         <!-- Reading progress of a long document (transform only). -->
         <div

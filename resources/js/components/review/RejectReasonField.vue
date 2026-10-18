@@ -8,6 +8,7 @@ import {
     reasonLength,
     reasonState,
 } from './decisions';
+import type { ReasonChip } from './decisions';
 
 /**
  * The rejection reason. It reaches the author word for word and is the
@@ -27,6 +28,10 @@ const props = defineProps<{
     disabled?: boolean;
     /** A refusal of this field by the server, shown in place of the help. */
     serverError?: string | null;
+    /** Replaces the deposit-level quick reasons (the file reject dialog). */
+    chips?: ReasonChip[];
+    /** Added after them ("Inclure les fichiers rejetés"). */
+    extraChips?: ReasonChip[];
 }>();
 
 const CHIPS = [
@@ -82,16 +87,21 @@ onMounted(() => {
     field.value?.focus();
 });
 
-function insert(chip: (typeof CHIPS)[number]): void {
+const chipList = computed<ReasonChip[]>(() => [
+    ...(props.chips ??
+        CHIPS.map((id) => {
+            const label = t(`review.reject.chips.${id}`);
+
+            return { id, label, text: label };
+        })),
+    ...(props.extraChips ?? []),
+]);
+
+function insert(chip: ReasonChip): void {
     const element = field.value;
     const start = element?.selectionStart ?? reason.value.length;
     const end = element?.selectionEnd ?? reason.value.length;
-    const result = insertAtCursor(
-        reason.value,
-        t(`review.reject.chips.${chip}`),
-        start,
-        end,
-    );
+    const result = insertAtCursor(reason.value, chip.text, start, end);
 
     reason.value = result.text;
 
@@ -174,15 +184,15 @@ defineExpose({ touch });
             </p>
             <div class="flex flex-wrap gap-1.5">
                 <button
-                    v-for="chip in CHIPS"
-                    :key="chip"
+                    v-for="chip in chipList"
+                    :key="chip.id"
                     type="button"
-                    :data-chip="chip"
+                    :data-chip="chip.id"
                     :disabled="disabled"
                     class="cursor-pointer rounded-full border bg-background px-2.5 py-1 text-xs transition-colors outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/40 disabled:pointer-events-none disabled:opacity-50"
                     @click="insert(chip)"
                 >
-                    {{ t(`review.reject.chips.${chip}`) }}
+                    {{ chip.label }}
                 </button>
             </div>
         </div>

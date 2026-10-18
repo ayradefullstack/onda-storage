@@ -62,7 +62,11 @@ export interface DecisionSummary {
         filesNotReady: { name: string; status: string }[];
         /** Advisory: documents that may not apply to this deposit. */
         conditionalMissing: string[];
+        /** Every file an officer has not accepted (pending or rejected). */
+        filesNotAccepted?: { name: string; reviewStatus: string }[];
     };
+    /** Rejected files and their reasons: the reject screen's quick insert. */
+    rejectedFiles?: { name: string; reason: string }[];
     allowed: AllowedDecision[];
     /** Permitted by status and holder, refused by the checklist. */
     blocked: AllowedDecision[];
@@ -95,6 +99,13 @@ export async function fetchSummary(url: string): Promise<SummaryResult> {
     } catch {
         return { kind: 'failed', status: null };
     }
+}
+
+/** A quick reason: what the chip says, and the text it inserts. */
+export interface ReasonChip {
+    id: string;
+    label: string;
+    text: string;
 }
 
 export const REASON_MIN = 20;

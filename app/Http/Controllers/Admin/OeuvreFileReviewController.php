@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Actions\Consultation\AuditConsultation;
 use App\Actions\Consultation\ConsultationDescriptor;
+use App\Actions\Review\DecideMediaFile;
 use App\Http\Controllers\Controller;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -60,17 +61,28 @@ final class OeuvreFileReviewController extends Controller
                 'uuid' => $oeuvre->uuid,
                 'title' => $oeuvre->title,
                 'created_at' => $oeuvre->created_at,
+                'status' => $oeuvre->status,
             ],
             'file' => [
                 'uuid' => $mediaFile->uuid,
                 'original_name' => $mediaFile->original_name,
                 'extension' => $mediaFile->extension,
                 'status' => $mediaFile->status,
+                'size_bytes' => $mediaFile->size_bytes,
+                'mime' => $mediaFile->mime,
+                'sha256_plain' => $mediaFile->sha256_plain,
+                // The officer's decision on this file, and what may be done
+                // to it now (server-computed; DecideMediaFile re-checks).
+                'review_status' => $mediaFile->review_status,
+                'review_reason' => $mediaFile->review_reason,
+                'allowed' => DecideMediaFile::allowed($oeuvre, $mediaFile, $admin),
             ],
             'siblings' => $files->map(fn (MediaFile $sibling): array => [
                 'uuid' => $sibling->uuid,
                 'original_name' => $sibling->original_name,
                 'slot' => $sibling->collegeOeuvreFile?->title,
+                // For "Suivant à examiner": the next sibling still pending.
+                'review_status' => $sibling->review_status,
             ])->values(),
             // Re-evaluated on every partial reload (`only: ['consultation']`),
             // which is what the pending poll uses.

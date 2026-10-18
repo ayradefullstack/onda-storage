@@ -6,7 +6,9 @@ namespace App\Actions\Review;
 
 use App\Domain\Deposit\OeuvreStatusMachine;
 use App\Domain\Deposit\SubmissionGate;
+use App\Enums\MediaFile\ReviewStatusEnum;
 use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
+use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\OeuvreReview;
 use App\Models\User;
@@ -32,6 +34,11 @@ use Illuminate\Support\Facades\DB;
  * holds or already decided the deposit) is reported before a completeness
  * problem. A refusal rolls the transition back.
  *
+ * On top of the gate, every file must have been ACCEPTED by an officer
+ * (`media_files.review_status`, DecideMediaFile). Same lock: DecideMediaFile
+ * locks this oeuvre row first, so a file rejection cannot slip in between
+ * this check and the commit.
+ *
  * Only the author is notified — the other officers do not need a bell for
  * a decision they did not make.
  */
@@ -44,6 +51,7 @@ final class ApproveOeuvre
 
     /**
      * @throws ApprovalRefused
+     * @throws FilesNotAccepted
      */
     public function handle(Oeuvre $oeuvre, User $officer, bool $takeOver = false): OeuvreReview
     {
@@ -62,9 +70,15 @@ final class ApproveOeuvre
                     throw new ApprovalRefused($verdict);
                 }
 
+                $notAccepted = self::filesNotAccepted($oeuvre);
+
+                if ($notAccepted !== []) {
+                    throw new FilesNotAccepted($notAccepted);
+                }
+
                 return $review;
             });
-        } catch (ApprovalRefused $e) {
+        } catch (ApprovalRefused|FilesNotAccepted $e) {
             // The machine synced the caller's instance to the registered
             // row it has just rolled back.
             $oeuvre->refresh();
@@ -76,5 +90,22 @@ final class ApproveOeuvre
         $oeuvre->author?->notify(new OeuvreRegisteredNotification($oeuvre));
 
         return $review;
+    }
+
+    /**
+     * Every file of the deposit not (yet) accepted by an officer, in the
+     * order the pages list files. Also the decision summary's checklist.
+     *
+     * @return list<array{name: string, reviewStatus: string}>
+     */
+    public static function filesNotAccepted(Oeuvre $oeuvre): array
+    {
+        return array_values($oeuvre->mediaFiles()
+            ->where('review_status', '!=', ReviewStatusEnum::ACCEPTED)
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get(['id', 'original_name', 'review_status'])
+            ->map(fn (MediaFile $file): array => ['name' => $file->original_name, 'reviewStatus' => $file->review_status->key()])
+            ->all());
     }
 }

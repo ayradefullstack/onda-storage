@@ -34,6 +34,7 @@ import type {
     DecisionSummary,
     Outcome,
     Problem,
+    ReasonChip,
 } from './decisions';
 import RejectReasonField from './RejectReasonField.vue';
 import { useKeyboardInset } from './useKeyboardInset';
@@ -221,6 +222,18 @@ const approveBlockedReason = computed(() => {
         );
     }
 
+    const notAccepted = checklist.filesNotAccepted?.length ?? 0;
+
+    if (notAccepted > 0) {
+        parts.push(
+            t(
+                'review.blockers.notAccepted',
+                { count: notAccepted },
+                notAccepted,
+            ),
+        );
+    }
+
     const missing = checklist.requiredMissing.length;
 
     if (missing > 0) {
@@ -246,6 +259,28 @@ const label = computed(() =>
               t('oeuvres.untitled'),
           ),
 );
+
+/**
+ * "Inclure les fichiers rejetés": writes each rejected file and its reason
+ * into the deposit's rejection reason, so they reach the author with it.
+ */
+const extraChips = computed<ReasonChip[]>(() => {
+    const files = summary.value?.rejectedFiles ?? [];
+
+    if (files.length === 0) {
+        return [];
+    }
+
+    const lines = files.map((file) => `- ${file.name} : ${file.reason}`);
+
+    return [
+        {
+            id: 'includeRejected',
+            label: t('review.reject.includeRejected'),
+            text: [t('review.reject.rejectedFilesIntro'), ...lines].join('\n'),
+        },
+    ];
+});
 
 const reasonOk = computed(() => reasonState(reason.value) === 'ok');
 
@@ -529,6 +564,7 @@ function close(): void {
                     v-model="reason"
                     :disabled="busy !== null"
                     :server-error="reasonError"
+                    :extra-chips="extraChips"
                 />
             </template>
 

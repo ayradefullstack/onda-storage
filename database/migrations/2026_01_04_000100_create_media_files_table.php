@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\MediaFile\ReviewStatusEnum;
 use App\Enums\MediaFile\StatusEnum;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -35,6 +36,9 @@ return new class extends Migration
             $table->foreignId('oeuvre_id')->constrained('oeuvres')->cascadeOnDelete();
             $table->foreignId('college_oeuvre_file_id')->nullable()->constrained('college_oeuvre_files')->cascadeOnUpdate()->nullOnDelete();
             $table->foreignId('uploaded_by')->constrained('users')->cascadeOnDelete();
+            // The officer whose decision `review_status` holds. Null on delete: the
+            // durable record of who decided is `media_file_reviews.reviewer_id`.
+            $table->foreignId('reviewed_by')->nullable()->constrained('users')->nullOnDelete();
             // NOT redundant with college_oeuvre_file_id — same reasoning as
             // oeuvres.code_college_snapshot. Requirement rows can be edited,
             // re-keyed or retired. A file deposited against
@@ -58,17 +62,29 @@ return new class extends Migration
             $table->unsignedInteger('width')->nullable();
             $table->unsignedInteger('height')->nullable();
             $table->unsignedInteger('ref_count')->default(1);
+            // The latest rejection reason, for display; the full history is
+            // `media_file_reviews`. Cleared on accept or reset.
+            $table->text('review_reason')->nullable();
             $table->unsignedTinyInteger('status')
                 ->default(StatusEnum::UPLOADING->value)
                 ->comment(StatusEnum::dbComment());
+            // The officer's decision on this file — NOT the pipeline state above.
+            // Written only by DecideMediaFile; never copied between dedup rows.
+            $table->unsignedTinyInteger('review_status')
+                ->default(ReviewStatusEnum::PENDING->value)
+                ->comment(ReviewStatusEnum::dbComment());
             $table->timestamp('scanned_at')->nullable();
             $table->timestamp('verified_at')->nullable();
             $table->timestamp('purged_at')->nullable();
+            $table->timestamp('reviewed_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
             // An oeuvre's files by status (submission gate, slot progress, removal gate).
             $table->index(['oeuvre_id', 'status']);
+            // An oeuvre's files by review decision (the oeuvre page counters and
+            // ApproveOeuvre's every-file-accepted guard).
+            $table->index(['oeuvre_id', 'review_status']);
             // Files deposited against one requirement slot.
             $table->index('college_oeuvre_file_id');
         });

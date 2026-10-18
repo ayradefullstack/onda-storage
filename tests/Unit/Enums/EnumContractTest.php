@@ -6,6 +6,7 @@ use App\Enums\Contracts\HasPresentation;
 use App\Enums\FileAccessLog\ActionEnum;
 use App\Enums\Language\DirectionEnum;
 use App\Enums\MediaConsultation\StatusEnum as ConsultationStatus;
+use App\Enums\MediaFile\ReviewStatusEnum;
 use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Enums\MediaVariant\KindEnum;
 use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
@@ -25,6 +26,7 @@ uses(TestCase::class);
 dataset('enum_snapshots', [
     'oeuvre.status' => [OeuvreStatus::class, 'oeuvre.status', [1 => 'draft', 2 => 'submitted', 3 => 'under_review', 4 => 'registered', 5 => 'rejected']],
     'media_file.status' => [MediaFileStatus::class, 'media_file.status', [1 => 'uploading', 2 => 'assembling', 3 => 'scanning', 4 => 'processing', 5 => 'ready', 6 => 'failed', 7 => 'quarantined']],
+    'media_file.review_status' => [ReviewStatusEnum::class, 'media_file.review_status', [1 => 'pending', 2 => 'accepted', 3 => 'rejected']],
     'upload_session.status' => [UploadSessionStatus::class, 'upload_session.status', [1 => 'pending', 2 => 'uploading', 3 => 'aborted', 4 => 'completed']],
     'media_variant.kind' => [KindEnum::class, 'media_variant.kind', [1 => 'poster', 2 => 'preview', 3 => 'waveform', 4 => 'thumbnail']],
     'file_access_log.action' => [ActionEnum::class, 'file_access_log.action', [

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Actions\Review\ApprovalRefused;
 use App\Actions\Review\ApproveOeuvre;
+use App\Actions\Review\FilesNotAccepted;
 use App\Actions\Review\OpenReview;
 use App\Actions\Review\RejectOeuvre;
 use App\Domain\Deposit\Exceptions\IllegalTransition;
@@ -14,10 +15,12 @@ use App\Domain\Deposit\Exceptions\ReviewConflict;
 use App\Domain\Deposit\OeuvreStatusMachine;
 use App\Domain\Deposit\SubmissionGate;
 use App\Domain\Deposit\Value\SubmissionReason;
+use App\Enums\MediaFile\ReviewStatusEnum;
 use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Http\Controllers\Author\OeuvreController as AuthorOeuvreController;
 use App\Http\Controllers\Controller;
+use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\User;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -99,6 +102,9 @@ final class OeuvreReviewController extends Controller
         ]);
 
         $verdict = $gate->evaluate($oeuvre);
+        // The second registration rule: every file accepted by an officer
+        // (ApproveOeuvre asks the same question under the lock).
+        $notAccepted = ApproveOeuvre::filesNotAccepted($oeuvre);
         $underReview = $oeuvre->status === OeuvreStatus::UNDER_REVIEW;
         // `reviewed_by` outlives the review (it names the decider of a
         // registered or rejected deposit); it is a *holder* only while the
@@ -116,7 +122,7 @@ final class OeuvreReviewController extends Controller
                 $allowed[] = self::TAKE_OVER;
             } else {
                 if ($machine->can($oeuvre, OeuvreStatus::REGISTERED, $officer)) {
-                    if ($verdict->passes()) {
+                    if ($verdict->passes() && $notAccepted === []) {
                         $allowed[] = self::APPROVE;
                     } else {
                         $blocked[] = self::APPROVE;
@@ -172,7 +178,16 @@ final class OeuvreReviewController extends Controller
                 'requiredMissing' => $names($verdict->blockers, SubmissionReason::SLOT_EMPTY),
                 'filesNotReady' => $notReady,
                 'conditionalMissing' => $names($verdict->advisories, SubmissionReason::SLOT_EMPTY_CONDITIONAL),
+                'filesNotAccepted' => $notAccepted,
             ],
+            // For the reject screen's "Inclure les fichiers rejetés" chip.
+            'rejectedFiles' => $oeuvre->mediaFiles()
+                ->where('review_status', ReviewStatusEnum::REJECTED)
+                ->orderBy('created_at')
+                ->orderBy('id')
+                ->get(['id', 'original_name', 'review_reason'])
+                ->map(fn (MediaFile $file): array => ['name' => $file->original_name, 'reason' => (string) $file->review_reason])
+                ->values(),
             'allowed' => $allowed,
             'blocked' => $blocked,
             'lastDecision' => $lastDecision === null ? null : [
@@ -278,6 +293,23 @@ final class OeuvreReviewController extends Controller
             }
 
             throw ValidationException::withMessages(['approval' => $e->verdict->blockerMessages()]);
+        } catch (FilesNotAccepted $e) {
+            $messages = array_map(fn (array $file): string => "{$file['name']} ({$file['reviewStatus']})", $e->files);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'errors' => ['approval' => $messages],
+                    'problems' => array_map(fn (array $file): array => [
+                        'code' => 'file_not_accepted',
+                        'params' => ['name' => $file['name'], 'reviewStatus' => $file['reviewStatus']],
+                        'message' => "{$file['name']} has not been accepted.",
+                    ], $e->files),
+                    'filesNotAccepted' => $e->files,
+                ], 422);
+            }
+
+            throw ValidationException::withMessages(['approval' => $messages]);
         } catch (ReasonRequired $e) {
             throw ValidationException::withMessages(['reason' => [$e->getMessage()]]);
         } catch (IllegalTransition $e) {

@@ -25,6 +25,11 @@ return [
             'failed' => 'Échec',
             'quarantined' => "En attente d'examen",
         ],
+        'review_status' => [
+            'pending' => 'À examiner',
+            'accepted' => 'Accepté',
+            'rejected' => 'Rejeté',
+        ],
     ],
     'upload_session' => [
         'status' => [

@@ -814,3 +814,95 @@ describe('ReviewDecisionDialog — locales', () => {
         expect(dialog()?.textContent).toContain('Open the work');
     });
 });
+
+describe('ReviewDecisionDialog — per-file decisions', () => {
+    it('lists the files not yet accepted and greys "Accepter" with the count', async () => {
+        server({
+            [DECISION]: [
+                {
+                    status: 200,
+                    body: summary({
+                        allowed: ['reject'],
+                        blocked: ['approve'],
+                        checklist: {
+                            noFiles: false,
+                            requiredMissing: [],
+                            filesNotReady: [],
+                            conditionalMissing: [],
+                            filesNotAccepted: [
+                                {
+                                    name: 'contrat.pdf',
+                                    reviewStatus: 'pending',
+                                },
+                                {
+                                    name: 'pochette.png',
+                                    reviewStatus: 'rejected',
+                                },
+                            ],
+                        },
+                    }),
+                },
+            ],
+        });
+        open();
+        await settle();
+
+        const check = $('check-accepted')!;
+        expect(check.dataset.ok).toBe('false');
+        expect(
+            [
+                ...document.querySelectorAll(
+                    '[data-testid="check-not-accepted"]',
+                ),
+            ].map((row) => row.textContent?.replace(/\s+/g, ' ').trim()),
+        ).toEqual(['contrat.pdf — À examiner', 'pochette.png — Rejeté']);
+        expect($<HTMLButtonElement>('decision-approve')!.disabled).toBe(true);
+        expect($('approve-blocked-reason')!.textContent).toContain(
+            '2 fichiers non acceptés',
+        );
+    });
+
+    it('"Inclure les fichiers rejetés" writes each rejected file and its reason', async () => {
+        server({
+            [DECISION]: [
+                {
+                    status: 200,
+                    body: summary({
+                        allowed: ['reject'],
+                        blocked: ['approve'],
+                        rejectedFiles: [
+                            { name: 'pochette.png', reason: VALID_REASON },
+                        ],
+                    }),
+                },
+            ],
+        });
+        open();
+        await settle();
+
+        $('decision-reject')!.click();
+        await settle();
+
+        document
+            .querySelector<HTMLButtonElement>('[data-chip="includeRejected"]')!
+            .click();
+        await settle();
+
+        expect($<HTMLTextAreaElement>('reject-reason')!.value).toBe(
+            `Fichiers rejetés :\n- pochette.png : ${VALID_REASON}`,
+        );
+    });
+
+    it('offers no such chip when no file is rejected', async () => {
+        server({ [DECISION]: [{ status: 200, body: summary() }] });
+        open();
+        await settle();
+
+        $('decision-reject')!.click();
+        await settle();
+
+        expect(
+            document.querySelector('[data-chip="includeRejected"]'),
+        ).toBeNull();
+    });
+});

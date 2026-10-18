@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\MediaFile\ReviewStatusEnum;
 use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\CollegeOeuvreFile;
@@ -86,6 +87,8 @@ function flowFile(Oeuvre $oeuvre, MediaFileStatus $status = MediaFileStatus::REA
         'college_oeuvre_file_id' => $slot?->id,
         'original_name' => $name,
         'status' => $status,
+        // Reviewed by an officer: registration needs every file accepted.
+        'review_status' => $status === MediaFileStatus::READY ? ReviewStatusEnum::ACCEPTED : ReviewStatusEnum::PENDING,
     ]);
 }
 
