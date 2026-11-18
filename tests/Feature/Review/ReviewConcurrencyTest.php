@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use App\Domain\Deposit\Exceptions\IllegalTransition;
 use App\Domain\Deposit\Exceptions\ReviewConflict;
-use App\Domain\Deposit\OeuvreStatus;
 use App\Domain\Deposit\OeuvreStatusMachine;
+use App\Enums\MediaFile\ReviewStatusEnum;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\OeuvreReview;
@@ -47,7 +49,9 @@ function concurrencyOeuvre(?User $holder = null): Oeuvre
     MediaFile::factory()->create([
         'oeuvre_id' => $oeuvre->id,
         'uploaded_by' => $author->id,
-        'status' => 'ready',
+        'status' => MediaFileStatus::READY,
+        // Reviewed by an officer: registration needs every file accepted.
+        'review_status' => ReviewStatusEnum::ACCEPTED,
     ]);
 
     return $oeuvre;
@@ -60,7 +64,7 @@ test('a second officer cannot decide on a deposit another officer holds', functi
 
     // The exact double-decision case: Amina holds it, Karim rejects.
     $this->actingAs($karim)
-        ->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Dossier incomplet.'])
+        ->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Dossier incomplet : le contrat signé manque.'])
         ->assertStatus(Response::HTTP_CONFLICT);
 
     // And the opposite decision is refused just the same.

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\Oeuvre;
 use App\Models\User;
 
@@ -17,7 +18,7 @@ function adminAccessRoutes(User $author, Oeuvre $oeuvre): array
 
 test('an author cannot reach any admin route', function () {
     $author = User::factory()->withRole('author')->create();
-    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id, 'status' => 'submitted']);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id, 'status' => OeuvreStatus::SUBMITTED]);
 
     foreach (adminAccessRoutes($author, $oeuvre) as $name => $url) {
         $this->actingAs($author)->get($url)->assertForbidden("expected [{$name}] to 403 an author");
@@ -26,7 +27,7 @@ test('an author cannot reach any admin route', function () {
 
 test('a guest is redirected to login for every admin route', function () {
     $author = User::factory()->withRole('author')->create();
-    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id, 'status' => 'submitted']);
+    $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id, 'status' => OeuvreStatus::SUBMITTED]);
 
     foreach (adminAccessRoutes($author, $oeuvre) as $name => $url) {
         $this->get($url)->assertRedirect(route('login', absolute: false), "expected [{$name}] to redirect a guest to login");

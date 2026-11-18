@@ -8,6 +8,9 @@ use App\Domain\Vault\Crypto\CtrCipher;
 use App\Domain\Vault\Crypto\HkdfKeys;
 use App\Domain\Vault\Crypto\KeyManager;
 use App\Domain\Vault\Value\UploadIntent;
+use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\MediaVariant\KindEnum;
 use App\Models\FileAccessLog;
 use App\Models\MediaFile;
 use App\Models\MediaVariant;
@@ -21,7 +24,7 @@ function adminMediaTestAuthor(): User
     return User::factory()->withRole('author')->create();
 }
 
-function adminMediaTestFile(User $author, Oeuvre $oeuvre, string $status = 'ready'): MediaFile
+function adminMediaTestFile(User $author, Oeuvre $oeuvre, MediaFileStatus $status = MediaFileStatus::READY): MediaFile
 {
     $vault = app(VaultContract::class);
     $bytes = file_get_contents(base_path('tests/fixtures/sample.mp4'));
@@ -85,7 +88,7 @@ function adminMediaTestPosterVariant(MediaFile $mediaFile): MediaVariant
     $variant = new MediaVariant;
     $variant->uuid = $variantUuid;
     $variant->media_file_id = $mediaFile->id;
-    $variant->kind = 'poster';
+    $variant->kind = KindEnum::POSTER;
     $variant->path = $relativePath;
     $variant->nonce = bin2hex($nonce);
     $variant->size_bytes = strlen($ciphertext);
@@ -94,7 +97,11 @@ function adminMediaTestPosterVariant(MediaFile $mediaFile): MediaVariant
     return $variant;
 }
 
-test('an admin can stream another author\'s deposit', function () {
+// INTENDED BEHAVIOUR CHANGE (admin file review): this used to assert 200.
+// An admin now consults DERIVATIVES only (OeuvreFileReviewController); the
+// original stream is owner-only (MediaFilePolicy::streamOriginal), so even a
+// validly signed URL issued for the admin is refused.
+test('an admin can no longer stream the original of another author', function () {
     $admin = User::factory()->withRole('admin')->create();
     $author = adminMediaTestAuthor();
     $oeuvre = Oeuvre::factory()->create(['author_id' => $author->id]);
@@ -102,7 +109,8 @@ test('an admin can stream another author\'s deposit', function () {
 
     $url = SignedMediaUrl::forStreaming($mediaFile, $admin);
 
-    $this->actingAs($admin)->get($url)->assertOk();
+    $this->actingAs($admin)->get($url)->assertForbidden();
+    $this->actingAs($admin)->getJson(route('media.link', $mediaFile))->assertForbidden();
 
     adminMediaTestCleanup($mediaFile);
 });
@@ -135,7 +143,7 @@ test('an admin previewing a variant writes a file_access_logs row naming the adm
     $log = FileAccessLog::where('media_file_id', $mediaFile->id)->latest('id')->first();
 
     expect($log)->not->toBeNull()
-        ->and($log->action)->toBe('preview')
+        ->and($log->action)->toBe(ActionEnum::PREVIEW)
         ->and($log->user_id)->toBe($admin->id);
 
     adminMediaTestCleanup($mediaFile);

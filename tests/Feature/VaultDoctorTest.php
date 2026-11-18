@@ -1,8 +1,11 @@
 <?php
 
 use App\Console\Commands\VaultDoctorCommand;
+use App\Domain\Deposit\VaultConsistencyChecks;
+use App\Domain\Deposit\WritabilityChecks;
 use App\Domain\Vault\Doctor\CheckResult;
 use App\Domain\Vault\Doctor\VaultDoctor;
+use App\Infrastructure\Render\ConsultationChecks;
 use App\Models\User;
 use Illuminate\Config\Repository;
 use Illuminate\Support\Facades\Artisan;
@@ -63,7 +66,12 @@ test('--json output is valid JSON and includes every check', function () {
         expect($row)->toHaveKeys(['key', 'label', 'status', 'value', 'rationale', 'sapi_sensitive']);
     }
 
-    expect(count($decoded))->toBe(app(VaultDoctor::class)->run()->count());
+    expect(count($decoded))->toBe(
+        app(VaultDoctor::class)->run()->count()
+            + app(ConsultationChecks::class)->run()->count()
+            + app(VaultConsistencyChecks::class)->run()->count()
+            + app(WritabilityChecks::class)->run()->count(),
+    );
 });
 
 function assetSourceCheckArgs(): array
@@ -394,4 +402,34 @@ test('a 404 outside local prints the enable hint', function () {
     Artisan::call('vault:doctor', ['--fpm' => true]);
 
     expect(Artisan::output())->toContain('Endpoint disabled — set VAULT_DOCTOR_WEB_ENABLED=true temporarily');
+});
+
+test('missing ffmpeg, pdftoppm and soffice are INFO, never WARN or FAIL, and the delivery map is printed', function () {
+    config([
+        'vault.ffmpeg_binary' => 'C:/definitely/not/ffmpeg.exe',
+        'vault.pdftoppm_binary' => 'C:/definitely/not/pdftoppm.exe',
+        'vault.soffice_binary' => 'C:/definitely/not/soffice.exe',
+    ]);
+
+    $checks = app(ConsultationChecks::class)->run()->keyBy('key');
+
+    foreach (['consult.soffice', 'consult.ffmpeg'] as $key) {
+        expect($checks[$key]->status)->toBe('INFO')
+            ->and($checks[$key]->rationale)->toContain('Optional, used only if a family is configured as derivative');
+    }
+
+    // imagick can stand in for pdftoppm on a machine that has it.
+    if (! extension_loaded('imagick')) {
+        expect($checks['consult.pdf']->status)->toBe('INFO');
+    }
+
+    expect($checks['consult.delivery']->status)->toBe('INFO')
+        ->and($checks['consult.delivery']->value)
+        ->toContain('pdf=original_inline')
+        ->toContain('document:docx=original_inline')
+        ->toContain('presentation:pptx=derivative')
+        ->toContain('other=unsupported');
+
+    expect($checks->whereIn('status', [CheckResult::WARN, CheckResult::FAIL])->pluck('key')->all())
+        ->not->toContain('consult.soffice', 'consult.ffmpeg', 'consult.pdf');
 });

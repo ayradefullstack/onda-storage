@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\User;
@@ -38,7 +39,7 @@ class MediaFileFactory extends Factory
             // Stored as the hex encoding of the 8-byte nonce (CHAR(16) column).
             'nonce' => bin2hex(random_bytes(8)),
             'mac_path' => substr($uuid, 0, 2).'/'.substr($uuid, 2, 2).'/'.$uuid.'.mac',
-            'status' => 'ready',
+            'status' => MediaFileStatus::READY,
             'duration_sec' => fake()->numberBetween(10, 3600),
             'width' => 1920,
             'height' => 1080,

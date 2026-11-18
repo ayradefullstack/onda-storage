@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\CollegeOeuvreFile;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -152,7 +153,7 @@ test('a full upload through the real pipeline reaches ready with the requirement
     // No Bus::fake(): QUEUE_CONNECTION=sync runs the whole P5 chain.
     $mediaFile = slotUpload($oeuvre, $requirement, 'Justificatif.PDF', $bytes)->fresh();
 
-    expect($mediaFile->status)->toBe('ready')
+    expect($mediaFile->status)->toBe(MediaFileStatus::READY)
         ->and($mediaFile->sha256_plain)->toBe(hash('sha256', $bytes))
         ->and($mediaFile->college_oeuvre_file_id)->toBe($requirement->id)
         ->and($mediaFile->document_key_snapshot)->toBe('justificatif_exploitation')
@@ -310,7 +311,7 @@ test('a single-file slot refuses a second file while one is deposited or in flig
     // Refused, not replaced: the first deposit is untouched.
     expect($first->fresh()->trashed())->toBeFalse();
 
-    $first->forceFill(['status' => 'failed'])->save();
+    $first->forceFill(['status' => MediaFileStatus::FAILED])->save();
 
     slotInit($oeuvre, $requirement->id, 'paroles-v2.pdf', 100)->assertCreated();
 

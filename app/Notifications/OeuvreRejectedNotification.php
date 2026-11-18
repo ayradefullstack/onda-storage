@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Models\Oeuvre;
+use Illuminate\Contracts\Queue\ShouldQueue;
 
 /**
  * Sent to the author when an officer rejects their deposit.
@@ -17,8 +18,10 @@ use App\Models\Oeuvre;
  *
  * See OeuvreNotification for the rest of the payload and channel rationale.
  */
-final class OeuvreRejectedNotification extends OeuvreNotification
+final class OeuvreRejectedNotification extends OeuvreNotification implements ShouldQueue
 {
+    use QueuedForAuthor;
+
     public function __construct(
         Oeuvre $oeuvre,
         private readonly string $reason,

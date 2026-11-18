@@ -42,7 +42,7 @@ seed model RegisterTypeCollege by nest data
                     $typeGestion[1],
                 ],
                 'OEUVRE_FILM' => [
-                    'Œuvres film',
+                    'Oeuvres film',
                     $typeGestion[1],
                 ],
             ],
@@ -83,7 +83,7 @@ seed model RegisterTypeCollege by nest data
             'Arrangeur',
         ];
         $rolesDrama = [
-            'Auteur de l’œuvre originale',
+            'Auteur de l’oeuvre originale',
             'Compositeur',
             'Chorégraphe',
             'Traducteur',
@@ -94,7 +94,7 @@ seed model RegisterTypeCollege by nest data
         ];
         $rolesLiteraryBroadcast = [
             'Auteur',
-            'Auteur de l’œuvre originale',
+            'Auteur de l’oeuvre originale',
             'Traducteur',
             'Adaptateur',
         ];
@@ -241,12 +241,12 @@ seed model RegisterTypeCollege by nest data
             ],
             'ARTS_GRAPHIQUES' => $membersCollegeGraphiquePlastique,
             'SUSCEPTIBLE_GESTION_COLLECTIVE' => [
-                $this->member('Auteur d’œuvres littéraires (Inactive)'),
+                $this->member('Auteur d’oeuvres littéraires (Inactive)'),
             ],
             'EDITEUR_MUSICAL' => [
-                $this->member('Editeur d’œuvres musicales', 'E'),
-                $this->member('Sous-Éditeur d’œuvres musicales', 'SE'),
-                $this->member('Co-Éditeur d’œuvres musicales', 'CE'),
+                $this->member('Editeur d’oeuvres musicales', 'E'),
+                $this->member('Sous-Éditeur d’oeuvres musicales', 'SE'),
+                $this->member('Co-Éditeur d’oeuvres musicales', 'CE'),
             ],
             'PRESTATION_LYRIQUE' => [
                 $this->member("Chef d'orchestre", '03'),

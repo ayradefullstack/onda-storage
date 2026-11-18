@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Domain\Deposit\MediaFileStatus;
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\RegisterTypeCollege;
@@ -28,7 +28,7 @@ function tableAuthor(): User
     return $user;
 }
 
-function tableOeuvre(User $author, string $status = OeuvreStatus::DRAFT, ?string $title = null): Oeuvre
+function tableOeuvre(User $author, OeuvreStatus $status = OeuvreStatus::DRAFT, ?string $title = null): Oeuvre
 {
     return Oeuvre::factory()->create([
         'author_id' => $author->id,
@@ -97,6 +97,32 @@ test('an unknown status filter is ignored rather than returning nothing', functi
         ->assertInertia(fn (Assert $page) => $page
             ->has('oeuvres.data', 1)
             ->where('filters.status', '')
+        );
+});
+
+test('the pending filter returns submitted and under-review deposits, counted the same way', function () {
+    $author = tableAuthor();
+    $stranger = tableAuthor();
+
+    $submitted = tableOeuvre($author, OeuvreStatus::SUBMITTED);
+    $underReview = tableOeuvre($author, OeuvreStatus::UNDER_REVIEW);
+    tableOeuvre($author, OeuvreStatus::DRAFT);
+    tableOeuvre($author, OeuvreStatus::REGISTERED);
+    tableOeuvre($author, OeuvreStatus::REJECTED);
+    tableOeuvre($stranger, OeuvreStatus::SUBMITTED);
+
+    $this->actingAs($author)
+        ->get(route('oeuvres.index', ['status' => 'pending']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('oeuvres.data', 2)
+            ->where('oeuvres.data', fn ($rows) => collect($rows)->pluck('uuid')->sort()->values()->all()
+                === collect([$submitted->uuid, $underReview->uuid])->sort()->values()->all())
+            ->where('filters.status', 'pending')
+            // The dashboard card reads this same number.
+            ->where('counts.pending', 2)
+            ->where('counts.submitted', 1)
+            ->where('counts.under_review', 1)
+            ->where('counts.all', 5)
         );
 });
 
@@ -254,7 +280,7 @@ test('the table paginates instead of returning every row', function () {
         );
 });
 
-test('row abilities mirror the policy for every status', function (string $status, bool $editable) {
+test('row abilities mirror the policy for every status', function (OeuvreStatus $status, bool $editable) {
     $author = tableAuthor();
     tableOeuvre($author, $status);
 

@@ -4,6 +4,7 @@ import NotificationPopover from '@/components/dashboard/NotificationPopover.vue'
 import LanguageSwitcher from '@/components/public/LanguageSwitcher.vue';
 import ThemeToggle from '@/components/public/ThemeToggle.vue';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { useScrolled } from '@/composables/useScrolled';
 import type { BreadcrumbItem } from '@/types';
 
 withDefaults(
@@ -14,11 +15,15 @@ withDefaults(
         breadcrumbs: () => [],
     },
 );
+
+// A soft shadow once the page has moved under the sticky header.
+const scrolled = useScrolled();
 </script>
 
 <template>
     <header
-        class="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border/80 bg-background/80 px-4 backdrop-blur-md transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-14 md:px-6"
+        :data-scrolled="scrolled"
+        class="motion-header-shadow sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border/80 bg-background/80 px-4 backdrop-blur-md group-has-data-[collapsible=icon]/sidebar-wrapper:h-14 md:px-6"
     >
         <!-- Start: Sidebar Toggle & Breadcrumbs -->
         <div class="flex min-w-0 items-center gap-2 sm:gap-3">

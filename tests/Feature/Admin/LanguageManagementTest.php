@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Domain\Localization\LanguageService;
+use App\Enums\Language\DirectionEnum;
 use App\Models\Language;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -31,7 +32,7 @@ beforeEach(function () {
 test('the migration seeds ar (default), fr and en', function () {
     expect(Language::query()->pluck('code')->all())->toEqualCanonicalizing(['ar', 'fr', 'en'])
         ->and(Language::query()->where('is_default', true)->pluck('code')->all())->toBe(['ar'])
-        ->and(Language::query()->where('code', 'ar')->value('direction'))->toBe('rtl');
+        ->and(Language::query()->where('code', 'ar')->value('direction'))->toBe(DirectionEnum::RTL);
 });
 
 // --- authorization ---------------------------------------------------------
@@ -175,12 +176,12 @@ test('a new default language is used when there is no cookie', function () {
 });
 
 test('direction comes from the language row, not the code', function () {
-    Language::create(languagePayload(['code' => 'ur', 'direction' => 'rtl']));
+    Language::create(languagePayload(['code' => 'ur', 'direction' => DirectionEnum::RTL]));
 
     $this->withUnencryptedCookie('locale', 'ur')->get('/login')
         ->assertInertia(fn (Assert $page) => $page->where('locale', 'ur')->where('direction', 'rtl'));
 
-    patchLanguage('ar', ['direction' => 'ltr']);
+    patchLanguage('ar', ['direction' => DirectionEnum::LTR]);
 
     $this->withUnencryptedCookie('locale', 'ar')->get('/login')
         ->assertInertia(fn (Assert $page) => $page->where('direction', 'ltr'));
@@ -200,7 +201,7 @@ test('the active-language cache is flushed when a language changes', function ()
 
     expect($service->active())->toHaveCount(3);
 
-    Language::create(languagePayload());
+    Language::create(languagePayload(['direction' => DirectionEnum::LTR]));
     expect($service->active())->toHaveCount(4);
 
     Language::where('code', 'es')->first()->update(['is_active' => false]);

@@ -45,7 +45,8 @@ const page = usePage();
 const auth = computed(() => page.props.auth);
 const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
 
-const activeItemStyles = 'text-primary font-semibold border-b-2 border-primary';
+const activeItemStyles =
+    'text-primary-text font-semibold border-b-2 border-primary';
 
 const mainNavItems: NavItem[] = [
     {

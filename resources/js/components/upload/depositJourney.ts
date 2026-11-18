@@ -7,6 +7,7 @@
  * and out of `types/upload.ts` deliberately: this is presentation-only
  * derivation, not state either of those owns.
  */
+import type { LiveFileStatus } from '@/composables/useFileStatusPoll';
 import type { MediaFileSummary, UploadFileState } from '@/types/upload';
 
 /**
@@ -17,12 +18,17 @@ import type { MediaFileSummary, UploadFileState } from '@/types/upload';
  * `completed` uploads are excluded: the page's own watcher reloads
  * `mediaFiles` the moment that status is reached, so the row is picked up
  * there instead within a moment rather than being shown twice.
+ *
+ * `live` is what the status poll last heard from the server for a file. It
+ * is newer than the page's props between two reloads, so it wins: that is
+ * what moves the rail past step 4 without a refresh.
  */
 export function mergeDepositEntries(
     uploadFiles: UploadFileState[],
     oeuvreId: number,
     mediaFiles: MediaFileSummary[],
     readyAtLoadUuids: ReadonlySet<string>,
+    live: Readonly<Record<string, LiveFileStatus>> = {},
 ): DepositEntry[] {
     const uploadEntries: UploadEntry[] = uploadFiles
         .filter(
@@ -30,12 +36,18 @@ export function mergeDepositEntries(
         )
         .map((file) => ({ kind: 'upload', file }));
 
-    const mediaEntries: MediaEntry[] = mediaFiles.map((file) => ({
-        kind: 'media',
-        file,
-        collapsedReady:
-            file.status === 'ready' && readyAtLoadUuids.has(file.uuid),
-    }));
+    const mediaEntries: MediaEntry[] = mediaFiles.map((shown) => {
+        const now = live[shown.uuid];
+        const file = now ? { ...shown, status: now.status } : shown;
+
+        return {
+            kind: 'media',
+            file,
+            collapsedReady:
+                file.status === 'ready' && readyAtLoadUuids.has(file.uuid),
+            ...(now ? { stage: now.stage } : {}),
+        };
+    });
 
     return [...uploadEntries, ...mediaEntries];
 }
@@ -120,12 +132,31 @@ export interface MediaEntry {
      * actively watching finish stays on the full rail.
      */
     collapsedReady: boolean;
+    /**
+     * The rail step the server reported for this file (`RAIL_STAGES` key),
+     * when the status poll has heard about it; null falls back to `status`.
+     */
+    stage?: string | null;
 }
 
 export type DepositEntry = UploadEntry | MediaEntry;
 
+/**
+ * The 6-step rail, in order (`upload.step.*` keys). Steps 1–3 are the
+ * browser's, 4–6 the server pipeline's; the status endpoint reports the
+ * latter with these same keys.
+ */
+export const RAIL_STAGES = [
+    'initialisation',
+    'upload',
+    'assembly',
+    'antivirus',
+    'processing',
+    'sealed',
+] as const;
+
 /** 0-indexed position on the 6-step rail: queued…uploading…finishing…checking…preparing…deposited. */
-export const RAIL_LENGTH = 6;
+export const RAIL_LENGTH = RAIL_STAGES.length;
 
 export function entryKey(entry: DepositEntry): string {
     return entry.kind === 'upload'
@@ -181,6 +212,14 @@ export function railStepIndex(entry: DepositEntry): number {
             default:
                 return 1;
         }
+    }
+
+    const reported = RAIL_STAGES.indexOf(
+        (entry.stage ?? '') as (typeof RAIL_STAGES)[number],
+    );
+
+    if (reported >= 0) {
+        return reported;
     }
 
     switch (entry.file.status) {

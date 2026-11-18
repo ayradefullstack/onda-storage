@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Concerns\HasUuidColumn;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
+use App\Models\Concerns\SerializesEnumsAsKeys;
 use Database\Factories\OeuvreReviewFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -24,17 +26,25 @@ use Illuminate\Support\Carbon;
  * @property string $uuid
  * @property int $oeuvre_id
  * @property int $actor_id
- * @property string $from_status
- * @property string $to_status
+ * @property OeuvreStatus $from_status
+ * @property OeuvreStatus $to_status
  * @property string|null $reason
  * @property Carbon|null $created_at
  */
 class OeuvreReview extends Model
 {
     /** @use HasFactory<OeuvreReviewFactory> */
-    use HasFactory, HasUuidColumn;
+    use HasFactory, HasUuidColumn, SerializesEnumsAsKeys;
 
     const UPDATED_AT = null;
+
+    protected function casts(): array
+    {
+        return [
+            'from_status' => OeuvreStatus::class,
+            'to_status' => OeuvreStatus::class,
+        ];
+    }
 
     /**
      * @return BelongsTo<Oeuvre, $this>

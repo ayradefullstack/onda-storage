@@ -15,19 +15,18 @@ export function updateTheme(value: Appearance): void {
         return;
     }
 
-    if (value === 'system') {
-        const mediaQueryList = window.matchMedia(
-            '(prefers-color-scheme: dark)',
-        );
-        const systemTheme = mediaQueryList.matches ? 'dark' : 'light';
+    const root = document.documentElement;
+    const dark =
+        value === 'system'
+            ? window.matchMedia('(prefers-color-scheme: dark)').matches
+            : value === 'dark';
 
-        document.documentElement.classList.toggle(
-            'dark',
-            systemTheme === 'dark',
-        );
-    } else {
-        document.documentElement.classList.toggle('dark', value === 'dark');
-    }
+    // Exactly one of `.light` / `.dark`, whatever the stored preference:
+    // 'system' is resolved here, so the token CSS (onda-tokens.css) and
+    // Tailwind's `dark:` variant never depend on the OS media query once
+    // the app is running. The preference itself stays 'system' in storage.
+    root.classList.toggle('dark', dark);
+    root.classList.toggle('light', !dark);
 }
 
 const setCookie = (name: string, value: string, days = 365) => {

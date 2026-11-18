@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Domain\Quota\QuotaPolicy;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Http\Controllers\Author\OeuvreController as AuthorOeuvreController;
 use App\Http\Controllers\Concerns\ResolvesPerPage;
 use App\Http\Controllers\Controller;
@@ -115,7 +116,9 @@ final class AuthorController extends Controller
     {
         abort_if($user->hasRole('admin'), 404);
 
+        // The status KEY from the URL; an unknown key is no filter.
         $status = (string) $request->string('status');
+        $statusCase = OeuvreStatus::fromKey($status);
 
         // A draft is an author's private working state, not a submission
         // (see Admin\OeuvreController's docblock) — excluded here too, not
@@ -127,7 +130,7 @@ final class AuthorController extends Controller
             ->with('registerTypeCollege')
             ->withCount('mediaFiles')
             ->selectRaw('(select coalesce(sum(mf.size_bytes), 0) from media_files mf where mf.oeuvre_id = oeuvres.id and mf.deleted_at is null) as files_size_bytes')
-            ->when($status !== '', fn ($query) => $query->where('status', $status))
+            ->when($statusCase !== null, fn ($query) => $query->where('status', $statusCase))
             ->latest()
             ->paginate(15)
             ->withQueryString();
@@ -136,7 +139,9 @@ final class AuthorController extends Controller
             ->where('author_id', $user->id)
             ->selectRaw('status, count(*) as c')
             ->groupBy('status')
-            ->pluck('c', 'status');
+            ->pluck('c', 'status')
+            // Stored ints → status keys, as the page reads them.
+            ->mapWithKeys(fn ($count, $value): array => [OeuvreStatus::from((int) $value)->key() => (int) $count]);
 
         $lastDeposit = Oeuvre::query()
             ->join('media_files', 'media_files.oeuvre_id', '=', 'oeuvres.id')

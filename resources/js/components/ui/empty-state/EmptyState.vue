@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue';
+import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { Inbox } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
@@ -14,9 +15,11 @@ interface Props {
     class?: string;
 }
 
-withDefaults(defineProps<Props>(), {
-    icon: Inbox,
-});
+// Not `withDefaults({ icon: Inbox })`: Vue would call the lucide icon as a
+// default FACTORY and the render would throw (see ui/data-table/DataTableEmpty).
+const props = defineProps<Props>();
+
+const resolvedIcon = computed<Component>(() => props.icon ?? Inbox);
 
 const emit = defineEmits<{
     (e: 'action'): void;
@@ -35,7 +38,7 @@ const emit = defineEmits<{
         <div
             class="mb-3 flex size-12 items-center justify-center rounded-xl bg-muted/60 text-muted-foreground"
         >
-            <component :is="icon" :stroke-width="1.75" class="size-6 text-muted-foreground/80" />
+            <component :is="resolvedIcon" :stroke-width="1.75" class="size-6 text-muted-foreground/80" />
         </div>
 
         <h3 class="text-sm font-semibold text-foreground">

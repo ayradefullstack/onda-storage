@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Referentiel;
 
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
 use App\Models\RegisterTypeCollege;
 use App\Models\RegisterTypeMember;
 use App\Models\User;
@@ -26,7 +27,7 @@ final class CreateMember extends CreatesReferenceRow
             'name_en' => $data['name_en'] ?? null,
             'code_qlt' => $data['code_qlt'] ?? null,
             'available_in_registration' => $data['available_in_registration'] ?? true,
-            'status' => $data['status'] ?? RegisterTypeCollege::STATUS_ACTIVE,
+            'status' => $data['status'] ?? ReferentielStatus::ACTIVE,
             'is_disabled' => false,
         ]);
     }

@@ -10,18 +10,13 @@ import LockedField from '@/components/admin/LockedField.vue';
 import Pagination from '@/components/admin/Pagination.vue';
 import ReferentielShell from '@/components/admin/ReferentielShell.vue';
 import { ActionButton } from '@/components/ui/action';
+import { AppDialog } from '@/components/ui/app-dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { TableScroll } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useListFilters } from '@/composables/useListFilters';
 import { types as typesRoute } from '@/routes/admin/referentiel';
 import { store, update } from '@/routes/admin/referentiel/types';
 
@@ -33,12 +28,12 @@ interface TypeRow {
     colleges_count: number;
     reachable_colleges_count: number;
     gestions_count: number;
-    status: number;
+    status: 'active' | 'inactive';
     is_disabled: boolean;
     is_system: boolean;
 }
 
-defineProps<{
+const props = defineProps<{
     tabs: Array<{ key: string; route: string; count: number }>;
     rows: {
         data: TypeRow[];
@@ -51,6 +46,15 @@ defineProps<{
     filters: { search: string };
 }>();
 
+// The controls of this tab's list (search in the shell, selects below);
+// the rows are read straight from `props.rows`.
+const list = useListFilters({
+    url: () => typesRoute().url,
+    filters: () => props.filters,
+    defaults: { search: '' },
+    only: ['rows'],
+});
+
 const { t } = useI18n();
 
 const editing = ref<TypeRow | null>(null);
@@ -60,7 +64,7 @@ const form = ref({
     name: '',
     name_ar: '',
     name_en: '',
-    status: 1,
+    status: 'active',
     is_disabled: false,
 });
 
@@ -69,7 +73,7 @@ const blank = () => ({
     name: '',
     name_ar: '',
     name_en: '',
-    status: 1,
+    status: 'active',
     is_disabled: false,
 });
 
@@ -143,15 +147,14 @@ const hidesColleges = () =>
     editing.value !== null &&
     editing.value.reachable_colleges_count > 0 &&
     ((form.value.is_disabled && !editing.value.is_disabled) ||
-        (form.value.status !== 1 && editing.value.status === 1));
+        (form.value.status !== 'active' && editing.value.status === 'active'));
 </script>
 
 <template>
     <ReferentielShell
         :tabs="tabs"
         active="types"
-        :index-url="typesRoute().url"
-        :search="filters.search"
+        :list="list"
         :legend="['status', 'is_disabled']"
     >
         <template #actions>
@@ -162,111 +165,133 @@ const hidesColleges = () =>
         </template>
 
         <EmptyState
+            data-test="list-empty"
             v-if="rows.data.length === 0"
             :title="t('admin.referentiel.empty')"
             :description="t('admin.referentiel.emptyDescription')"
-        />
+        >
+            <Button
+                v-if="list.isActive.value"
+                variant="outline"
+                size="sm"
+                class="h-8 cursor-pointer text-xs"
+                data-test="list-empty-clear"
+                @click="list.clear()"
+            >
+                {{ t('common.clearFilters') }}
+            </Button>
+        </EmptyState>
 
         <div
             v-else
             class="overflow-hidden rounded-lg border border-border bg-card"
         >
-            <table class="w-full border-collapse text-xs">
-                <thead>
-                    <tr
-                        class="border-b border-border bg-muted/40 text-muted-foreground"
-                    >
-                        <th class="w-12 px-3 py-2.5 text-center font-medium">
-                            #
-                        </th>
-                        <th class="px-3 py-2.5 text-start font-medium">
-                            {{ t('admin.referentiel.col.name') }}
-                        </th>
-                        <th class="px-3 py-2.5 text-end font-medium">
-                            {{ t('admin.referentiel.col.gestions') }}
-                        </th>
-                        <th class="px-3 py-2.5 text-end font-medium">
-                            {{ t('admin.referentiel.col.colleges') }}
-                        </th>
-                        <th class="px-3 py-2.5 text-start font-medium">
-                            {{ t('admin.referentiel.flags.status') }}
-                        </th>
-                        <th class="px-3 py-2.5 text-end font-medium">
-                            {{ t('admin.referentiel.col.actions') }}
-                        </th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-border/70">
-                    <tr
-                        v-for="(row, index) in rows.data"
-                        :key="row.uuid"
-                        class="transition-colors hover:bg-accent/30"
-                    >
-                        <td
-                            class="w-12 px-3 py-2 text-center text-xs font-medium text-muted-foreground"
+            <TableScroll>
+                <table class="w-full border-collapse text-xs">
+                    <thead>
+                        <tr
+                            class="border-b border-border bg-muted/40 text-muted-foreground"
                         >
-                            {{ (rows.from ?? 1) + index }}
-                        </td>
-                        <td class="px-3 py-2">
-                            <bdi class="block font-medium">{{ row.name }}</bdi>
-                            <bdi
-                                v-if="row.name_ar"
-                                class="block text-[11px] text-muted-foreground"
-                                >{{ row.name_ar }}</bdi
+                            <th
+                                class="w-12 px-3 py-2.5 text-center font-medium"
                             >
-                        </td>
-                        <td class="px-3 py-2 text-end text-muted-foreground">
-                            <bdi>{{ row.gestions_count }}</bdi>
-                        </td>
-                        <td class="px-3 py-2 text-end text-muted-foreground">
-                            <bdi>{{ row.colleges_count }}</bdi>
-                        </td>
-                        <td class="px-3 py-2 whitespace-nowrap">
-                            <div class="flex flex-wrap items-center gap-1">
-                                <span
-                                    :class="[
-                                        'rounded px-1.5 py-0.5 text-[10px] font-medium',
-                                        row.status === 1
-                                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                            : 'bg-muted text-muted-foreground',
-                                    ]"
-                                    >{{
-                                        row.status === 1
-                                            ? t(
-                                                  'admin.referentiel.flags.statusOn',
-                                              )
-                                            : t(
-                                                  'admin.referentiel.flags.statusOff',
-                                              )
-                                    }}</span
+                                #
+                            </th>
+                            <th class="px-3 py-2.5 text-start font-medium">
+                                {{ t('admin.referentiel.col.name') }}
+                            </th>
+                            <th class="px-3 py-2.5 text-end font-medium">
+                                {{ t('admin.referentiel.col.gestions') }}
+                            </th>
+                            <th class="px-3 py-2.5 text-end font-medium">
+                                {{ t('admin.referentiel.col.colleges') }}
+                            </th>
+                            <th class="px-3 py-2.5 text-start font-medium">
+                                {{ t('admin.referentiel.flags.status') }}
+                            </th>
+                            <th class="px-3 py-2.5 text-end font-medium">
+                                {{ t('admin.referentiel.col.actions') }}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border/70">
+                        <tr
+                            v-for="(row, index) in rows.data"
+                            :key="row.uuid"
+                            class="transition-colors hover:bg-accent/30"
+                        >
+                            <td
+                                class="w-12 px-3 py-2 text-center text-xs font-medium text-muted-foreground"
+                            >
+                                {{ (rows.from ?? 1) + index }}
+                            </td>
+                            <td class="px-3 py-2">
+                                <bdi class="block font-medium">{{
+                                    row.name
+                                }}</bdi>
+                                <bdi
+                                    v-if="row.name_ar"
+                                    class="block text-[11px] text-muted-foreground"
+                                    >{{ row.name_ar }}</bdi
                                 >
-                                <span
-                                    v-if="row.is_disabled"
-                                    class="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400"
-                                    >{{
-                                        t('admin.referentiel.flags.retired')
-                                    }}</span
-                                >
-                                <span
-                                    v-if="!row.is_system"
-                                    class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
-                                    >{{
-                                        t('admin.referentiel.badge.custom')
-                                    }}</span
-                                >
-                            </div>
-                        </td>
-                        <td class="px-3 py-2 text-end">
-                            <ActionButton
-                                action="edit"
-                                size="sm"
-                                :label="t('admin.referentiel.edit')"
-                                @click="open(row)"
-                            />
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+                            </td>
+                            <td
+                                class="px-3 py-2 text-end text-muted-foreground"
+                            >
+                                <bdi>{{ row.gestions_count }}</bdi>
+                            </td>
+                            <td
+                                class="px-3 py-2 text-end text-muted-foreground"
+                            >
+                                <bdi>{{ row.colleges_count }}</bdi>
+                            </td>
+                            <td class="px-3 py-2 whitespace-nowrap">
+                                <div class="flex flex-wrap items-center gap-1">
+                                    <span
+                                        :class="[
+                                            'rounded px-1.5 py-0.5 text-[10px] font-medium',
+                                            row.status === 'active'
+                                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                                : 'bg-muted text-muted-foreground',
+                                        ]"
+                                        >{{
+                                            row.status === 'active'
+                                                ? t(
+                                                      'admin.referentiel.flags.statusOn',
+                                                  )
+                                                : t(
+                                                      'admin.referentiel.flags.statusOff',
+                                                  )
+                                        }}</span
+                                    >
+                                    <span
+                                        v-if="row.is_disabled"
+                                        class="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400"
+                                        >{{
+                                            t('admin.referentiel.flags.retired')
+                                        }}</span
+                                    >
+                                    <span
+                                        v-if="!row.is_system"
+                                        class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary-text"
+                                        >{{
+                                            t('admin.referentiel.badge.custom')
+                                        }}</span
+                                    >
+                                </div>
+                            </td>
+                            <td class="px-3 py-2 text-end">
+                                <ActionButton
+                                    action="edit"
+                                    size="sm"
+                                    :label="t('admin.referentiel.edit')"
+                                    @click="open(row)"
+                                />
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </TableScroll>
 
             <div class="px-3 pb-3">
                 <Pagination
@@ -332,8 +357,10 @@ const hidesColleges = () =>
 
             <label class="flex items-start gap-2.5 text-xs">
                 <Checkbox
-                    :model-value="form.status === 1"
-                    @update:model-value="form.status = $event ? 1 : 0"
+                    :model-value="form.status === 'active'"
+                    @update:model-value="
+                        form.status = $event ? 'active' : 'inactive'
+                    "
                 />
                 <span>
                     <span class="block font-medium">{{
@@ -347,20 +374,17 @@ const hidesColleges = () =>
         </CreateDialog>
 
         <!-- Edit -->
-        <Dialog
+        <AppDialog
             :open="editing !== null"
             @update:open="(o) => !o && (editing = null)"
+            size="md"
+            :busy="saving"
         >
-            <DialogContent class="sm:max-w-lg">
-                <DialogHeader>
-                    <DialogTitle>{{
-                        t('admin.referentiel.editType')
-                    }}</DialogTitle>
-                    <DialogDescription>
-                        <bdi>{{ editing?.name }}</bdi>
-                    </DialogDescription>
-                </DialogHeader>
-
+            <template #title>{{ t('admin.referentiel.editType') }}</template>
+            <template #description
+                ><bdi>{{ editing?.name }}</bdi></template
+            >
+            <div class="grid gap-4">
                 <LockedField
                     v-if="editing?.is_system"
                     :label="t('admin.referentiel.col.name')"
@@ -408,8 +432,10 @@ const hidesColleges = () =>
                 <div class="space-y-3 rounded-lg border border-border/80 p-3">
                     <label class="flex items-start gap-2.5 text-xs">
                         <Checkbox
-                            :model-value="form.status === 1"
-                            @update:model-value="form.status = $event ? 1 : 0"
+                            :model-value="form.status === 'active'"
+                            @update:model-value="
+                                form.status = $event ? 'active' : 'inactive'
+                            "
                         />
                         <span>
                             <span class="block font-medium">{{
@@ -459,23 +485,22 @@ const hidesColleges = () =>
                         {{ t('admin.referentiel.blast.safe') }}
                     </p>
                 </div>
-
-                <DialogFooter class="gap-2 sm:gap-2">
-                    <Button
-                        variant="outline"
-                        class="cursor-pointer"
-                        :disabled="saving"
-                        @click="editing = null"
-                        >{{ t('admin.referentiel.cancel') }}</Button
-                    >
-                    <Button
-                        class="cursor-pointer"
-                        :disabled="saving"
-                        @click="save"
-                        >{{ t('admin.referentiel.save') }}</Button
-                    >
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            </div>
+            <template #footer
+                ><Button
+                    variant="outline"
+                    class="cursor-pointer"
+                    :disabled="saving"
+                    @click="editing = null"
+                    >{{ t('admin.referentiel.cancel') }}</Button
+                >
+                <Button
+                    class="cursor-pointer"
+                    :disabled="saving"
+                    @click="save"
+                    >{{ t('admin.referentiel.save') }}</Button
+                ></template
+            >
+        </AppDialog>
     </ReferentielShell>
 </template>

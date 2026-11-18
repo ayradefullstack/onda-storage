@@ -5,20 +5,23 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Actions\Media\TransitionMediaFileStatus;
-use App\Domain\Deposit\MediaFileStatus;
+use App\Domain\Access\AccessLogger;
 use App\Domain\Deposit\Value\RowHash;
+use App\Domain\Deposit\VaultConsistency;
+use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\FileAccessLog;
 use App\Models\MediaFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
- * The legal record. Appends a row to `file_access_logs` (see this phase's
- * report for why that table rather than a new one — the short version:
- * `database/migrations/**` is frozen, so a dedicated table wasn't buildable
- * either, and reusing the existing prev_hash/row_hash columns needed only a
- * one-value enum addition) with `action = 'deposit'`, chained by
+ * The legal record. Appends a row to `file_access_logs` (that table rather
+ * than a dedicated one: it already carries the prev_hash/row_hash chain, so
+ * the deposit event is one more `action` value in the same ledger) with
+ * `action = 'deposit'`, chained by
  * `row_hash = sha256(prev_hash . canonical_json_of_this_row)` — tampering
  * with an old row is then detectable, since its stored row_hash would no
  * longer match what a later row's chain was actually built against.
@@ -36,9 +39,18 @@ final class RecordDeposit extends PipelineJob
 {
     public int $timeout = 300;
 
-    public function handle(TransitionMediaFileStatus $transition): void
+    public function handle(TransitionMediaFileStatus $transition, VaultConsistency $consistency): void
     {
         $mediaFile = MediaFile::where('uuid', $this->mediaFileUuid)->firstOrFail();
+
+        // A deposit record must never be written for bytes that are not
+        // there. Checked before anything is recorded: the file fails with
+        // reason `bytes_missing` and no deposit row exists.
+        if (! $consistency->bytesIntact($mediaFile)) {
+            $this->failBytesMissing($mediaFile);
+
+            return;
+        }
 
         if ($mediaFile->sha256_plain === null) {
             throw new RuntimeException("Cannot record deposit for [{$this->mediaFileUuid}]: sha256_plain is not set.");
@@ -50,13 +62,36 @@ final class RecordDeposit extends PipelineJob
         $transition->handle($mediaFile, MediaFileStatus::READY);
     }
 
+    private function failBytesMissing(MediaFile $mediaFile): void
+    {
+        Log::error('RecordDeposit: bytes_missing — refusing to record a deposit for bytes that are not on disk.', [
+            'media_file_uuid' => $mediaFile->uuid,
+            'path' => $mediaFile->path,
+        ]);
+
+        AccessLogger::record($mediaFile, null, ActionEnum::BYTES_MISSING, 'system', null);
+
+        $exception = new RuntimeException('bytes_missing');
+
+        // Permanent: retrying cannot bring bytes back. `fail()` runs
+        // failed() immediately; outside a queue (direct call) rethrow.
+        if ($this->job !== null) {
+            $this->fail($exception);
+
+            return;
+        }
+
+        throw $exception;
+    }
+
     private function appendDepositRow(MediaFile $mediaFile): void
     {
         DB::transaction(function () use ($mediaFile): void {
             $previousRowHash = FileAccessLog::orderByDesc('id')->value('row_hash');
 
             $payload = [
-                'action' => 'deposit',
+                // The ActionEnum key, as in AccessLogger: the chain's format is unchanged.
+                'action' => ActionEnum::DEPOSIT->key(),
                 'media_file_uuid' => $mediaFile->uuid,
                 'sha256_plain' => $mediaFile->sha256_plain,
                 'size_bytes' => $mediaFile->size_bytes,
@@ -67,7 +102,7 @@ final class RecordDeposit extends PipelineJob
             $log = new FileAccessLog;
             $log->media_file_id = $mediaFile->id;
             $log->user_id = $mediaFile->uploaded_by;
-            $log->action = 'deposit';
+            $log->action = ActionEnum::DEPOSIT;
             // No HTTP request context in a queued job — 'system' is a
             // deliberate non-IP sentinel, not a real client address.
             $log->ip = 'system';

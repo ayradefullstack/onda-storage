@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
+use App\Enums\TypeGestion\TypeGestionEnum;
 use App\Models\CollegeOeuvreFile;
 use App\Models\RegisterType;
 use App\Models\RegisterTypeCollege;
@@ -9,7 +11,6 @@ use App\Models\RegisterTypeMember;
 use App\Models\TypeGestion;
 use Database\Seeders\CollegeOeuvreFileSeeder;
 use Database\Seeders\MembershipTypeSeeder;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -37,10 +38,10 @@ function ownershipAdminCollege(string $code = 'ADMIN_COLLEGE'): RegisterTypeColl
     $college->fill([
         'register_type_id' => $type->id,
         'type_gestion_id' => $gestion->id,
-        'type_gestion' => 1,
+        'type_gestion' => TypeGestionEnum::COLLECTIVE,
         'code_college' => $code,
         'name' => 'Collège ajouté par un admin',
-        'status' => 1,
+        'status' => ReferentielStatus::ACTIVE,
         'is_disabled' => false,
     ])->save();
 
@@ -76,17 +77,17 @@ test('re-running the seeders keeps an admin\'s status flags on a system row', fu
     $type = RegisterType::where('slug', 'auteur')->firstOrFail();
     $gestion = TypeGestion::where('register_type_id', $type->id)->firstOrFail();
 
-    $college->update(['is_disabled' => true, 'status' => 0, 'adhesion' => false, 'name_ar' => 'اسم']);
-    $member->update(['is_disabled' => true, 'available_in_registration' => false, 'status' => 0]);
-    $type->update(['status' => 0, 'is_disabled' => true]);
-    $gestion->update(['status' => 0]);
+    $college->update(['is_disabled' => true, 'status' => ReferentielStatus::INACTIVE, 'adhesion' => false, 'name_ar' => 'اسم']);
+    $member->update(['is_disabled' => true, 'available_in_registration' => false, 'status' => ReferentielStatus::INACTIVE]);
+    $type->update(['status' => ReferentielStatus::INACTIVE, 'is_disabled' => true]);
+    $gestion->update(['status' => ReferentielStatus::INACTIVE]);
 
     ownershipRerun();
 
-    expect($college->fresh())->is_disabled->toBeTrue()->status->toBe(0)->name_ar->toBe('اسم')
-        ->and($member->fresh())->is_disabled->toBeTrue()->available_in_registration->toBeFalse()->status->toBe(0)
-        ->and($type->fresh())->status->toBe(0)->is_disabled->toBeTrue()
-        ->and($gestion->fresh()->status)->toBe(0);
+    expect($college->fresh())->is_disabled->toBeTrue()->status->toBe(ReferentielStatus::INACTIVE)->name_ar->toBe('اسم')
+        ->and($member->fresh())->is_disabled->toBeTrue()->available_in_registration->toBeFalse()->status->toBe(ReferentielStatus::INACTIVE)
+        ->and($type->fresh())->status->toBe(ReferentielStatus::INACTIVE)->is_disabled->toBeTrue()
+        ->and($gestion->fresh()->status)->toBe(ReferentielStatus::INACTIVE);
 });
 
 test('re-running the seeders creates no duplicate of a system row nor of an admin row', function () {
@@ -95,7 +96,7 @@ test('re-running the seeders creates no duplicate of a system row nor of an admi
     $adminMember = new RegisterTypeMember;
     $adminMember->fill([
         'register_type_college_id' => $adminCollege->id, 'name' => 'Qualité admin', 'code_qlt' => 'ADM',
-        'status' => 1, 'is_disabled' => false, 'available_in_registration' => true,
+        'status' => ReferentielStatus::ACTIVE, 'is_disabled' => false, 'available_in_registration' => true,
     ])->save();
 
     $before = [
@@ -147,37 +148,24 @@ test('admin-created documents are not touched by the documents seeder', function
         ->and([$seeded->fresh()->is_required, $seeded->fresh()->title_en])->toBe($expected);
 });
 
-// --- the migration backfill -----------------------------------------------------------
+// --- seeded rows are system rows ------------------------------------------------------
 
-test('after the migration every pre-existing row is a system row', function () {
-    $path = 'database/migrations/2026_10_05_090000_add_is_system_to_referentiel_tables.php';
-
-    // Take the database back to how it was before the column existed: rows
-    // seeded, no `is_system` anywhere…
-    Artisan::call('migrate:rollback', ['--path' => $path, '--force' => true]);
-
+test('every row the seeder writes is a system row, and the column defaults hold', function () {
+    // The seeders mark every row they write; there is no migration backfill,
+    // so this is the only thing that makes the seeded set `is_system`.
     foreach (['register_types', 'type_gestions', 'register_type_colleges', 'register_type_members'] as $table) {
-        expect(Schema::hasColumn($table, 'is_system'))->toBeFalse();
+        expect(DB::table($table)->count())->toBeGreaterThan(0)
+            ->and(DB::table($table)->where('is_system', false)->count())->toBe(0);
     }
 
-    // …plus one row a seeder never wrote, so the backfill is shown to apply
-    // to whatever exists, not to the seeded set only.
+    // Every seeded gestion is active.
+    expect(DB::table('type_gestions')->where('status', '!=', 1)->count())->toBe(0);
+
+    // A row written outside the seeder takes the column default: not a system row.
     DB::table('register_types')->insert([
-        'uuid' => (string) Str::uuid(), 'name' => 'Pre-existing', 'slug' => 'pre-existing',
-        'status' => 1, 'is_disabled' => false, 'created_at' => now(), 'updated_at' => now(),
+        'uuid' => (string) Str::uuid(), 'name' => 'Admin-made', 'slug' => 'admin-made',
+        'status' => ReferentielStatus::ACTIVE, 'is_disabled' => false, 'created_at' => now(), 'updated_at' => now(),
     ]);
 
-    $types = DB::table('register_types')->count();
-    $members = DB::table('register_type_members')->count();
-
-    Artisan::call('migrate', ['--path' => $path, '--force' => true]);
-
-    expect(DB::table('register_types')->where('is_system', false)->count())->toBe(0)
-        ->and(DB::table('register_types')->where('is_system', true)->count())->toBe($types)
-        ->and(DB::table('type_gestions')->where('is_system', false)->count())->toBe(0)
-        ->and(DB::table('register_type_colleges')->where('is_system', false)->count())->toBe(0)
-        ->and(DB::table('register_type_members')->where('is_system', true)->count())->toBe($members)
-        // The new columns' defaults: gestions stay active, members gain nullable names.
-        ->and(DB::table('type_gestions')->where('status', '!=', 1)->count())->toBe(0)
-        ->and(DB::table('register_type_members')->whereNotNull('name_ar')->count())->toBe(0);
+    expect(DB::table('register_types')->where('slug', 'admin-made')->value('is_system'))->toBeFalsy();
 });

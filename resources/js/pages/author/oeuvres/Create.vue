@@ -34,6 +34,7 @@ import ClassificationCascade from '@/components/oeuvre/ClassificationCascade.vue
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import Spinner from '@/components/ui/spinner/Spinner.vue';
+import { silent } from '@/composables/useGlobalLoader';
 import { create, index } from '@/routes/oeuvres';
 
 const props = defineProps<{
@@ -45,8 +46,8 @@ const { t, locale } = useI18n();
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Works', href: index() },
-            { title: 'New work', href: create() },
+            { title: 'sidebar.nav.oeuvres', href: index() },
+            { title: 'oeuvres.create.title', href: create() },
         ],
     },
 });
@@ -135,7 +136,7 @@ function submit(): void {
 // Names are localised server-side; after a client-side language switch,
 // refetch just the tree so option labels follow.
 watch(locale, () => {
-    router.reload({ only: ['classification'] });
+    router.reload(silent({ only: ['classification'] }));
 });
 </script>
 
@@ -158,7 +159,7 @@ watch(locale, () => {
                     class="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
                     <ArrowLeft class="size-3.5 rtl:rotate-180" />
-                    <span>Retour à la liste des œuvres</span>
+                    <span>Retour à la liste des oeuvres</span>
                 </Link>
             </div>
 

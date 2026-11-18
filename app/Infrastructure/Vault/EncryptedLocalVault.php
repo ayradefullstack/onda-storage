@@ -17,6 +17,7 @@ use App\Domain\Vault\Value\ByteRange;
 use App\Domain\Vault\Value\StoredObject;
 use App\Domain\Vault\Value\TempFile;
 use App\Domain\Vault\Value\UploadIntent;
+use App\Enums\UploadSession\StatusEnum as UploadSessionStatus;
 use App\Models\StorageQuota;
 use App\Models\UploadSession;
 use GuzzleHttp\Psr7\FnStream;
@@ -118,7 +119,7 @@ final class EncryptedLocalVault implements VaultContract
         $session->dek_wrapped = $this->keyManager->wrap($dek);
         $session->nonce = bin2hex($nonce);
         $session->temp_path = $tempPath;
-        $session->status = 'uploading';
+        $session->status = UploadSessionStatus::UPLOADING;
         // Carbon::now() explicitly, not the now() helper: AppServiceProvider
         // swaps the app-wide default to CarbonImmutable, but the model casts
         // this column to the mutable Illuminate\Support\Carbon.

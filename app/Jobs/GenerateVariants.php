@@ -8,6 +8,7 @@ use App\Domain\Deposit\PipelineWorkspace;
 use App\Domain\Vault\Crypto\CtrCipher;
 use App\Domain\Vault\Crypto\HkdfKeys;
 use App\Domain\Vault\Crypto\KeyManager;
+use App\Enums\MediaVariant\KindEnum;
 use App\Models\MediaFile;
 use App\Models\MediaVariant;
 use Closure;
@@ -47,19 +48,21 @@ final class GenerateVariants extends PipelineJob
         }
 
         if (str_starts_with($mediaFile->mime, 'video/')) {
-            $this->tryGenerate($mediaFile, 'poster', 'jpg', fn (string $out) => $this->generatePosterFrame($sourcePath, $out, $mediaFile->duration_sec));
-            $this->tryGenerate($mediaFile, 'preview', 'mp4', fn (string $out) => $this->generatePreviewClip($sourcePath, $out));
+            $this->tryGenerate($mediaFile, KindEnum::POSTER, 'jpg', fn (string $out) => $this->generatePosterFrame($sourcePath, $out, $mediaFile->duration_sec));
+            $this->tryGenerate($mediaFile, KindEnum::PREVIEW, 'mp4', fn (string $out) => $this->generatePreviewClip($sourcePath, $out));
 
             return;
         }
 
         if (str_starts_with($mediaFile->mime, 'audio/')) {
-            $this->tryGenerate($mediaFile, 'waveform', 'png', fn (string $out) => $this->generateWaveform($sourcePath, $out));
+            $this->tryGenerate($mediaFile, KindEnum::WAVEFORM, 'png', fn (string $out) => $this->generateWaveform($sourcePath, $out));
         }
     }
 
-    private function tryGenerate(MediaFile $mediaFile, string $kind, string $extension, Closure $generate): void
+    private function tryGenerate(MediaFile $mediaFile, KindEnum $variantKind, string $extension, Closure $generate): void
     {
+        // The key keeps the staging name (`work/{uuid}-poster.jpg`) and log lines as before.
+        $kind = $variantKind->key();
         $stagingPath = Storage::disk('work')->path("{$mediaFile->uuid}-{$kind}.{$extension}");
 
         try {
@@ -69,7 +72,7 @@ final class GenerateVariants extends PipelineJob
                 return;
             }
 
-            $this->encryptAndStoreVariant($mediaFile, $kind, $stagingPath);
+            $this->encryptAndStoreVariant($mediaFile, $variantKind, $stagingPath);
         } catch (Throwable $e) {
             // An individual variant failing is logged and skipped, not fatal.
             Log::warning("GenerateVariants: '{$kind}' failed for [{$mediaFile->uuid}].", ['error' => $e->getMessage()]);
@@ -78,7 +81,7 @@ final class GenerateVariants extends PipelineJob
         }
     }
 
-    private function encryptAndStoreVariant(MediaFile $mediaFile, string $kind, string $plainPath): void
+    private function encryptAndStoreVariant(MediaFile $mediaFile, KindEnum $kind, string $plainPath): void
     {
         $dek = app(KeyManager::class)->unwrap($mediaFile->dek_wrapped);
         $encKey = HkdfKeys::encryptionKey($dek);

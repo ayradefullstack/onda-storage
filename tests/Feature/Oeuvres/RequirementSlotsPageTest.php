@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\CollegeOeuvreFile;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -156,7 +157,7 @@ test('required-slot completion counts only files at ready', function () {
     $justificatif = slotsPageRequirement($oeuvre, 'justificatif_exploitation');
     $paroles = slotsPageRequirement($oeuvre, 'paroles');
 
-    $file = fn (CollegeOeuvreFile $requirement, string $status): MediaFile => MediaFile::factory()->create([
+    $file = fn (CollegeOeuvreFile $requirement, MediaFileStatus $status): MediaFile => MediaFile::factory()->create([
         'oeuvre_id' => $oeuvre->id,
         'uploaded_by' => $author->id,
         'college_oeuvre_file_id' => $requirement->id,
@@ -166,23 +167,23 @@ test('required-slot completion counts only files at ready', function () {
 
     expect($oeuvre->requiredDocumentsProgress())->toBe(['satisfied' => 0, 'total' => 6, 'conditional' => 5]);
 
-    $scanning = $file($justificatif, 'scanning');
+    $scanning = $file($justificatif, MediaFileStatus::SCANNING);
     expect($oeuvre->requiredDocumentsProgress()['satisfied'])->toBe(0);
 
-    $file($justificatif, 'processing');
-    $file($justificatif, 'quarantined');
-    $file($justificatif, 'failed');
+    $file($justificatif, MediaFileStatus::PROCESSING);
+    $file($justificatif, MediaFileStatus::QUARANTINED);
+    $file($justificatif, MediaFileStatus::FAILED);
     expect($oeuvre->requiredDocumentsProgress()['satisfied'])->toBe(0);
 
-    $scanning->forceFill(['status' => 'ready'])->save();
+    $scanning->forceFill(['status' => MediaFileStatus::READY])->save();
     expect($oeuvre->requiredDocumentsProgress())->toBe(['satisfied' => 1, 'total' => 6, 'conditional' => 5]);
 
     // Two ready files in one slot still satisfy one requirement.
-    $file($justificatif, 'ready');
+    $file($justificatif, MediaFileStatus::READY);
     expect($oeuvre->requiredDocumentsProgress()['satisfied'])->toBe(1);
 
     // A conditional slot satisfied leaves one fewer "may not apply".
-    $file($paroles, 'ready');
+    $file($paroles, MediaFileStatus::READY);
     expect($oeuvre->requiredDocumentsProgress())->toBe(['satisfied' => 2, 'total' => 6, 'conditional' => 4]);
 });
 
@@ -198,8 +199,8 @@ test('a quarantined file alone does not satisfy its slot, and a soft-deleted rea
         'document_key_snapshot' => 'code_source',
     ];
 
-    MediaFile::factory()->create([...$attributes, 'status' => 'quarantined']);
-    MediaFile::factory()->create([...$attributes, 'status' => 'ready'])->delete();
+    MediaFile::factory()->create([...$attributes, 'status' => MediaFileStatus::QUARANTINED]);
+    MediaFile::factory()->create([...$attributes, 'status' => MediaFileStatus::READY])->delete();
 
     // LOGICIEL: only code_source is required; schema_bdd and
     // oeuvre_format_numerique are optional and not counted.

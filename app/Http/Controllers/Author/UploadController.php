@@ -9,6 +9,7 @@ use App\Actions\Upload\CompleteUpload;
 use App\Actions\Upload\InitUpload;
 use App\Actions\Upload\StoreChunk;
 use App\Domain\Vault\Contracts\ChunkTracker;
+use App\Enums\UploadSession\StatusEnum as UploadSessionStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CompleteUploadRequest;
 use App\Http\Requests\InitUploadRequest;
@@ -87,7 +88,7 @@ final class UploadController extends Controller
 
         return response()->json([
             'uuid' => $session->uuid,
-            'status' => 'aborted',
+            'status' => UploadSessionStatus::ABORTED,
         ]);
     }
 }

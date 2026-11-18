@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\StorageQuota;
@@ -32,8 +33,8 @@ test('works count, files count and storage used are correct against seeded data'
     $admin = User::factory()->withRole('admin')->create();
     $author = User::factory()->withRole('author')->create();
 
-    $oeuvreOne = Oeuvre::factory()->create(['author_id' => $author->id, 'status' => 'submitted']);
-    $oeuvreTwo = Oeuvre::factory()->create(['author_id' => $author->id, 'status' => 'draft']);
+    $oeuvreOne = Oeuvre::factory()->create(['author_id' => $author->id, 'status' => OeuvreStatus::SUBMITTED]);
+    $oeuvreTwo = Oeuvre::factory()->create(['author_id' => $author->id, 'status' => OeuvreStatus::DRAFT]);
     MediaFile::factory()->count(2)->create(['oeuvre_id' => $oeuvreOne->id, 'size_bytes' => 1000]);
     MediaFile::factory()->count(1)->create(['oeuvre_id' => $oeuvreTwo->id, 'size_bytes' => 500]);
 

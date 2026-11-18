@@ -6,6 +6,8 @@ namespace App\Domain\Deposit;
 
 use App\Domain\Deposit\Value\SubmissionReason;
 use App\Domain\Deposit\Value\SubmissionVerdict;
+use App\Enums\MediaFile\ReviewStatusEnum;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\CollegeOeuvreFile;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -46,7 +48,7 @@ final class SubmissionGate
      * A file the pipeline has not finished with. Submitting mid-pipeline
      * would hand an officer a deposit whose files are still being checked.
      *
-     * @var list<string>
+     * @var list<MediaFileStatus>
      */
     private const IN_PIPELINE = [
         MediaFileStatus::UPLOADING,
@@ -58,13 +60,13 @@ final class SubmissionGate
     /**
      * A file the author must resolve or remove before submitting — and
      * must be told about by name, since "a file failed" is useless when
-     * the deposit holds nine of them.
+     * the deposit holds nine of them. Keyed by the status's permanent int.
      *
-     * @var array<string, string>
+     * @var array<int, string>
      */
     private const UNRESOLVED = [
-        MediaFileStatus::FAILED => SubmissionReason::FILE_FAILED,
-        MediaFileStatus::QUARANTINED => SubmissionReason::FILE_QUARANTINED,
+        MediaFileStatus::FAILED->value => SubmissionReason::FILE_FAILED,
+        MediaFileStatus::QUARANTINED->value => SubmissionReason::FILE_QUARANTINED,
     ];
 
     public function evaluate(Oeuvre $oeuvre): SubmissionVerdict
@@ -74,24 +76,40 @@ final class SubmissionGate
 
         $files = $oeuvre->mediaFiles()
             ->orderBy('created_at')
-            ->get(['id', 'college_oeuvre_file_id', 'original_name', 'status']);
+            ->get(['id', 'uuid', 'college_oeuvre_file_id', 'original_name', 'status', 'review_status', 'review_reason']);
 
         if ($files->isEmpty()) {
             $blockers[] = new SubmissionReason(SubmissionReason::NO_FILES);
         }
 
         foreach ($files as $file) {
+            // A deposit returned to the author is resubmitted only once every
+            // file the ONDA rejected is gone (removed, and replaced where the
+            // slot needs it): otherwise the officer would get the same
+            // rejected file back. Named, with the ONDA's own reason. Asked
+            // only of a deposit the author can still edit — under review a
+            // rejected file is the officer's business, not a gate blocker.
+            if ($oeuvre->isAuthorEditable() && $file->review_status === ReviewStatusEnum::REJECTED) {
+                $blockers[] = new SubmissionReason(SubmissionReason::FILE_REJECTED, [
+                    'name' => $file->original_name,
+                    'uuid' => $file->uuid,
+                    'slot_id' => $file->college_oeuvre_file_id,
+                    'reason' => $file->review_reason,
+                ]);
+            }
+
             if (in_array($file->status, self::IN_PIPELINE, true)) {
                 $blockers[] = new SubmissionReason(SubmissionReason::FILE_IN_PIPELINE, [
                     'name' => $file->original_name,
-                    'status' => $file->status,
+                    // The key, as the page renders it.
+                    'status' => $file->status->key(),
                 ]);
 
                 continue;
             }
 
-            if (isset(self::UNRESOLVED[$file->status])) {
-                $blockers[] = new SubmissionReason(self::UNRESOLVED[$file->status], [
+            if (isset(self::UNRESOLVED[$file->status->value])) {
+                $blockers[] = new SubmissionReason(self::UNRESOLVED[$file->status->value], [
                     'name' => $file->original_name,
                 ]);
             }

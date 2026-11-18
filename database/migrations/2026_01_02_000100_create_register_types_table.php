@@ -1,0 +1,51 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Enums\Referentiel\StatusEnum;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+/**
+ * Level 1 of the deposit classification: the declarant type (Auteur,
+ * Editeur, Artiste-interprète, Producteur). Ported from ONDA's
+ * `register_types` in this project's conventions — `ondaKeys()` (UUIDv7
+ * route key) instead of ONDA's `ulid`.
+ *
+ * Soft deletes: reference rows an admin may retire, which must stay
+ * resolvable for anything already classified under them.
+ *
+ * `is_system` marks the rows a seeder owns (MembershipTypeSeeder sets it on
+ * every row it creates or updates); a row an admin creates keeps `false`.
+ */
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('register_types', function (Blueprint $table) {
+            $table->ondaKeys();
+            $table->string('name');
+            $table->string('slug')->unique();
+            $table->string('name_ar')->nullable();
+            $table->string('name_en')->nullable();
+            // ACTIVE = 1 — what ONDA's code treats as active. ONDA's migration
+            // comment says "1 = Inactive, 2 = Active", contradicting its own
+            // code; the code wins.
+            $table->unsignedTinyInteger('status')
+                ->default(StatusEnum::ACTIVE->value)
+                ->comment(StatusEnum::dbComment())
+                // RegisterType::active() filters on status alone.
+                ->index();
+            $table->boolean('is_disabled')->default(false);
+            $table->boolean('is_system')->default(false);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('register_types');
+    }
+};

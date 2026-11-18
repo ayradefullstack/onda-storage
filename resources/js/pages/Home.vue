@@ -411,7 +411,7 @@ const guarantees = [
             </div>
 
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                <!-- Card 1: Dépôt d'œuvre -->
+                <!-- Card 1: Dépôt d'oeuvre -->
                 <div
                     class="group relative flex flex-col justify-between rounded-3xl border border-border bg-card p-7 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-onda-blue-400 hover:shadow-xl dark:hover:border-onda-blue-500/50"
                 >

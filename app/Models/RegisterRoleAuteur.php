@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Concerns\HasUuidColumn;
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
+use App\Models\Concerns\SerializesEnumsAsKeys;
 use Database\Factories\RegisterRoleAuteurFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -22,7 +24,7 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string|null $name_ar
  * @property string|null $name_en
- * @property int $status
+ * @property ReferentielStatus $status
  * @property bool $is_disabled
  * @property-read string $name_global
  * @property Carbon|null $created_at
@@ -32,7 +34,7 @@ use Illuminate\Support\Carbon;
 class RegisterRoleAuteur extends Model
 {
     /** @use HasFactory<RegisterRoleAuteurFactory> */
-    use HasFactory, HasUuidColumn, SoftDeletes;
+    use HasFactory, HasUuidColumn, SerializesEnumsAsKeys, SoftDeletes;
 
     protected $fillable = [
         'register_type_college_id',
@@ -46,7 +48,7 @@ class RegisterRoleAuteur extends Model
     protected function casts(): array
     {
         return [
-            'status' => 'integer',
+            'status' => ReferentielStatus::class,
             'is_disabled' => 'boolean',
         ];
     }

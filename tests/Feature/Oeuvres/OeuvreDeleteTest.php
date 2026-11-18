@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Domain\Deposit\MediaFileStatus;
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\User;
@@ -27,7 +27,7 @@ function deleteAuthor(): User
     return $user;
 }
 
-function deleteOeuvreWithFiles(User $author, string $status = OeuvreStatus::DRAFT, string $fileStatus = MediaFileStatus::READY): Oeuvre
+function deleteOeuvreWithFiles(User $author, OeuvreStatus $status = OeuvreStatus::DRAFT, MediaFileStatus $fileStatus = MediaFileStatus::READY): Oeuvre
 {
     $oeuvre = Oeuvre::factory()->create([
         'author_id' => $author->id,
@@ -50,7 +50,7 @@ function deleteOeuvreWithFiles(User $author, string $status = OeuvreStatus::DRAF
     return $oeuvre;
 }
 
-test('an author deletes a draft or a rejected oeuvre', function (string $status) {
+test('an author deletes a draft or a rejected oeuvre', function (OeuvreStatus $status) {
     $author = deleteAuthor();
     $oeuvre = deleteOeuvreWithFiles($author, $status);
 
@@ -104,7 +104,7 @@ test('deleting an oeuvre leaves every vault byte on disk', function () {
     expect($stillCharged)->toBe((int) $files->sum('size_bytes'));
 });
 
-test('deleting a submitted, under_review or registered oeuvre is refused by direct request', function (string $status) {
+test('deleting a submitted, under_review or registered oeuvre is refused by direct request', function (OeuvreStatus $status) {
     $author = deleteAuthor();
     $oeuvre = deleteOeuvreWithFiles($author, $status);
 
@@ -120,7 +120,7 @@ test('deleting a submitted, under_review or registered oeuvre is refused by dire
     'registered' => [OeuvreStatus::REGISTERED],
 ]);
 
-test('deleting is refused while any file is mid-pipeline, naming it', function (string $fileStatus) {
+test('deleting is refused while any file is mid-pipeline, naming it', function (MediaFileStatus $fileStatus) {
     $author = deleteAuthor();
     $oeuvre = deleteOeuvreWithFiles($author, fileStatus: $fileStatus);
 

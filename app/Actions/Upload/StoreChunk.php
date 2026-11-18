@@ -6,6 +6,7 @@ namespace App\Actions\Upload;
 
 use App\Domain\Vault\Contracts\ChunkTracker;
 use App\Domain\Vault\Contracts\VaultContract;
+use App\Enums\UploadSession\StatusEnum as UploadSessionStatus;
 use App\Models\UploadSession;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ final class StoreChunk
     public function __construct(
         private readonly VaultContract $vault,
         private readonly ChunkTracker $tracker,
+        private readonly ReplacementGuard $replacementGuard,
     ) {}
 
     /**
@@ -29,6 +31,8 @@ final class StoreChunk
     {
         $this->assertNotMultipart($request);
         $this->assertAcceptingChunks($session);
+        // A replacement whose oeuvre was decided meanwhile: 409, session aborted.
+        $this->replacementGuard->assertStillOpen($session);
         $this->assertIndexInRange($session, $index);
 
         $bytes = (string) $request->getContent();
@@ -70,9 +74,9 @@ final class StoreChunk
             ], 410));
         }
 
-        if ($session->status !== 'uploading') {
+        if ($session->status !== UploadSessionStatus::UPLOADING) {
             throw new HttpResponseException(response()->json([
-                'message' => "This upload session is not accepting chunks (status: {$session->status}).",
+                'message' => "This upload session is not accepting chunks (status: {$session->status->key()}).",
             ], 409));
         }
     }

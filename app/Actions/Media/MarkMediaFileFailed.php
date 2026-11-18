@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions\Media;
 
-use App\Domain\Deposit\MediaFileStatus;
 use App\Domain\Deposit\PipelineWorkspace;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\MediaFile;
 use App\Notifications\MediaFileFailedNotification;
 use Illuminate\Support\Facades\Log;

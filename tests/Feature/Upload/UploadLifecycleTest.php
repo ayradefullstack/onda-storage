@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Value\StoredObject;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Jobs\CleanupTemp;
 use App\Jobs\ComputeContentHash;
 use App\Jobs\DecryptToTemp;
@@ -117,7 +118,7 @@ test('a full 3-chunk lifecycle round-trips the exact source bytes', function () 
     $complete->assertCreated();
 
     $mediaFile = MediaFile::where('uuid', $complete->json('uuid'))->firstOrFail();
-    expect($mediaFile->status)->toBe('scanning')
+    expect($mediaFile->status)->toBe(MediaFileStatus::SCANNING)
         ->and($mediaFile->size_bytes)->toBe(74)
         ->and($mediaFile->sha256_plain)->toBeNull();
 

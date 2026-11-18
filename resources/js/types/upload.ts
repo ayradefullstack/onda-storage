@@ -30,7 +30,17 @@ export type UploadErrorCode =
     | 'serverBusy'
     | 'temporaryServer'
     | 'validation'
+    /** 409: the deposit was decided mid-upload; nothing added, no retry. */
+    | 'oeuvreDecided'
+    /** 409: the deposit was submitted mid-upload; nothing added, no retry. */
+    | 'oeuvreSubmitted'
     | 'unknown';
+
+/** Codes whose upload can never succeed by retrying: the session is gone. */
+export const FINAL_UPLOAD_ERRORS: readonly UploadErrorCode[] = [
+    'oeuvreDecided',
+    'oeuvreSubmitted',
+];
 
 export type ChunkStatus =
     'pending' | 'slicing' | 'uploading' | 'done' | 'failed';
@@ -167,8 +177,6 @@ export type WorkerResponse = WorkerSliceResult | WorkerSliceError;
 export interface PersistedUpload {
     id: string;
     oeuvreId: number;
-    /** Pre-rename field name — read only as a fallback, never written. */
-    workId?: number;
     /** Absent on records written before per-requirement uploads. */
     requirementId?: number | null;
     sessionUuid: string;
@@ -214,4 +222,11 @@ export interface MediaFileSummary {
     sha256_plain: string | null;
     variant_count: number;
     created_at: string;
+    /** The ONDA's decision on the file (`media_files.review_status` key). */
+    review_status?: 'pending' | 'accepted' | 'rejected';
+    /** The rejection reason, word for word; null unless rejected. */
+    review_reason?: string | null;
+    reviewed_at?: string | null;
+    /** Set on a replacement uploaded during review: the file it replaces. */
+    replaces?: { original_name: string } | null;
 }

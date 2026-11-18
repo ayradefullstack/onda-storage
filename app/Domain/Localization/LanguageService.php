@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Localization;
 
+use App\Enums\Language\DirectionEnum;
 use App\Models\Language;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -60,7 +61,7 @@ final class LanguageService
 
     public function direction(string $code): string
     {
-        return $this->active()->firstWhere('code', $code)['direction'] ?? 'ltr';
+        return $this->active()->firstWhere('code', $code)['direction'] ?? DirectionEnum::LTR->key();
     }
 
     public function flush(): void
@@ -103,7 +104,7 @@ final class LanguageService
                     'code' => $l->code,
                     'name' => $l->name,
                     'native_name' => $l->native_name,
-                    'direction' => $l->direction,
+                    'direction' => $l->direction->key(),
                     'is_default' => $l->is_default,
                 ])->all());
         } catch (Throwable) {
@@ -111,7 +112,7 @@ final class LanguageService
             // the environment names so the app can still render an error page.
             $code = (string) config('app.fallback_locale');
 
-            return [['code' => $code, 'name' => $code, 'native_name' => $code, 'direction' => 'ltr', 'is_default' => true]];
+            return [['code' => $code, 'name' => $code, 'native_name' => $code, 'direction' => DirectionEnum::LTR->key(), 'is_default' => true]];
         }
     }
 

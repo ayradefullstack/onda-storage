@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Domain\Deposit\PipelineWorkspace;
 use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Value\UploadIntent;
+use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Jobs\CleanupTemp;
 use App\Jobs\ComputeContentHash;
 use App\Jobs\DecryptToTemp;
@@ -66,7 +68,7 @@ function fullChainUploadFixture(User $author, Oeuvre $oeuvre, ?string $filename 
     $mediaFile->dek_wrapped = $object->dekWrapped;
     $mediaFile->nonce = $object->nonce;
     $mediaFile->mac_path = $object->macPath;
-    $mediaFile->status = 'scanning';
+    $mediaFile->status = MediaFileStatus::SCANNING;
     $mediaFile->ref_count = 1;
     $mediaFile->save();
 
@@ -105,7 +107,7 @@ test('the full chain on a small real MP4 fixture reaches ready', function () {
 
     $mediaFile->refresh();
 
-    expect($mediaFile->status)->toBe('ready')
+    expect($mediaFile->status)->toBe(MediaFileStatus::READY)
         ->and($mediaFile->sha256_plain)->not->toBeNull()
         ->and($mediaFile->size_bytes)->toBe((int) filesize(fullChainFixturePath()));
 
@@ -119,7 +121,7 @@ test('the full chain on a small real MP4 fixture reaches ready', function () {
     }
 
     // RecordDeposit's audit row.
-    $depositLog = FileAccessLog::where('media_file_id', $mediaFile->id)->where('action', 'deposit')->first();
+    $depositLog = FileAccessLog::where('media_file_id', $mediaFile->id)->where('action', ActionEnum::DEPOSIT)->first();
     expect($depositLog)->not->toBeNull()
         ->and($depositLog->row_hash)->toHaveLength(64);
 

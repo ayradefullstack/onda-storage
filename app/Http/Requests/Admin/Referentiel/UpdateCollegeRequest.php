@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin\Referentiel;
 
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
 use App\Http\Requests\Admin\Referentiel\Concerns\ValidatesEditableName;
+use App\Http\Requests\Concerns\AcceptsEnumKeys;
 use App\Models\RegisterTypeCollege;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -44,6 +46,16 @@ use Illuminate\Validation\Validator;
  */
 final class UpdateCollegeRequest extends FormRequest
 {
+    use AcceptsEnumKeys;
+
+    /**
+     * @return array<string, class-string<ReferentielStatus>>
+     */
+    protected function enumFields(): array
+    {
+        return ['status' => ReferentielStatus::class];
+    }
+
     use ValidatesEditableName;
 
     public function authorize(): bool
@@ -71,7 +83,7 @@ final class UpdateCollegeRequest extends FormRequest
             // falls the display back to the French `name` (name_global).
             'name_ar' => ['sometimes', 'nullable', 'string', 'max:255'],
             'name_en' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'status' => ['sometimes', 'integer', Rule::in([0, RegisterTypeCollege::STATUS_ACTIVE])],
+            'status' => ['sometimes', Rule::enum(ReferentielStatus::class)],
             'is_disabled' => ['sometimes', 'boolean'],
             'adhesion' => ['sometimes', 'boolean'],
         ];
@@ -94,7 +106,7 @@ final class UpdateCollegeRequest extends FormRequest
             $wasReachable = $college->isReachable();
 
             $after = clone $college;
-            $after->status = $this->has('status') ? $this->integer('status') : $college->status;
+            $after->status = ReferentielStatus::tryFrom((int) ($this->validationData()['status'] ?? 0)) ?? $college->status;
             $after->is_disabled = $this->has('is_disabled') ? $this->boolean('is_disabled') : $college->is_disabled;
 
             if (! $wasReachable && $after->isReachable() && $college->activeDocumentsCount() === 0) {

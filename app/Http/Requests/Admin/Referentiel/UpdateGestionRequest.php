@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin\Referentiel;
 
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
 use App\Http\Requests\Admin\Referentiel\Concerns\ValidatesEditableName;
+use App\Http\Requests\Concerns\AcceptsEnumKeys;
 use App\Models\TypeGestion;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -17,6 +19,16 @@ use Illuminate\Validation\Rule;
  */
 final class UpdateGestionRequest extends FormRequest
 {
+    use AcceptsEnumKeys;
+
+    /**
+     * @return array<string, class-string<ReferentielStatus>>
+     */
+    protected function enumFields(): array
+    {
+        return ['status' => ReferentielStatus::class];
+    }
+
     use ValidatesEditableName;
 
     public function authorize(): bool
@@ -36,7 +48,7 @@ final class UpdateGestionRequest extends FormRequest
             'name' => $this->nameRules($gestion, 'type_gestions', ['register_type_id' => $gestion->register_type_id]),
             'name_ar' => ['sometimes', 'nullable', 'string', 'max:255'],
             'name_en' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'status' => ['sometimes', 'integer', Rule::in([0, TypeGestion::STATUS_ACTIVE])],
+            'status' => ['sometimes', Rule::enum(ReferentielStatus::class)],
         ];
     }
 

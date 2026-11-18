@@ -90,6 +90,24 @@ describe('upload failure mapping', () => {
         });
     });
 
+    it.each([
+        ['oeuvre_decided', 'oeuvreDecided'],
+        ['oeuvre_submitted', 'oeuvreSubmitted'],
+    ])('409 %s means the deposit closed mid-upload', (error, code) => {
+        const failure = classifyFailure(
+            new UploadHttpError(409, { error, message: 'closed' }),
+        );
+
+        expect(failure).toEqual({ kind: 'depositClosed', code });
+        expect(isTransient(failure)).toBe(false);
+    });
+
+    it('a 409 with another error key stays generic', () => {
+        expect(
+            classifyFailure(new UploadHttpError(409, { error: 'other' })),
+        ).toEqual({ kind: 'unknown', status: 409 });
+    });
+
     it.each([400, 401, 403, 404, 409, 418, 500, 501, 507])(
         '%i is the only generic failure and carries its status code',
         (status) => {

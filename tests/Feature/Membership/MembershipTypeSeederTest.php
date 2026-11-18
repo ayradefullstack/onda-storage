@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\TypeGestion\TypeGestionEnum;
 use App\Models\RegisterRoleAuteur;
 use App\Models\RegisterType;
 use App\Models\RegisterTypeCollege;
@@ -64,8 +65,8 @@ test('every college has a unique, non-null code_college', function () {
 });
 
 test('type_gestion is always 1, 2 or 3', function () {
-    expect(RegisterTypeCollege::pluck('type_gestion')->unique()->sort()->values()->all())
-        ->toBe(TypeGestion::VALUES);
+    expect(RegisterTypeCollege::pluck('type_gestion')->map(fn (TypeGestionEnum $g): int => $g->value)->unique()->sort()->values()->all())
+        ->toBe(TypeGestionEnum::values());
 });
 
 test('code_dv is null for Auteur and Editeur colleges and the college code for the other two types', function () {
@@ -103,17 +104,17 @@ test('college names keep their leading spaces verbatim', function () {
 // --- the gestion cascade -----------------------------------------------------
 
 test('Auteur with type_gestion 1 yields MUSIQUE, DRAMATIQUE, LITTERAIRE_EMISSION, REFERENTIEL_HORS_ADHESION and OEUVRE_FILM', function () {
-    expect(auteur()->registerTypeColleges()->forGestion(TypeGestion::COLLECTIVE)->orderBy('id')->pluck('code_college')->all())
+    expect(auteur()->registerTypeColleges()->forGestion(TypeGestionEnum::COLLECTIVE)->orderBy('id')->pluck('code_college')->all())
         ->toBe(['MUSIQUE', 'DRAMATIQUE', 'LITTERAIRE_EMISSION', 'REFERENTIEL_HORS_ADHESION', 'OEUVRE_FILM']);
 });
 
 test('Auteur with type_gestion 3 yields exactly the seven deferred colleges', function () {
-    expect(auteur()->registerTypeColleges()->forGestion(TypeGestion::SIMPLE)->orderBy('id')->pluck('code_college')->all())
+    expect(auteur()->registerTypeColleges()->forGestion(TypeGestionEnum::SIMPLE)->orderBy('id')->pluck('code_college')->all())
         ->toBe(['SIMPLE_LITTERAIRE_EDITION', 'SIMPLE_POESIE', 'SIMPLE_ARTS_GRAPHIQUES', 'LOGICIEL', 'RECHERCHE_SCIENTIFIQUE', 'SITE_WEB', 'THESES_MEMOIRES']);
 });
 
 test('availableForRegistration drops the two reference-only colleges and nothing else', function () {
-    expect(auteur()->registerTypeColleges()->forGestion(TypeGestion::COLLECTIVE)->availableForRegistration()->orderBy('id')->pluck('code_college')->all())
+    expect(auteur()->registerTypeColleges()->forGestion(TypeGestionEnum::COLLECTIVE)->availableForRegistration()->orderBy('id')->pluck('code_college')->all())
         ->toBe(['MUSIQUE', 'DRAMATIQUE', 'LITTERAIRE_EMISSION'])
         ->and(RegisterTypeCollege::availableForRegistration()->count())->toBe(20);
 });
@@ -126,9 +127,9 @@ test('type_gestions has the three Auteur labels and nothing for the other types'
     expect(TypeGestion::count())->toBe(3)
         ->and(auteur()->typeGestions()->orderBy('type_gestion')->get()->map->only(['type_gestion', 'name', 'name_en', 'name_ar'])->all())
         ->toBe([
-            ['type_gestion' => 1, 'name' => 'Gestion collective', 'name_en' => 'Collective management', 'name_ar' => 'إدارة جماعية'],
-            ['type_gestion' => 2, 'name' => 'Gestion individuelle', 'name_en' => 'Individual management', 'name_ar' => 'إدارة فردية'],
-            ['type_gestion' => 3, 'name' => 'Simple protection', 'name_en' => 'Simple protection', 'name_ar' => 'حماية بسيطة'],
+            ['type_gestion' => TypeGestionEnum::COLLECTIVE, 'name' => 'Gestion collective', 'name_en' => 'Collective management', 'name_ar' => 'إدارة جماعية'],
+            ['type_gestion' => TypeGestionEnum::INDIVIDUAL, 'name' => 'Gestion individuelle', 'name_en' => 'Individual management', 'name_ar' => 'إدارة فردية'],
+            ['type_gestion' => TypeGestionEnum::SIMPLE, 'name' => 'Simple protection', 'name_en' => 'Simple protection', 'name_ar' => 'حماية بسيطة'],
         ]);
 });
 
@@ -157,7 +158,7 @@ test('a type_gestions row reaches its colleges through the relation', function (
 
     expect($counts)->toBe([1 => 5, 2 => 3, 3 => 7]);
 
-    $simple = auteur()->typeGestions()->where('type_gestion', TypeGestion::SIMPLE)->firstOrFail();
+    $simple = auteur()->typeGestions()->where('type_gestion', TypeGestionEnum::SIMPLE)->firstOrFail();
 
     expect($simple->registerTypeColleges()->orderBy('id')->pluck('code_college')->all())
         ->toBe(['SIMPLE_LITTERAIRE_EDITION', 'SIMPLE_POESIE', 'SIMPLE_ARTS_GRAPHIQUES', 'LOGICIEL', 'RECHERCHE_SCIENTIFIQUE', 'SITE_WEB', 'THESES_MEMOIRES']);
@@ -235,7 +236,7 @@ test('name_global falls back to name when the translation is null', function () 
 });
 
 test('name_global uses the translation when it is filled', function () {
-    $collective = auteur()->typeGestions()->where('type_gestion', TypeGestion::COLLECTIVE)->firstOrFail();
+    $collective = auteur()->typeGestions()->where('type_gestion', TypeGestionEnum::COLLECTIVE)->firstOrFail();
 
     app()->setLocale('ar');
     expect($collective->name_global)->toBe('إدارة جماعية');

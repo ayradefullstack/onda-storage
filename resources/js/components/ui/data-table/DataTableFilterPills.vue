@@ -65,7 +65,7 @@ const hasFilters = computed(() => props.filters && props.filters.length > 0);
         <!-- Clear All Button -->
         <button
             type="button"
-            class="ms-1 inline-flex items-center gap-1 cursor-pointer rounded-md px-1.5 py-0.5 text-xs font-medium text-primary hover:text-primary/80 hover:underline focus-visible:outline-none"
+            class="ms-1 inline-flex items-center gap-1 cursor-pointer rounded-md px-1.5 py-0.5 text-xs font-medium text-primary-text hover:text-primary-text/80 hover:underline focus-visible:outline-none"
             @click="emit('clear'); emit('clear-all')"
         >
             <RotateCcw :stroke-width="1.75" class="size-3" />

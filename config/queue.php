@@ -47,6 +47,21 @@ return [
             'after_commit' => false,
         ],
 
+        // Consultation previews (page images, web video...). Same `jobs` table
+        // as `database`, but its own retry_after: a full-length ffmpeg encode
+        // can run for well over an hour, and 3600 would make the queue hand a
+        // still-running encode to a second worker. Jobs on it declare a
+        // `$timeout` strictly below this value (vault.consult.job_timeout).
+        // Work it with: php artisan queue:work previews --queue=previews
+        'previews' => [
+            'driver' => 'database',
+            'connection' => env('DB_QUEUE_CONNECTION'),
+            'table' => env('DB_QUEUE_TABLE', 'jobs'),
+            'queue' => 'previews',
+            'retry_after' => (int) env('VAULT_CONSULT_RETRY_AFTER', 7200),
+            'after_commit' => false,
+        ],
+
         'beanstalkd' => [
             'driver' => 'beanstalkd',
             'host' => env('BEANSTALKD_QUEUE_HOST', 'localhost'),

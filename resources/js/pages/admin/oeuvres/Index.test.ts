@@ -33,6 +33,12 @@ vi.mock('@/routes/admin/oeuvres', () => {
     return {
         index,
         show: (uuid: string) => ({ url: `/admin/oeuvres/${uuid}` }),
+        review: (uuid: string) => ({ url: `/admin/oeuvres/${uuid}/review` }),
+        approve: (uuid: string) => ({ url: `/admin/oeuvres/${uuid}/approve` }),
+        reject: (uuid: string) => ({ url: `/admin/oeuvres/${uuid}/reject` }),
+        decision: (uuid: string) => ({
+            url: `/admin/oeuvres/${uuid}/decision`,
+        }),
     };
 });
 
@@ -159,5 +165,114 @@ describe('admin/oeuvres/Index', () => {
         expect(html).toContain(en['admin.oeuvres.view']);
         expect(html).not.toContain('NaN');
         expect(html).not.toContain('No oeuvre matches');
+    });
+
+    const row = (uuid: string, status: string, extra = {}) => ({
+        uuid,
+        title: `Work ${uuid}`,
+        college_name: null,
+        status,
+        author: { uuid: 'a1', name: 'Lina Haddad' },
+        files_count: 2,
+        files_size_bytes: 10,
+        all_ready: true,
+        has_blocking_file: false,
+        created_at: '2026-10-01T10:00:00Z',
+        submitted_at: '2026-10-02T10:00:00Z',
+        holder: null,
+        checks: { files: 2, pending: 0, blocked: 0, missing_required: 0 },
+        can_decide: true,
+        ...extra,
+    });
+
+    it('has an "À examiner" chip with the queue count, pressed when active', async () => {
+        const idle = await render(
+            {
+                ...base,
+                oeuvres: emptyPaginator,
+                filters: noFilters,
+                counts: { to_review: 7 },
+            },
+            'fr',
+        );
+
+        expect(idle).toMatch(
+            /data-testid="to-review-chip"[^>]*aria-pressed="false"/,
+        );
+        expect(idle).toContain('À examiner');
+        expect(idle).toMatch(/<bdi dir="ltr">7<\/bdi>/);
+
+        const active = await render(
+            {
+                ...base,
+                oeuvres: emptyPaginator,
+                filters: { ...noFilters, status: 'to_review' },
+                counts: { to_review: 7 },
+            },
+            'fr',
+        );
+
+        expect(active).toMatch(
+            /data-testid="to-review-chip"[^>]*aria-pressed="true"/,
+        );
+        // It is an active filter like any other: the reset is offered.
+        expect(active).toContain(fr['admin.oeuvres.resetFilters']);
+    });
+
+    it('has a visible "Examiner" button only on submitted and under-review rows, and no menu', async () => {
+        const html = await render(
+            {
+                ...base,
+                oeuvres: {
+                    ...emptyPaginator,
+                    data: [
+                        row('s1', 'submitted'),
+                        row('r1', 'under_review'),
+                        row('g1', 'registered'),
+                        row('j1', 'rejected'),
+                        row('d1', 'draft', { can_decide: false }),
+                    ],
+                    from: 1,
+                    to: 5,
+                    total: 5,
+                },
+                filters: noFilters,
+                counts: { to_review: 2 },
+            },
+            'fr',
+        );
+
+        // Regression: the decisions used to hide in a dropdown whose menu
+        // rendered off-screen and froze the page. No menu of any kind now.
+        expect(html).not.toContain('decision-menu');
+        expect(html).not.toContain('aria-haspopup="menu"');
+        expect(html).not.toContain('role="menu"');
+
+        const examine = html.match(/<button[^>]*data-testid="examine"[^>]*>/g);
+        expect(examine).toHaveLength(2);
+        expect(examine?.[0]).toContain('aria-label="Examiner : Work s1"');
+        expect(examine?.[1]).toContain('aria-label="Examiner : Work r1"');
+        expect(html.match(/>\s*Examiner\s*</g)).toHaveLength(2);
+
+        // "Voir" stays on every row, whatever its status — a real link.
+        expect(html.match(/data-testid="view"/g)).toHaveLength(5);
+    });
+
+    it('labels the button in Arabic and English', async () => {
+        const props = {
+            ...base,
+            oeuvres: {
+                ...emptyPaginator,
+                data: [row('s1', 'submitted')],
+                from: 1,
+                to: 1,
+                total: 1,
+            },
+            filters: noFilters,
+        };
+
+        expect(await render(props, 'ar')).toContain(ar['review.examine']);
+        expect(ar['review.examine']).toBe('مراجعة');
+        expect(await render(props, 'en')).toContain('Review');
     });
 });

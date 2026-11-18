@@ -3,15 +3,8 @@ import { router } from '@inertiajs/vue3';
 import { AlertTriangle, HardDrive, Trash2 } from '@lucide/vue';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { AppDialog } from '@/components/ui/app-dialog';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { destroy } from '@/routes/oeuvres';
 
 /**
@@ -63,26 +56,29 @@ const onOpenChange = (open: boolean) => {
 </script>
 
 <template>
-    <Dialog :open="oeuvre !== null" @update:open="onOpenChange">
-        <DialogContent class="sm:max-w-lg">
-            <DialogHeader>
-                <div
-                    class="mb-1 flex size-11 items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400"
-                >
-                    <Trash2 class="size-5" />
-                </div>
-                <DialogTitle>{{ t('oeuvres.delete.title') }}</DialogTitle>
-                <DialogDescription>
-                    <i18n-t keypath="oeuvres.delete.body" tag="span">
-                        <template #label>
-                            <bdi class="font-semibold text-foreground">{{
-                                oeuvre?.label
-                            }}</bdi>
-                        </template>
-                    </i18n-t>
-                </DialogDescription>
-            </DialogHeader>
-
+    <AppDialog
+        :open="oeuvre !== null"
+        @update:open="onOpenChange"
+        size="md"
+        :busy="busy"
+    >
+        <template #icon
+            ><div
+                class="mb-1 flex size-11 items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400"
+            >
+                <Trash2 class="size-5" /></div
+        ></template>
+        <template #title>{{ t('oeuvres.delete.title') }}</template>
+        <template #description
+            ><i18n-t keypath="oeuvres.delete.body" tag="span">
+                <template #label>
+                    <bdi class="font-semibold text-foreground">{{
+                        oeuvre?.label
+                    }}</bdi>
+                </template>
+            </i18n-t></template
+        >
+        <div class="grid gap-4">
             <!-- The two surprises, stated plainly. -->
             <div
                 class="space-y-3 rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 text-xs leading-relaxed"
@@ -110,26 +106,25 @@ const onOpenChange = (open: boolean) => {
                     </p>
                 </div>
             </div>
-
-            <DialogFooter class="gap-2 sm:gap-2">
-                <Button
-                    variant="outline"
-                    class="cursor-pointer rounded-xl"
-                    :disabled="busy"
-                    @click="emit('close')"
-                >
-                    {{ t('oeuvres.delete.cancel') }}
-                </Button>
-                <Button
-                    variant="destructive"
-                    class="cursor-pointer gap-2 rounded-xl"
-                    :disabled="busy"
-                    @click="confirm"
-                >
-                    <Trash2 class="size-4" />
-                    {{ t('oeuvres.delete.confirm') }}
-                </Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
+        </div>
+        <template #footer
+            ><Button
+                variant="outline"
+                class="cursor-pointer rounded-xl"
+                :disabled="busy"
+                @click="emit('close')"
+            >
+                {{ t('oeuvres.delete.cancel') }}
+            </Button>
+            <Button
+                variant="destructive"
+                class="cursor-pointer gap-2 rounded-xl"
+                :disabled="busy"
+                @click="confirm"
+            >
+                <Trash2 class="size-4" />
+                {{ t('oeuvres.delete.confirm') }}
+            </Button></template
+        >
+    </AppDialog>
 </template>

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Concerns\HasUuidColumn;
+use App\Enums\MediaVariant\KindEnum;
+use App\Models\Concerns\SerializesEnumsAsKeys;
 use Database\Factories\MediaVariantFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +17,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property string $uuid
  * @property int $media_file_id
- * @property string $kind
+ * @property KindEnum $kind
  * @property string $path
  * @property string $nonce
  * @property int $size_bytes
@@ -25,11 +27,12 @@ use Illuminate\Support\Carbon;
 class MediaVariant extends Model
 {
     /** @use HasFactory<MediaVariantFactory> */
-    use HasFactory, HasUuidColumn;
+    use HasFactory, HasUuidColumn, SerializesEnumsAsKeys;
 
     protected function casts(): array
     {
         return [
+            'kind' => KindEnum::class,
             'size_bytes' => 'integer',
         ];
     }

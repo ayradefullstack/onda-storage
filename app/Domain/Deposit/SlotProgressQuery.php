@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Deposit;
 
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\CollegeOeuvreFile;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;

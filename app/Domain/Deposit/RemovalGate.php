@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Deposit;
 
 use App\Domain\Deposit\Exceptions\RemovalRefused;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 
@@ -47,7 +48,7 @@ final class RemovalGate
     /**
      * Statuses whose pipeline is still running over the row.
      *
-     * @var list<string>
+     * @var list<MediaFileStatus>
      */
     private const MID_PIPELINE = [
         MediaFileStatus::ASSEMBLING,
@@ -59,7 +60,7 @@ final class RemovalGate
      * Removable statuses: the pipeline is done with the row, one way or
      * another.
      *
-     * @var list<string>
+     * @var list<MediaFileStatus>
      */
     private const REMOVABLE = [
         MediaFileStatus::READY,

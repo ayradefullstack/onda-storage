@@ -3,7 +3,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { Menu, Phone, Sparkles, Mail, MapPin, ShieldCheck } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import FullscreenPreloader from '@/components/public/FullscreenPreloader.vue';
+import AppLoader from '@/components/AppLoader.vue';
 import LanguageSwitcher from '@/components/public/LanguageSwitcher.vue';
 import OrgLogo from '@/components/public/OrgLogo.vue';
 import ThemeToggle from '@/components/public/ThemeToggle.vue';
@@ -40,8 +40,8 @@ const dashboard = computed(() =>
 </script>
 
 <template>
-    <!-- Fullscreen ONDA Logo & Orbital Spinner Loading Screen -->
-    <FullscreenPreloader :min-duration="700" />
+    <!-- Global loading overlay (smart: see useGlobalLoader) -->
+    <AppLoader />
 
     <a
         href="#main-content"

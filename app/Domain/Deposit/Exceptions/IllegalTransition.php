@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Deposit\Exceptions;
 
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
+
 /**
  * The requested move is not in the transition table at all, or the actor
  * is not the kind of user allowed to make it.
@@ -13,18 +15,18 @@ namespace App\Domain\Deposit\Exceptions;
  */
 final class IllegalTransition extends DepositException
 {
-    public static function between(string $from, string $to): self
+    public static function between(OeuvreStatus $from, OeuvreStatus $to): self
     {
-        return new self("An oeuvre cannot move from \"{$from}\" to \"{$to}\".");
+        return new self("An oeuvre cannot move from \"{$from->key()}\" to \"{$to->key()}\".");
     }
 
-    public static function terminal(string $from, string $to): self
+    public static function terminal(OeuvreStatus $from, OeuvreStatus $to): self
     {
-        return new self("This oeuvre is registered. A registered deposit is final and cannot move to \"{$to}\".");
+        return new self("This oeuvre is registered. A registered deposit is final and cannot move to \"{$to->key()}\".");
     }
 
-    public static function actor(string $from, string $to): self
+    public static function actor(OeuvreStatus $from, OeuvreStatus $to): self
     {
-        return new self("You are not allowed to move an oeuvre from \"{$from}\" to \"{$to}\".");
+        return new self("You are not allowed to move an oeuvre from \"{$from->key()}\" to \"{$to->key()}\".");
     }
 }

@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Media;
 
 use App\Domain\Access\AccessLogger;
-use App\Domain\Deposit\MediaFileStatus;
 use App\Domain\Deposit\Value\StoredObjectMapper;
 use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Exceptions\MacVerificationFailed;
 use App\Domain\Vault\Value\ByteRange;
+use App\Enums\FileAccessLog\ActionEnum;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Http\Controllers\Controller;
 use App\Models\MediaFile;
 use Illuminate\Http\Request;
@@ -26,7 +27,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  *    outlived its 15-minute TTL.
  * 2. `auth`/`role:author` route middleware — the requester is a logged-in
  *    author.
- * 3. `MediaFilePolicy::view` — this specific author owns the work.
+ * 3. `MediaFilePolicy::streamOriginal` — this specific author owns the work
+ *    (an admin does NOT: admins consult derivatives only).
  * 4. The `u` query param — this link was issued to *this* session's user,
  *    not merely to *an* authorized one (see `SignedMediaUrl`).
  *
@@ -45,7 +47,9 @@ final class StreamController extends Controller
             'This link was issued to a different session.',
         );
 
-        Gate::forUser($user)->authorize('view', $mediaFile);
+        abort_unless(config('vault.download.owner_enabled'), 403, 'Downloading originals is disabled.');
+
+        Gate::forUser($user)->authorize('streamOriginal', $mediaFile);
 
         if ($mediaFile->status !== MediaFileStatus::READY) {
             abort(404);
@@ -60,7 +64,7 @@ final class StreamController extends Controller
             AccessLogger::record(
                 $mediaFile,
                 $user->id,
-                'stream',
+                ActionEnum::STREAM,
                 $request->ip() ?? 'unknown',
                 $request->userAgent(),
                 null,
@@ -75,7 +79,7 @@ final class StreamController extends Controller
         AccessLogger::record(
             $mediaFile,
             $user->id,
-            'stream',
+            ActionEnum::STREAM,
             $request->ip() ?? 'unknown',
             $request->userAgent(),
             $contentLength,

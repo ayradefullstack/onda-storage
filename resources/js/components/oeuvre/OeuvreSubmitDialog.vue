@@ -3,15 +3,8 @@ import { router } from '@inertiajs/vue3';
 import { Lock, Send } from '@lucide/vue';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { AppDialog } from '@/components/ui/app-dialog';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { submit } from '@/routes/author/oeuvres';
 
 /**
@@ -63,26 +56,29 @@ const onOpenChange = (open: boolean) => {
 </script>
 
 <template>
-    <Dialog :open="oeuvre !== null" @update:open="onOpenChange">
-        <DialogContent class="sm:max-w-lg">
-            <DialogHeader>
-                <div
-                    class="mb-1 flex size-11 items-center justify-center rounded-xl border border-onda-blue-500/20 bg-onda-blue-500/10 text-onda-blue-600 dark:text-onda-blue-400"
-                >
-                    <Send class="size-5" />
-                </div>
-                <DialogTitle>{{ t('oeuvres.submit.title') }}</DialogTitle>
-                <DialogDescription>
-                    <i18n-t keypath="oeuvres.submit.body" tag="span">
-                        <template #label>
-                            <bdi class="font-semibold text-foreground">{{
-                                oeuvre?.label
-                            }}</bdi>
-                        </template>
-                    </i18n-t>
-                </DialogDescription>
-            </DialogHeader>
-
+    <AppDialog
+        :open="oeuvre !== null"
+        @update:open="onOpenChange"
+        size="md"
+        :busy="busy"
+    >
+        <template #icon
+            ><div
+                class="mb-1 flex size-11 items-center justify-center rounded-xl border border-onda-blue-500/20 bg-onda-blue-500/10 text-onda-blue-600 dark:text-onda-blue-400"
+            >
+                <Send class="size-5" /></div
+        ></template>
+        <template #title>{{ t('oeuvres.submit.title') }}</template>
+        <template #description
+            ><i18n-t keypath="oeuvres.submit.body" tag="span">
+                <template #label>
+                    <bdi class="font-semibold text-foreground">{{
+                        oeuvre?.label
+                    }}</bdi>
+                </template>
+            </i18n-t></template
+        >
+        <div class="grid gap-4">
             <!-- Exactly what the author gives up, enumerated. -->
             <div
                 class="space-y-2.5 rounded-xl border border-border/80 bg-muted/40 p-4 text-xs leading-relaxed"
@@ -104,25 +100,24 @@ const onOpenChange = (open: boolean) => {
                     {{ t('oeuvres.submit.freezeUntil') }}
                 </p>
             </div>
-
-            <DialogFooter class="gap-2 sm:gap-2">
-                <Button
-                    variant="outline"
-                    class="cursor-pointer rounded-xl"
-                    :disabled="busy"
-                    @click="emit('close')"
-                >
-                    {{ t('oeuvres.submit.cancel') }}
-                </Button>
-                <Button
-                    class="cursor-pointer gap-2 rounded-xl bg-onda-blue-600 text-white hover:bg-onda-blue-700"
-                    :disabled="busy"
-                    @click="confirm"
-                >
-                    <Send class="size-4" />
-                    {{ t('oeuvres.submit.confirm') }}
-                </Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
+        </div>
+        <template #footer
+            ><Button
+                variant="outline"
+                class="cursor-pointer rounded-xl"
+                :disabled="busy"
+                @click="emit('close')"
+            >
+                {{ t('oeuvres.submit.cancel') }}
+            </Button>
+            <Button
+                class="cursor-pointer gap-2 rounded-xl bg-onda-blue-600 text-white hover:bg-onda-blue-700"
+                :disabled="busy"
+                @click="confirm"
+            >
+                <Send class="size-4" />
+                {{ t('oeuvres.submit.confirm') }}
+            </Button></template
+        >
+    </AppDialog>
 </template>

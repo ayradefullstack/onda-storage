@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { cn } from '@/lib/utils';
+import TableScroll from './TableScroll.vue';
 
 interface Props {
+    /** A filter/page visit is in flight: the rows dim until it lands. */
     loading?: boolean;
     class?: string;
 }
@@ -17,14 +19,25 @@ defineProps<Props>();
                 $props.class,
             )
         "
+        :aria-busy="loading ? 'true' : undefined"
+        :data-loading="loading ? '' : undefined"
     >
         <!-- Top Toolbar Slot -->
         <slot name="toolbar" />
 
         <!-- Table Viewport (Horizontal Scroll on Mobile/Dense Grids) -->
-        <div class="relative w-full overflow-x-auto">
+        <!-- Dimmed, never hidden: the previous rows stay readable until the
+             new ones replace them. -->
+        <TableScroll
+            :class="
+                cn(
+                    'transition-opacity duration-150',
+                    loading && 'pointer-events-none opacity-60',
+                )
+            "
+        >
             <slot />
-        </div>
+        </TableScroll>
 
         <!-- Pagination Slot -->
         <slot name="pagination" />

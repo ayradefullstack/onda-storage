@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use App\Domain\Deposit\Exceptions\IllegalTransition;
 use App\Domain\Deposit\Exceptions\ReasonRequired;
-use App\Domain\Deposit\OeuvreStatus;
 use App\Domain\Deposit\OeuvreStatusMachine;
+use App\Enums\MediaFile\ReviewStatusEnum;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\OeuvreReview;
@@ -39,7 +41,7 @@ function reviewAuthorUser(): User
     return $user;
 }
 
-function reviewOeuvre(User $author, string $status = OeuvreStatus::SUBMITTED, ?User $holder = null): Oeuvre
+function reviewOeuvre(User $author, OeuvreStatus $status = OeuvreStatus::SUBMITTED, ?User $holder = null): Oeuvre
 {
     $oeuvre = Oeuvre::factory()->create([
         'author_id' => $author->id,
@@ -53,7 +55,9 @@ function reviewOeuvre(User $author, string $status = OeuvreStatus::SUBMITTED, ?U
     MediaFile::factory()->create([
         'oeuvre_id' => $oeuvre->id,
         'uploaded_by' => $author->id,
-        'status' => 'ready',
+        'status' => MediaFileStatus::READY,
+        // Reviewed by an officer: registration needs every file accepted.
+        'review_status' => ReviewStatusEnum::ACCEPTED,
     ]);
 
     return $oeuvre;
@@ -146,7 +150,7 @@ test('no transition out of registered succeeds, for any actor', function () {
 
     // Including through the HTTP endpoints, where the take-over flag exists.
     $this->actingAs($admin)
-        ->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'changed my mind', 'take_over' => true])
+        ->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'changed my mind about this deposit', 'take_over' => true])
         ->assertInvalid('status');
 
     $this->actingAs($admin)
@@ -195,7 +199,7 @@ test('a rejected deposit can be resubmitted, producing a second review row', fun
     $admin = reviewAdmin();
     $oeuvre = reviewOeuvre($author, OeuvreStatus::UNDER_REVIEW, holder: $admin);
 
-    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Scan illisible.']);
+    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Scan illisible, merci de le redéposer.']);
 
     expect($oeuvre->fresh()->status)->toBe(OeuvreStatus::REJECTED);
 
@@ -219,13 +223,13 @@ test('the history survives: an approved resubmission keeps every earlier row', f
     $admin = reviewAdmin();
     $oeuvre = reviewOeuvre($author, OeuvreStatus::UNDER_REVIEW, holder: $admin);
 
-    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Scan illisible.']);
+    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Scan illisible, merci de le redéposer.']);
     $this->actingAs($author)->post(route('author.oeuvres.submit', $oeuvre));
     $this->actingAs($admin)->post(route('admin.oeuvres.review', $oeuvre));
     $this->actingAs($admin)->post(route('admin.oeuvres.approve', $oeuvre));
 
     $trail = OeuvreReview::where('oeuvre_id', $oeuvre->id)->orderBy('id')->get()
-        ->map(fn (OeuvreReview $r): string => "{$r->from_status}->{$r->to_status}")
+        ->map(fn (OeuvreReview $r): string => "{$r->from_status->key()}->{$r->to_status->key()}")
         ->all();
 
     expect($trail)->toBe([

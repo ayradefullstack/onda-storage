@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domain\Vault\Contracts\VaultContract;
 use App\Domain\Vault\Value\UploadIntent;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use App\Jobs\ProcessMediaFile;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
@@ -44,7 +45,7 @@ function dedupUploadFixture(User $author, Oeuvre $oeuvre, string $filename): Med
     $mediaFile->dek_wrapped = $object->dekWrapped;
     $mediaFile->nonce = $object->nonce;
     $mediaFile->mac_path = $object->macPath;
-    $mediaFile->status = 'scanning';
+    $mediaFile->status = MediaFileStatus::SCANNING;
     $mediaFile->ref_count = 1;
     $mediaFile->save();
 
@@ -67,8 +68,8 @@ test('two identical uploads leave one set of bytes on disk with ref_count 2', fu
     $first->refresh();
     $second->refresh();
 
-    expect($first->status)->toBe('ready')
-        ->and($second->status)->toBe('ready')
+    expect($first->status)->toBe(MediaFileStatus::READY)
+        ->and($second->status)->toBe(MediaFileStatus::READY)
         ->and($first->sha256_plain)->toBe($second->sha256_plain)
         // The second row now points at the first's bytes, not its own.
         ->and($second->path)->toBe($first->path)
@@ -110,7 +111,7 @@ test('deleting one of a deduplicated pair does not delete the shared bytes', fun
     $second->delete();
 
     expect(is_file($sharedAbsolutePath))->toBeTrue()
-        ->and($first->fresh()->status)->toBe('ready');
+        ->and($first->fresh()->status)->toBe(MediaFileStatus::READY);
 
     @unlink($disk->path($first->path));
     @unlink($disk->path($first->mac_path));

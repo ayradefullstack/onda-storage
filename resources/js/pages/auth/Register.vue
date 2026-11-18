@@ -1,28 +1,46 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
+import { Form, Head, Link } from '@inertiajs/vue3';
 import {
-    ArrowRight,
-    Globe,
-    MapPin,
     Building,
-    Phone,
-    Mail,
+    Globe,
     Lock,
+    Mail,
+    MapPin,
+    Phone,
+    Sparkles,
 } from '@lucide/vue';
-import { ref, computed, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import InputError from '@/components/InputError.vue';
-import PasswordInput from '@/components/PasswordInput.vue';
-import TextLink from '@/components/TextLink.vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import SearchableSelect from '@/components/ui/SearchableSelect.vue';
-import type { SelectOption } from '@/components/ui/SearchableSelect.vue';
-import { Spinner } from '@/components/ui/spinner';
+import AuthErrorSummary from '@/components/auth/AuthErrorSummary.vue';
+import AuthField from '@/components/auth/AuthField.vue';
+import AuthFormSection from '@/components/auth/AuthFormSection.vue';
+import AuthPasswordInput from '@/components/auth/AuthPasswordInput.vue';
+import AuthPhoneInput from '@/components/auth/AuthPhoneInput.vue';
+import AuthSubmitButton from '@/components/auth/AuthSubmitButton.vue';
+import AuthTextField from '@/components/auth/AuthTextField.vue';
+import { AppCombobox } from '@/components/ui/app-combobox';
+import type { ComboboxOption } from '@/components/ui/app-combobox';
+import {
+    arabicNameRule,
+    confirmRule,
+    emailRule,
+    newPasswordRule,
+    requiredSelect,
+    requiredText,
+    useAuthForm,
+} from '@/composables/useAuthForm';
+import { useAuthStage } from '@/composables/useAuthStage';
+import { minLengthFromRules } from '@/lib/authInput';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
 
+/**
+ * Presentation only. Field names, the `store.form()` action, the country →
+ * wilaya → commune data flow and every redirect are exactly what the page
+ * did before; the backend (CreateNewUser) is the authority on validity. The
+ * rules in useAuthForm are a subset of the server's, only to speak earlier
+ * and in the user's language.
+ */
 interface CountryItem {
     id: number;
     code: string;
@@ -55,100 +73,89 @@ const props = withDefaults(
         wilayas?: WilayaItem[];
     }>(),
     {
+        passwordRules: undefined,
         countries: () => [],
         wilayas: () => [],
     },
 );
 
 const { t, locale } = useI18n();
-
-// Initialize form reactive state
+const { setStageState } = useAuthStage();
 const form = store.form();
 
-// Available list of countries and wilayas with fallbacks
-const countriesList = computed<CountryItem[]>(() => props.countries);
-const wilayasList = computed<WilayaItem[]>(() => props.wilayas);
+// ------------------------------------------------------- location data ----
+const isAr = computed(() => locale.value === 'ar');
 
-// Format Options with Search terms for SearchableSelect
-const countryOptions = computed<SelectOption[]>(() => {
-    return countriesList.value.map((c) => ({
+// LRM keeps "+213" readable inside an Arabic label: "(‎+213‎)".
+const countryOptions = computed<ComboboxOption[]>(() =>
+    props.countries.map((c) => ({
         value: c.id,
-        label: `${locale.value === 'ar' ? c.name_ar : c.name_fr} (${c.phone_code})`,
-        subtitle: locale.value === 'ar' ? c.name_fr : c.name_ar,
+        label: `${isAr.value ? c.name_ar : c.name_fr} (‎${c.phone_code}‎)`,
+        subtitle: isAr.value ? c.name_fr : c.name_ar,
         badge: c.code,
         flagUrl:
             c.flag_url || `https://flagcdn.com/${c.code.toLowerCase()}.svg`,
         searchTerms: `${c.name_fr} ${c.name_ar} ${c.code} ${c.phone_code}`,
-    }));
-});
+    })),
+);
 
-const wilayaOptions = computed<SelectOption[]>(() => {
-    return wilayasList.value.map((w) => ({
+const wilayaOptions = computed<ComboboxOption[]>(() =>
+    props.wilayas.map((w) => ({
         value: w.id,
-        label: `${w.code} - ${locale.value === 'ar' ? w.name_ar : w.name_fr}`,
-        subtitle: locale.value === 'ar' ? w.name_fr : w.name_ar,
+        label: `${w.code} - ${isAr.value ? w.name_ar : w.name_fr}`,
+        subtitle: isAr.value ? w.name_fr : w.name_ar,
         badge: w.code,
         searchTerms: `${w.code} ${w.name_fr} ${w.name_ar}`,
-    }));
-});
+    })),
+);
 
-const communeOptions = computed<SelectOption[]>(() => {
-    return communesList.value.map((cm) => ({
+const communeOptions = computed<ComboboxOption[]>(() =>
+    communesList.value.map((cm) => ({
         value: cm.id,
-        label: locale.value === 'ar' ? cm.name_ar : cm.name_fr,
-        subtitle: locale.value === 'ar' ? cm.name_fr : cm.name_ar,
+        label: isAr.value ? cm.name_ar : cm.name_fr,
+        subtitle: isAr.value ? cm.name_fr : cm.name_ar,
         badge: cm.post_code ? String(cm.post_code) : undefined,
         searchTerms: `${cm.name_fr} ${cm.name_ar} ${cm.post_code || ''}`,
-    }));
-});
+    })),
+);
 
-// Identify default Algeria country
 const defaultDz =
     props.countries.find((c) => c.code === 'DZ') || props.countries[0];
 
-// State for dynamic location - Wilaya and Commune default to null
 const selectedCountryId = ref<number | null>(defaultDz ? defaultDz.id : null);
 const selectedWilayaId = ref<number | null>(null);
 const selectedCommuneId = ref<number | null>(null);
 const communesList = ref<CommuneItem[]>([]);
-const isLoadingCommunes = ref<boolean>(false);
+const isLoadingCommunes = ref(false);
 const communesCache = new Map<number, CommuneItem[]>();
 
-// Determine currently selected country object
-const selectedCountry = computed<CountryItem | undefined>(() => {
-    return countriesList.value.find((c) => c.id === selectedCountryId.value);
-});
+const selectedCountry = computed(() =>
+    props.countries.find((c) => c.id === selectedCountryId.value),
+);
+const isAlgeria = computed(() =>
+    selectedCountry.value ? selectedCountry.value.code === 'DZ' : true,
+);
+const activePhoneCode = computed(
+    () => selectedCountry.value?.phone_code || '+213',
+);
 
-// Check if currently selected country is Algeria
-const isAlgeria = computed<boolean>(() => {
-    return selectedCountry.value ? selectedCountry.value.code === 'DZ' : true;
-});
-
-// Active country phone dialing code
-const activePhoneCode = computed<string>(() => {
-    return selectedCountry.value?.phone_code || '+213';
-});
-
-// Watch Country Selection
 watch(selectedCountryId, () => {
     selectedWilayaId.value = null;
     selectedCommuneId.value = null;
     communesList.value = [];
 });
 
-// Watch Wilaya Selection to fetch communes
-watch(selectedWilayaId, (newWilayaId) => {
+watch(selectedWilayaId, (wilayaId) => {
     selectedCommuneId.value = null;
 
-    if (newWilayaId) {
-        fetchCommunes(newWilayaId);
+    if (wilayaId) {
+        void fetchCommunes(wilayaId);
     } else {
         communesList.value = [];
     }
 });
 
-// Fetch communes for a given wilaya without pre-selecting a commune (keep null by default)
-async function fetchCommunes(wilayaId: number) {
+async function fetchCommunes(wilayaId: number): Promise<void> {
     if (communesCache.has(wilayaId)) {
         communesList.value = communesCache.get(wilayaId)!;
 
@@ -162,6 +169,7 @@ async function fetchCommunes(wilayaId: number) {
 
         if (response.ok) {
             const data: CommuneItem[] = await response.json();
+
             communesCache.set(wilayaId, data);
             communesList.value = data;
         }
@@ -172,403 +180,403 @@ async function fetchCommunes(wilayaId: number) {
     }
 }
 
-// Strictly enforce Arabic characters on Arabic inputs
-function handleArabicInput(event: Event) {
-    const input = event.target as HTMLInputElement;
-    input.value = input.value.replace(/[^\u0600-\u06FF\s]/g, '');
+// ----------------------------------------------------------- validation ----
+const algeriaOnly =
+    (rule: typeof requiredSelect): typeof requiredSelect =>
+    (value, get) =>
+        isAlgeria.value ? rule(value, get) : null;
+
+const auth = useAuthForm(
+    [
+        {
+            name: 'first_name',
+            id: 'reg-first-name',
+            label: () => t('auth.firstName'),
+            rule: requiredText,
+            showValid: true,
+        },
+        {
+            name: 'last_name',
+            id: 'reg-last-name',
+            label: () => t('auth.lastName'),
+            rule: requiredText,
+            showValid: true,
+        },
+        {
+            name: 'first_name_ar',
+            id: 'reg-first-name-ar',
+            label: () => t('auth.firstNameAr'),
+            rule: arabicNameRule,
+            showValid: true,
+        },
+        {
+            name: 'last_name_ar',
+            id: 'reg-last-name-ar',
+            label: () => t('auth.lastNameAr'),
+            rule: arabicNameRule,
+            showValid: true,
+        },
+        {
+            name: 'country_id',
+            id: 'reg-country',
+            label: () => t('auth.country'),
+            rule: requiredSelect,
+            showValid: true,
+        },
+        {
+            name: 'wilaya_id',
+            id: 'reg-wilaya',
+            label: () => t('auth.wilaya'),
+            rule: algeriaOnly(requiredSelect),
+            showValid: true,
+        },
+        {
+            name: 'commune_id',
+            id: 'reg-commune',
+            label: () => t('auth.commune'),
+            rule: algeriaOnly(requiredSelect),
+            showValid: true,
+        },
+        { name: 'city', id: 'reg-city', label: () => t('auth.city') },
+        {
+            name: 'phone',
+            id: 'reg-phone',
+            label: () => t('auth.phone'),
+            rule: requiredText,
+            showValid: true,
+        },
+        {
+            name: 'email',
+            id: 'reg-email',
+            label: () => t('auth.email'),
+            rule: emailRule,
+            showValid: true,
+        },
+        {
+            name: 'password',
+            id: 'reg-password',
+            label: () => t('auth.password'),
+            rule: newPasswordRule(minLengthFromRules(props.passwordRules)),
+            showValid: true,
+        },
+        {
+            name: 'password_confirmation',
+            id: 'reg-password-confirmation',
+            label: () => t('auth.passwordConfirmation'),
+            rule: confirmRule('password'),
+            showValid: true,
+        },
+    ],
+    (key, params) => t(key, params ?? {}),
+);
+
+// Selects are controlled by refs; keep the validation state in step.
+watch(
+    selectedCountryId,
+    (id) => auth.setValue('country_id', id === null ? '' : String(id)),
+    { immediate: true },
+);
+watch(selectedWilayaId, (id) =>
+    auth.setValue('wilaya_id', id === null ? '' : String(id)),
+);
+watch(selectedCommuneId, (id) =>
+    auth.setValue('commune_id', id === null ? '' : String(id)),
+);
+
+const section1 = ['first_name', 'last_name', 'first_name_ar', 'last_name_ar'];
+const section2 = ['country_id', 'wilaya_id', 'commune_id', 'phone', 'email'];
+const section3 = ['password', 'password_confirmation'];
+
+function onError(errors: Record<string, string>): void {
+    setStageState('idle');
+    auth.setServerErrors(errors);
 }
 
-// Format phone number with a space every two digits (e.g. 05 49 02 04 55)
-function handlePhoneInput(event: Event) {
-    const input = event.target as HTMLInputElement;
-    const rawDigits = input.value.replace(/\D/g, '');
-    const maxDigits = isAlgeria.value ? 10 : 15;
-    const truncated = rawDigits.slice(0, maxDigits);
-    const formatted = (truncated.match(/.{1,2}/g) || []).join(' ');
-    input.value = formatted;
-}
+onMounted(() => auth.syncFromDom());
 </script>
 
 <template>
     <Head :title="t('auth.registerTitle')" />
 
-    <!-- Card Header -->
-    <div class="mb-7 space-y-2 text-center lg:text-start">
-        <h1
-            class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
-        >
+    <div class="auth-stagger">
+        <div>
+            <span class="auth-eyebrow">
+                <Sparkles class="size-3.5" aria-hidden="true" />
+                {{ t('authUi.eyebrowRegister') }}
+            </span>
+        </div>
+        <h1 class="auth-title" data-auth-title tabindex="-1">
             {{ t('auth.registerTitle') }}
         </h1>
-        <p class="text-xs leading-relaxed text-muted-foreground sm:text-sm">
-            {{ t('auth.registerDesc') }}
-        </p>
+        <p class="auth-sub">{{ t('auth.registerDesc') }}</p>
     </div>
 
     <Form
         v-bind="form"
+        novalidate
         :reset-on-success="['password', 'password_confirmation']"
-        v-slot="{ errors, processing }"
-        class="flex flex-col gap-5"
+        class="auth-form auth-stagger"
+        v-slot="{ processing, wasSuccessful }"
+        @before="auth.begin"
+        @start="setStageState('busy')"
+        @success="setStageState('stamped')"
+        @error="onError"
+        @finish="auth.finish"
     >
-        <div class="space-y-4.5">
-            <!-- SECTION 1: NAMES IN LATIN (FR/EN) - ALWAYS LTR -->
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <!-- First Name (Latin) -->
-                <div class="space-y-1.5 text-start">
-                    <Label
-                        for="first_name"
-                        class="text-xs font-semibold text-foreground"
-                    >
-                        {{ t('auth.firstName') }}
-                        <span class="text-destructive">*</span>
-                    </Label>
-                    <Input
-                        id="first_name"
-                        type="text"
-                        required
-                        autofocus
-                        :tabindex="1"
-                        dir="ltr"
-                        autocomplete="given-name"
-                        name="first_name"
-                        placeholder="Ex: Mohamed"
-                        class="text-left"
-                    />
-                    <InputError :message="errors.first_name" />
-                </div>
+        <AuthErrorSummary :items="auth.summary.value" />
 
-                <!-- Last Name (Latin) -->
-                <div class="space-y-1.5 text-start">
-                    <Label
-                        for="last_name"
-                        class="text-xs font-semibold text-foreground"
-                    >
-                        {{ t('auth.lastName') }}
-                        <span class="text-destructive">*</span>
-                    </Label>
-                    <Input
-                        id="last_name"
-                        type="text"
-                        required
-                        :tabindex="2"
-                        dir="ltr"
-                        autocomplete="family-name"
-                        name="last_name"
-                        placeholder="Ex: Benali"
-                        class="text-left"
-                    />
-                    <InputError :message="errors.last_name" />
-                </div>
-            </div>
+        <p class="auth-note">{{ t('authUi.reqNote') }}</p>
 
-            <!-- SECTION 2: NAMES IN ARABIC (ALWAYS RTL WITH ARABIC FILTER) -->
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <!-- First Name in Arabic -->
-                <div class="space-y-1.5 text-start">
-                    <div class="flex items-center justify-between">
-                        <Label
-                            for="first_name_ar"
-                            class="text-xs font-semibold text-foreground"
-                        >
-                            {{ t('auth.firstNameAr') }}
-                            <span class="text-destructive">*</span>
-                        </Label>
-                        <span
-                            class="font-arabic text-[10px] font-medium text-onda-teal-600 dark:text-onda-teal-400"
-                            >{{ t('auth.arabicOnlyNotice') }}</span
-                        >
-                    </div>
-                    <Input
-                        id="first_name_ar"
-                        type="text"
-                        required
-                        :tabindex="3"
-                        dir="rtl"
-                        name="first_name_ar"
-                        placeholder="مثال: محمد"
-                        @input="handleArabicInput"
-                        class="font-arabic text-right"
-                    />
-                    <InputError :message="errors.first_name_ar" />
-                </div>
-
-                <!-- Last Name in Arabic -->
-                <div class="space-y-1.5 text-start">
-                    <div class="flex items-center justify-between">
-                        <Label
-                            for="last_name_ar"
-                            class="text-xs font-semibold text-foreground"
-                        >
-                            {{ t('auth.lastNameAr') }}
-                            <span class="text-destructive">*</span>
-                        </Label>
-                        <span
-                            class="font-arabic text-[10px] font-medium text-onda-teal-600 dark:text-onda-teal-400"
-                            >{{ t('auth.arabicOnlyNotice') }}</span
-                        >
-                    </div>
-                    <Input
-                        id="last_name_ar"
-                        type="text"
-                        required
-                        :tabindex="4"
-                        dir="rtl"
-                        name="last_name_ar"
-                        placeholder="مثال: بن علي"
-                        @input="handleArabicInput"
-                        class="font-arabic text-right"
-                    />
-                    <InputError :message="errors.last_name_ar" />
-                </div>
-            </div>
-
-            <!-- SECTION 3: COUNTRY SELECTION -->
-            <div class="space-y-1.5 text-start">
-                <Label
-                    for="country_id"
-                    class="flex items-center gap-1.5 text-xs font-semibold text-foreground"
-                >
-                    <Globe
-                        class="size-3.5 text-onda-blue-600 dark:text-onda-blue-400"
-                    />
-                    <span>{{ t('auth.country') }}</span>
-                    <span class="text-destructive">*</span>
-                </Label>
-                <SearchableSelect
-                    id="country_id"
-                    name="country_id"
-                    v-model="selectedCountryId"
-                    :options="countryOptions"
-                    :placeholder="t('auth.selectCountry')"
-                    :search-placeholder="t('auth.searchCountry')"
-                    :empty-text="t('common.noResults')"
-                    :tabindex="5"
-                    required
-                />
-                <InputError :message="errors.country_id" />
-            </div>
-
-            <!-- SECTION 4: LOCATION (WILAYA + COMMUNE FOR ALGERIA, OR FREE CITY FIELD FOR OTHERS) -->
-            <!-- Case A: Algeria Selected -->
-            <div v-if="isAlgeria" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <!-- Wilaya Selector -->
-                <div class="space-y-1.5 text-start">
-                    <Label
-                        for="wilaya_id"
-                        class="flex items-center gap-1.5 text-xs font-semibold text-foreground"
-                    >
-                        <MapPin class="size-3.5 text-onda-teal-600" />
-                        <span>{{ t('auth.wilaya') }}</span>
-                        <span class="text-destructive">*</span>
-                    </Label>
-                    <SearchableSelect
-                        id="wilaya_id"
-                        name="wilaya_id"
-                        v-model="selectedWilayaId"
-                        :options="wilayaOptions"
-                        :placeholder="t('auth.selectWilaya')"
-                        :search-placeholder="t('auth.searchWilaya')"
-                        :empty-text="t('common.noResults')"
-                        :tabindex="6"
-                        required
-                    />
-                    <InputError :message="errors.wilaya_id" />
-                </div>
-
-                <!-- Commune Selector -->
-                <div class="space-y-1.5 text-start">
-                    <Label
-                        for="commune_id"
-                        class="flex items-center gap-1.5 text-xs font-semibold text-foreground"
-                    >
-                        <Building class="size-3.5 text-onda-teal-600" />
-                        <span>{{ t('auth.commune') }}</span>
-                        <span class="text-destructive">*</span>
-                    </Label>
-                    <SearchableSelect
-                        id="commune_id"
-                        name="commune_id"
-                        v-model="selectedCommuneId"
-                        :options="communeOptions"
-                        :placeholder="
-                            isLoadingCommunes
-                                ? t('auth.loadingCommunes')
-                                : t('auth.selectCommune')
-                        "
-                        :search-placeholder="t('auth.searchCommune')"
-                        :empty-text="t('common.noResults')"
-                        :disabled="
-                            isLoadingCommunes || communesList.length === 0
-                        "
-                        :tabindex="7"
-                        required
-                    />
-                    <InputError :message="errors.commune_id" />
-                </div>
-            </div>
-
-            <!-- Case B: Foreign Country Selected -->
-            <div v-else class="space-y-1.5 text-start">
-                <Label
-                    for="city"
-                    class="flex items-center gap-1.5 text-xs font-semibold text-foreground"
-                >
-                    <Building class="size-3.5 text-onda-blue-600" />
-                    <span>{{ t('auth.city') }}</span>
-                </Label>
-                <Input
-                    id="city"
-                    type="text"
-                    name="city"
-                    :tabindex="6"
-                    :placeholder="t('auth.cityPlaceholder')"
-                />
-                <InputError :message="errors.city" />
-            </div>
-
-            <!-- SECTION 5: PHONE NUMBER (ALWAYS LTR WITH DIALING CODE ON LEFT) -->
-            <div class="space-y-1.5 text-start">
-                <Label
-                    for="phone"
-                    class="flex items-center gap-1.5 text-xs font-semibold text-foreground"
-                >
-                    <Phone class="size-3.5 text-onda-blue-600" />
-                    <span>{{ t('auth.phone') }}</span>
-                    <span class="text-destructive">*</span>
-                </Label>
-                <div
-                    dir="ltr"
-                    class="relative flex h-10 overflow-hidden rounded-lg border border-input bg-card shadow-xs focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40"
-                >
-                    <!-- Dialing code prefix badge locked to the left in LTR with flag -->
-                    <span
-                        class="inline-flex items-center gap-1.5 border-r border-border bg-muted/80 px-3 font-mono text-xs font-bold text-foreground select-none"
-                    >
-                        <img
-                            v-if="selectedCountry?.flag_url"
-                            :src="selectedCountry.flag_url"
-                            :alt="selectedCountry.code"
-                            class="size-4 shrink-0 rounded-xs border border-border/40 object-cover shadow-xs"
-                            loading="lazy"
-                        />
-                        <span>{{ activePhoneCode }}</span>
-                    </span>
-                    <input
-                        id="phone"
-                        type="tel"
-                        required
-                        :tabindex="8"
-                        dir="ltr"
-                        autocomplete="tel"
-                        name="phone"
-                        :placeholder="
-                            isAlgeria ? '05 12 34 56 78' : '06 12 34 56 78'
-                        "
-                        @input="handlePhoneInput"
-                        class="h-10.5 flex-1 bg-transparent px-3.5 text-left font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-                    />
-                </div>
-                <InputError :message="errors.phone" />
-            </div>
-
-            <!-- SECTION 6: EMAIL ADDRESS (ALWAYS LTR) -->
-            <div class="space-y-1.5 text-start">
-                <Label
-                    for="email"
-                    class="flex items-center gap-1.5 text-xs font-semibold text-foreground"
-                >
-                    <Mail class="size-3.5 text-onda-blue-600" />
-                    <span>{{ t('auth.email') }}</span>
-                    <span class="text-destructive">*</span>
-                </Label>
-                <Input
-                    id="email"
-                    type="email"
-                    required
-                    :tabindex="9"
-                    dir="ltr"
-                    autocomplete="email"
-                    name="email"
-                    placeholder="author@onda.dz"
-                    class="text-left"
-                />
-                <InputError :message="errors.email" />
-            </div>
-
-            <!-- SECTION 7: PASSWORD & CONFIRMATION -->
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <!-- Password -->
-                <div class="space-y-1.5 text-start">
-                    <Label
-                        for="password"
-                        class="flex items-center gap-1.5 text-xs font-semibold text-foreground"
-                    >
-                        <Lock class="size-3.5 text-onda-blue-600" />
-                        <span>{{ t('auth.password') }}</span>
-                        <span class="text-destructive">*</span>
-                    </Label>
-                    <PasswordInput
-                        id="password"
-                        required
-                        :tabindex="10"
-                        autocomplete="new-password"
-                        name="password"
-                        placeholder="••••••••"
-                        :passwordrules="passwordRules"
-                    />
-                    <InputError :message="errors.password" />
-                </div>
-
-                <!-- Password Confirmation -->
-                <div class="space-y-1.5 text-start">
-                    <Label
-                        for="password_confirmation"
-                        class="text-xs font-semibold text-foreground"
-                    >
-                        {{ t('auth.passwordConfirmation') }}
-                        <span class="text-destructive">*</span>
-                    </Label>
-                    <PasswordInput
-                        id="password_confirmation"
-                        required
-                        :tabindex="11"
-                        autocomplete="new-password"
-                        name="password_confirmation"
-                        placeholder="••••••••"
-                        :passwordrules="passwordRules"
-                    />
-                    <InputError :message="errors.password_confirmation" />
-                </div>
-            </div>
-
-            <!-- SUBMIT BUTTON -->
-            <Button
-                type="submit"
-                class="mt-3 h-10 w-full cursor-pointer rounded-lg text-sm font-semibold shadow-xs"
-                :tabindex="12"
-                :disabled="processing"
-                data-test="register-user-button"
-            >
-                <Spinner v-if="processing" />
-                <span v-else class="flex items-center justify-center gap-2">
-                    <span>{{ t('auth.registerBtn') }}</span>
-                    <ArrowRight class="size-4 rtl:rotate-180" />
-                </span>
-            </Button>
-        </div>
-
-        <!-- LINK TO LOGIN -->
-        <div
-            class="mt-3 border-t border-border/80 pt-4 text-center text-xs text-muted-foreground"
+        <!-- 1. Identity -->
+        <AuthFormSection
+            :number="1"
+            :title="t('authUi.sec1')"
+            :done-label="t('authUi.secDone')"
+            :complete="auth.isComplete(section1)"
         >
-            <span>{{ t('auth.alreadyHaveAccount') }}&nbsp;</span>
-            <TextLink
-                :href="login()"
-                class="font-semibold text-onda-teal-600 hover:text-onda-teal-700 dark:text-onda-teal-400"
-                :tabindex="13"
+            <div class="auth-row">
+                <AuthTextField
+                    id="reg-first-name"
+                    name="first_name"
+                    dir="ltr"
+                    :label="t('auth.firstName')"
+                    autocomplete="given-name"
+                    autocapitalize="words"
+                    placeholder="Ex : Mohamed"
+                    required
+                    v-bind="auth.bind('first_name')"
+                />
+                <AuthTextField
+                    id="reg-last-name"
+                    name="last_name"
+                    dir="ltr"
+                    :label="t('auth.lastName')"
+                    autocomplete="family-name"
+                    autocapitalize="words"
+                    placeholder="Ex : Benali"
+                    required
+                    v-bind="auth.bind('last_name')"
+                />
+            </div>
+            <div class="auth-row">
+                <AuthTextField
+                    id="reg-first-name-ar"
+                    name="first_name_ar"
+                    dir="rtl"
+                    lang="ar"
+                    :label="t('auth.firstNameAr')"
+                    :tag="t('auth.arabicOnlyNotice')"
+                    autocomplete="off"
+                    placeholder="مثال: محمد"
+                    required
+                    v-bind="auth.bind('first_name_ar')"
+                />
+                <AuthTextField
+                    id="reg-last-name-ar"
+                    name="last_name_ar"
+                    dir="rtl"
+                    lang="ar"
+                    :label="t('auth.lastNameAr')"
+                    :tag="t('auth.arabicOnlyNotice')"
+                    autocomplete="off"
+                    placeholder="مثال: بن علي"
+                    required
+                    v-bind="auth.bind('last_name_ar')"
+                />
+            </div>
+        </AuthFormSection>
+
+        <!-- 2. Residence & contact -->
+        <AuthFormSection
+            :number="2"
+            :title="t('authUi.sec2')"
+            :done-label="t('authUi.secDone')"
+            :complete="auth.isComplete(section2)"
+        >
+            <AuthField
+                id="reg-country"
+                :label="t('auth.country')"
+                :icon="Globe"
+                bare
+                required
+                :error="auth.error('country_id')"
             >
-                {{ t('nav.signIn') }}
-            </TextLink>
-        </div>
+                <template #default="{ inputProps }">
+                    <AppCombobox
+                        id="reg-country"
+                        v-model="selectedCountryId"
+                        name="country_id"
+                        :options="countryOptions"
+                        :placeholder="t('auth.selectCountry')"
+                        :search-placeholder="t('auth.searchCountry')"
+                        :empty-text="t('common.noResults')"
+                        :invalid="inputProps['aria-invalid'] === 'true'"
+                        :describedby="inputProps['aria-describedby']"
+                        :clearable="false"
+                        required
+                    />
+                </template>
+            </AuthField>
+
+            <div v-if="isAlgeria" class="auth-row">
+                <AuthField
+                    id="reg-wilaya"
+                    :label="t('auth.wilaya')"
+                    :icon="MapPin"
+                    bare
+                    required
+                    :error="auth.error('wilaya_id')"
+                >
+                    <template #default="{ inputProps }">
+                        <AppCombobox
+                            id="reg-wilaya"
+                            v-model="selectedWilayaId"
+                            name="wilaya_id"
+                            :options="wilayaOptions"
+                            :placeholder="t('auth.selectWilaya')"
+                            :search-placeholder="t('auth.searchWilaya')"
+                            :empty-text="t('common.noResults')"
+                            :invalid="inputProps['aria-invalid'] === 'true'"
+                            :describedby="inputProps['aria-describedby']"
+                            :clearable="false"
+                            required
+                        />
+                    </template>
+                </AuthField>
+                <AuthField
+                    id="reg-commune"
+                    :label="t('auth.commune')"
+                    :icon="Building"
+                    bare
+                    required
+                    :error="auth.error('commune_id')"
+                >
+                    <template #default="{ inputProps }">
+                        <AppCombobox
+                            id="reg-commune"
+                            v-model="selectedCommuneId"
+                            name="commune_id"
+                            :options="communeOptions"
+                            :placeholder="
+                                isLoadingCommunes
+                                    ? t('auth.loadingCommunes')
+                                    : t('auth.selectCommune')
+                            "
+                            :search-placeholder="t('auth.searchCommune')"
+                            :empty-text="t('common.noResults')"
+                            :disabled="
+                                isLoadingCommunes || communesList.length === 0
+                            "
+                            :invalid="inputProps['aria-invalid'] === 'true'"
+                            :describedby="inputProps['aria-describedby']"
+                            :clearable="false"
+                            required
+                        />
+                    </template>
+                </AuthField>
+            </div>
+
+            <AuthTextField
+                v-else
+                id="reg-city"
+                name="city"
+                dir="auto"
+                :label="t('auth.city')"
+                :icon="Building"
+                autocomplete="address-level2"
+                autocapitalize="words"
+                :placeholder="t('auth.cityPlaceholder')"
+                v-bind="auth.bind('city')"
+            />
+
+            <AuthPhoneInput
+                id="reg-phone"
+                name="phone"
+                :label="t('auth.phone')"
+                :icon="Phone"
+                :dial-code="activePhoneCode"
+                :iso="selectedCountry?.code"
+                :flag-url="selectedCountry?.flag_url"
+                :max-digits="isAlgeria ? 10 : 15"
+                :group-on-blur="isAlgeria"
+                :placeholder="isAlgeria ? '05 12 34 56 78' : '06 12 34 56 78'"
+                :hint="t('authUi.phoneSr', { code: activePhoneCode })"
+                required
+                v-bind="auth.bind('phone')"
+            />
+
+            <AuthTextField
+                id="reg-email"
+                name="email"
+                type="email"
+                dir="ltr"
+                :label="t('auth.email')"
+                :icon="Mail"
+                autocomplete="email"
+                inputmode="email"
+                placeholder="exemple@domaine.com"
+                keyboard-hint="email"
+                required
+                v-bind="auth.bind('email')"
+            />
+        </AuthFormSection>
+
+        <!-- 3. Account security -->
+        <AuthFormSection
+            :number="3"
+            :title="t('authUi.sec3')"
+            :done-label="t('authUi.secDone')"
+            :complete="auth.isComplete(section3)"
+        >
+            <div class="auth-row">
+                <AuthPasswordInput
+                    id="reg-password"
+                    name="password"
+                    :label="t('auth.password')"
+                    :icon="Lock"
+                    :show-label="t('authUi.showPw')"
+                    :hide-label="t('authUi.hidePw')"
+                    autocomplete="new-password"
+                    placeholder="Mot de passe"
+                    strength
+                    required
+                    v-bind="auth.bind('password')"
+                    @input="auth.revalidate('password_confirmation')"
+                />
+                <AuthPasswordInput
+                    id="reg-password-confirmation"
+                    name="password_confirmation"
+                    :label="t('auth.passwordConfirmation')"
+                    :show-label="t('authUi.showPwConfirm')"
+                    :hide-label="t('authUi.hidePwConfirm')"
+                    autocomplete="new-password"
+                    placeholder="Mot de passe"
+                    required
+                    :success="
+                        auth.values.password_confirmation &&
+                        auth.values.password_confirmation ===
+                            auth.values.password
+                            ? t('authUi.err.pwMatchOk')
+                            : ''
+                    "
+                    v-bind="auth.bind('password_confirmation')"
+                />
+            </div>
+        </AuthFormSection>
+
+        <AuthSubmitButton
+            :processing="processing"
+            :success="wasSuccessful"
+            :label="t('auth.registerBtn')"
+            :busy-label="t('auth.creatingAccount')"
+            :done-label="t('authUi.created')"
+            data-test="register-user-button"
+        />
     </Form>
+
+    <p class="auth-foot">
+        <span>{{ t('auth.alreadyHaveAccount') }}</span>
+        &nbsp;
+        <Link :href="login()" class="auth-link">{{ t('nav.signIn') }}</Link>
+    </p>
 </template>

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Concerns\HasUuidColumn;
+use App\Enums\FileAccessLog\ActionEnum;
+use App\Models\Concerns\SerializesEnumsAsKeys;
 use Database\Factories\FileAccessLogFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,7 +20,7 @@ use Illuminate\Support\Carbon;
  * @property string $uuid
  * @property int $media_file_id
  * @property int|null $user_id
- * @property string $action
+ * @property ActionEnum $action
  * @property string $ip
  * @property string|null $user_agent
  * @property int|null $bytes_sent
@@ -30,13 +32,14 @@ use Illuminate\Support\Carbon;
 class FileAccessLog extends Model
 {
     /** @use HasFactory<FileAccessLogFactory> */
-    use HasFactory, HasUuidColumn;
+    use HasFactory, HasUuidColumn, SerializesEnumsAsKeys;
 
     const UPDATED_AT = null;
 
     protected function casts(): array
     {
         return [
+            'action' => ActionEnum::class,
             'bytes_sent' => 'integer',
         ];
     }

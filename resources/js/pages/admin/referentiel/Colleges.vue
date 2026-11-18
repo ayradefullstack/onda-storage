@@ -10,16 +10,10 @@ import LockedField from '@/components/admin/LockedField.vue';
 import Pagination from '@/components/admin/Pagination.vue';
 import ReferentielShell from '@/components/admin/ReferentielShell.vue';
 import { ActionButton } from '@/components/ui/action';
+import { AppDialog } from '@/components/ui/app-dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { TableScroll } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -29,6 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { useListFilters } from '@/composables/useListFilters';
 import {
     colleges as collegesRoute,
     documents,
@@ -51,7 +46,7 @@ interface CollegeRow {
     is_system: boolean;
     code_dv: string | null;
     has_documents: boolean;
-    status: number;
+    status: 'active' | 'inactive';
     is_disabled: boolean;
     adhesion: boolean;
     hidden_from_registration: boolean;
@@ -86,6 +81,16 @@ const props = defineProps<{
     gestions: GestionOption[];
 }>();
 
+// The controls of this tab's list (search in the shell, selects below);
+// the rows are read straight from `props.rows`.
+const list = useListFilters({
+    url: () => collegesRoute().url,
+    filters: () => props.filters,
+    defaults: { search: '', type: '', gestion: '' },
+    only: ['rows'],
+});
+const { values: filterValues } = list;
+
 const { t } = useI18n();
 
 const editing = ref<CollegeRow | null>(null);
@@ -94,7 +99,7 @@ const form = ref({
     name: '',
     name_ar: '',
     name_en: '',
-    status: 1,
+    status: 'active',
     is_disabled: false,
     adhesion: false,
 });
@@ -232,30 +237,16 @@ const draftWarning = computed(() => {
     return (by.draft ?? 0) + (by.submitted ?? 0) + (by.under_review ?? 0);
 });
 
-const applyFilter = (key: 'type' | 'gestion', value: string) => {
-    router.get(
-        collegesRoute().url,
-        {
-            ...(props.filters.search ? { search: props.filters.search } : {}),
-            ...(props.filters.type && key !== 'type'
-                ? { type: props.filters.type }
-                : {}),
-            ...(props.filters.gestion && key !== 'gestion'
-                ? { gestion: props.filters.gestion }
-                : {}),
-            ...(value !== 'all' ? { [key]: value } : {}),
-        },
-        { preserveState: true, preserveScroll: true, replace: true },
-    );
-};
+// "all" is the select's own sentinel (reka-ui refuses an empty value).
+const setFilter = (key: 'type' | 'gestion', value: string) =>
+    list.set({ [key]: value === 'all' ? '' : value });
 </script>
 
 <template>
     <ReferentielShell
         :tabs="tabs"
         active="colleges"
-        :index-url="collegesRoute().url"
-        :search="filters.search"
+        :list="list"
         :legend="['status', 'is_disabled']"
     >
         <template #actions>
@@ -267,8 +258,8 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
 
         <template #filters>
             <Select
-                :model-value="String(filters.type ?? 'all')"
-                @update:model-value="applyFilter('type', String($event))"
+                :model-value="filterValues.type || 'all'"
+                @update:model-value="setFilter('type', String($event))"
             >
                 <SelectTrigger class="h-9 w-48 text-sm">
                     <SelectValue
@@ -289,8 +280,8 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
             </Select>
 
             <Select
-                :model-value="String(filters.gestion ?? 'all')"
-                @update:model-value="applyFilter('gestion', String($event))"
+                :model-value="filterValues.gestion || 'all'"
+                @update:model-value="setFilter('gestion', String($event))"
             >
                 <SelectTrigger class="h-9 w-48 text-sm">
                     <SelectValue
@@ -312,16 +303,28 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
         </template>
 
         <EmptyState
+            data-test="list-empty"
             v-if="rows.data.length === 0"
             :title="t('admin.referentiel.empty')"
             :description="t('admin.referentiel.emptyDescription')"
-        />
+        >
+            <Button
+                v-if="list.isActive.value"
+                variant="outline"
+                size="sm"
+                class="h-8 cursor-pointer text-xs"
+                data-test="list-empty-clear"
+                @click="list.clear()"
+            >
+                {{ t('common.clearFilters') }}
+            </Button>
+        </EmptyState>
 
         <div
             v-else
             class="overflow-hidden rounded-lg border border-border bg-card"
         >
-            <div class="overflow-x-auto">
+            <TableScroll>
                 <table class="w-full border-collapse text-xs">
                     <thead>
                         <tr
@@ -379,7 +382,9 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
                             <td
                                 class="px-3 py-2 font-mono text-[11px] whitespace-nowrap text-muted-foreground"
                             >
-                                <bdi>{{ row.code_college ?? '—' }}</bdi>
+                                <bdi dir="ltr">{{
+                                    row.code_college ?? '—'
+                                }}</bdi>
                             </td>
                             <td class="max-w-[18rem] px-3 py-2">
                                 <bdi class="block truncate font-medium">{{
@@ -434,12 +439,12 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
                                     <span
                                         :class="[
                                             'rounded px-1.5 py-0.5 text-[10px] font-medium',
-                                            row.status === 1
+                                            row.status === 'active'
                                                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                                                 : 'bg-muted text-muted-foreground',
                                         ]"
                                         >{{
-                                            row.status === 1
+                                            row.status === 'active'
                                                 ? t(
                                                       'admin.referentiel.flags.statusOn',
                                                   )
@@ -457,7 +462,7 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
                                     >
                                     <span
                                         v-if="!row.is_system"
-                                        class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+                                        class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary-text"
                                         >{{
                                             t('admin.referentiel.badge.custom')
                                         }}</span
@@ -490,7 +495,7 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
                         </tr>
                     </tbody>
                 </table>
-            </div>
+            </TableScroll>
 
             <div class="px-3 pb-3">
                 <Pagination
@@ -503,20 +508,17 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
             </div>
         </div>
 
-        <Dialog
+        <AppDialog
             :open="editing !== null"
             @update:open="(o) => !o && (editing = null)"
+            size="lg"
+            :busy="saving"
         >
-            <DialogContent class="sm:max-w-xl">
-                <DialogHeader>
-                    <DialogTitle>{{
-                        t('admin.referentiel.editCollege')
-                    }}</DialogTitle>
-                    <DialogDescription>
-                        <bdi>{{ editing?.name }}</bdi>
-                    </DialogDescription>
-                </DialogHeader>
-
+            <template #title>{{ t('admin.referentiel.editCollege') }}</template>
+            <template #description
+                ><bdi>{{ editing?.name }}</bdi></template
+            >
+            <div class="grid gap-4">
                 <div class="grid gap-4 sm:grid-cols-2">
                     <LockedField
                         :label="t('admin.referentiel.col.code')"
@@ -577,8 +579,10 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
                 <div class="space-y-3 rounded-lg border border-border/80 p-3">
                     <label class="flex items-start gap-2.5 text-xs">
                         <Checkbox
-                            :model-value="form.status === 1"
-                            @update:model-value="form.status = $event ? 1 : 0"
+                            :model-value="form.status === 'active'"
+                            @update:model-value="
+                                form.status = $event ? 'active' : 'inactive'
+                            "
                         />
                         <span>
                             <span class="block font-medium">{{
@@ -625,7 +629,7 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
                     <Link
                         v-if="documentsLink"
                         :href="documentsLink"
-                        class="font-medium text-primary underline underline-offset-2"
+                        class="font-medium text-primary-text underline underline-offset-2"
                     >
                         {{ t('admin.referentiel.enable.goToDocuments') }}
                     </Link>
@@ -683,24 +687,23 @@ const applyFilter = (key: 'type' | 'gestion', value: string) => {
                         {{ t('admin.referentiel.disableWarning.safe') }}
                     </p>
                 </div>
-
-                <DialogFooter class="gap-2 sm:gap-2">
-                    <Button
-                        variant="outline"
-                        class="cursor-pointer"
-                        :disabled="saving"
-                        @click="editing = null"
-                        >{{ t('admin.referentiel.cancel') }}</Button
-                    >
-                    <Button
-                        class="cursor-pointer"
-                        :disabled="saving"
-                        @click="save"
-                        >{{ t('admin.referentiel.save') }}</Button
-                    >
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            </div>
+            <template #footer
+                ><Button
+                    variant="outline"
+                    class="cursor-pointer"
+                    :disabled="saving"
+                    @click="editing = null"
+                    >{{ t('admin.referentiel.cancel') }}</Button
+                >
+                <Button
+                    class="cursor-pointer"
+                    :disabled="saving"
+                    @click="save"
+                    >{{ t('admin.referentiel.save') }}</Button
+                ></template
+            >
+        </AppDialog>
 
         <!-- Create -->
         <CreateDialog

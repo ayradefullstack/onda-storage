@@ -8,6 +8,7 @@ use App\Domain\Deposit\Exceptions\IllegalTransition;
 use App\Domain\Deposit\Exceptions\ReasonRequired;
 use App\Domain\Deposit\Exceptions\ReviewConflict;
 use App\Domain\Deposit\Exceptions\SubmissionRefused;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\Oeuvre;
 use App\Models\OeuvreReview;
 use App\Models\User;
@@ -72,21 +73,24 @@ final class OeuvreStatusMachine
     /**
      * from => to => ['actor' => author|admin, 'reason' => required?]
      *
-     * @var array<string, array<string, array{actor: string, reason: bool}>>
+     * Keyed by each case's permanent int (`->value`): an enum case cannot
+     * be an array key itself.
+     *
+     * @var array<int, array<int, array{actor: string, reason: bool}>>
      */
     private const TRANSITIONS = [
-        OeuvreStatus::DRAFT => [
-            OeuvreStatus::SUBMITTED => ['actor' => self::ACTOR_AUTHOR, 'reason' => false],
+        OeuvreStatus::DRAFT->value => [
+            OeuvreStatus::SUBMITTED->value => ['actor' => self::ACTOR_AUTHOR, 'reason' => false],
         ],
-        OeuvreStatus::REJECTED => [
-            OeuvreStatus::SUBMITTED => ['actor' => self::ACTOR_AUTHOR, 'reason' => false],
+        OeuvreStatus::REJECTED->value => [
+            OeuvreStatus::SUBMITTED->value => ['actor' => self::ACTOR_AUTHOR, 'reason' => false],
         ],
-        OeuvreStatus::SUBMITTED => [
-            OeuvreStatus::UNDER_REVIEW => ['actor' => self::ACTOR_ADMIN, 'reason' => false],
+        OeuvreStatus::SUBMITTED->value => [
+            OeuvreStatus::UNDER_REVIEW->value => ['actor' => self::ACTOR_ADMIN, 'reason' => false],
         ],
-        OeuvreStatus::UNDER_REVIEW => [
-            OeuvreStatus::REGISTERED => ['actor' => self::ACTOR_ADMIN, 'reason' => false],
-            OeuvreStatus::REJECTED => ['actor' => self::ACTOR_ADMIN, 'reason' => true],
+        OeuvreStatus::UNDER_REVIEW->value => [
+            OeuvreStatus::REGISTERED->value => ['actor' => self::ACTOR_ADMIN, 'reason' => false],
+            OeuvreStatus::REJECTED->value => ['actor' => self::ACTOR_ADMIN, 'reason' => true],
         ],
         // OeuvreStatus::REGISTERED is absent on purpose. Do not add it.
     ];
@@ -107,7 +111,7 @@ final class OeuvreStatusMachine
      * @throws ReviewConflict
      * @throws SubmissionRefused
      */
-    public function transition(Oeuvre $oeuvre, string $to, User $actor, ?string $reason = null, bool $takeOver = false): OeuvreReview
+    public function transition(Oeuvre $oeuvre, OeuvreStatus $to, User $actor, ?string $reason = null, bool $takeOver = false): OeuvreReview
     {
         $reason = $this->normaliseReason($reason);
 
@@ -192,7 +196,7 @@ final class OeuvreStatusMachine
      * and holder included. Used by the UI to decide what to offer; the
      * answer is advisory, since `transition()` re-checks under a lock.
      */
-    public function can(Oeuvre $oeuvre, string $to, User $actor): bool
+    public function can(Oeuvre $oeuvre, OeuvreStatus $to, User $actor): bool
     {
         try {
             $rule = $this->ruleFor($oeuvre->status, $to);
@@ -213,19 +217,19 @@ final class OeuvreStatusMachine
      *
      * @throws IllegalTransition
      */
-    private function ruleFor(string $from, string $to): array
+    private function ruleFor(OeuvreStatus $from, OeuvreStatus $to): array
     {
-        if (OeuvreStatus::isTerminal($from)) {
+        if ($from->isTerminal()) {
             throw IllegalTransition::terminal($from, $to);
         }
 
-        return self::TRANSITIONS[$from][$to] ?? throw IllegalTransition::between($from, $to);
+        return self::TRANSITIONS[$from->value][$to->value] ?? throw IllegalTransition::between($from, $to);
     }
 
     /**
      * @throws IllegalTransition
      */
-    private function assertActorMay(string $requiredActor, string $from, string $to, User $actor, Oeuvre $oeuvre): void
+    private function assertActorMay(string $requiredActor, OeuvreStatus $from, OeuvreStatus $to, User $actor, Oeuvre $oeuvre): void
     {
         $allowed = $requiredActor === self::ACTOR_AUTHOR
             ? $actor->id === $oeuvre->author_id
@@ -270,7 +274,7 @@ final class OeuvreStatusMachine
      * Timestamps are set here rather than by the caller, so a status and
      * the stamp that explains it can never disagree.
      */
-    private function apply(Oeuvre $oeuvre, string $to, User $actor): void
+    private function apply(Oeuvre $oeuvre, OeuvreStatus $to, User $actor): void
     {
         $oeuvre->status = $to;
 

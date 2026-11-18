@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Events;
 
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
 use Illuminate\Foundation\Events\Dispatchable;
 
 /**
@@ -19,7 +20,7 @@ final class MediaFileStatusChanged
 
     public function __construct(
         public readonly string $mediaFileUuid,
-        public readonly string $previousStatus,
-        public readonly string $newStatus,
+        public readonly MediaFileStatus $previousStatus,
+        public readonly MediaFileStatus $newStatus,
     ) {}
 }

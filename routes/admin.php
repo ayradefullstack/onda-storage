@@ -1,15 +1,20 @@
 <?php
 
 use App\Http\Controllers\Admin\AuthorController;
+use App\Http\Controllers\Admin\ConsultationAssetController;
+use App\Http\Controllers\Admin\ConsultOriginalController;
 use App\Http\Controllers\Admin\LanguageController;
+use App\Http\Controllers\Admin\MediaFileReviewController;
 use App\Http\Controllers\Admin\MediaVariantController;
 use App\Http\Controllers\Admin\OeuvreController;
+use App\Http\Controllers\Admin\OeuvreFileReviewController;
 use App\Http\Controllers\Admin\OeuvreReviewController;
 use App\Http\Controllers\Admin\Referentiel\CollegeController;
 use App\Http\Controllers\Admin\Referentiel\DocumentController;
 use App\Http\Controllers\Admin\Referentiel\GestionController;
 use App\Http\Controllers\Admin\Referentiel\MemberController;
 use App\Http\Controllers\Admin\Referentiel\TypeController;
+use App\Http\Middleware\EnsureConsultationAccess;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -43,6 +48,39 @@ Route::middleware(['auth', 'verified', 'role:admin'])->prefix('admin')->name('ad
         Route::post('/{oeuvre:uuid}/review', [OeuvreReviewController::class, 'review'])->name('review');
         Route::post('/{oeuvre:uuid}/approve', [OeuvreReviewController::class, 'approve'])->name('approve');
         Route::post('/{oeuvre:uuid}/reject', [OeuvreReviewController::class, 'reject'])->name('reject');
+
+        // What the review dialog shows, and which of the three it may
+        // offer — computed from those same rules (JSON only).
+        Route::get('/{oeuvre:uuid}/decision', [OeuvreReviewController::class, 'summary'])->name('decision');
+
+        // File review: a deposited file shown through server-generated
+        // DERIVATIVES only. The media file is resolved through the oeuvre
+        // (scoped bindings), so a file of another oeuvre is a 404. The asset
+        // route is signed, bound to the issuing admin, and has no path to
+        // the original — see OeuvreFileReviewController's docblock.
+        Route::scopeBindings()->group(function () {
+            Route::get('/{oeuvre:uuid}/files/{mediaFile:uuid}/review', [OeuvreFileReviewController::class, 'show'])
+                ->name('files.review');
+            // The officer's decision on ONE file (accepted / rejected / pending).
+            // Holder and file-status rules live in DecideMediaFile.
+            Route::post('/{oeuvre:uuid}/files/{mediaFile:uuid}/review', [MediaFileReviewController::class, 'store'])
+                ->name('files.decide')
+                // A file the author removed answers 422 (DecideMediaFile),
+                // not a bare 404.
+                ->withTrashed();
+            Route::get('/{oeuvre:uuid}/files/{mediaFile:uuid}/review/assets', [OeuvreFileReviewController::class, 'assets'])
+                ->name('files.review.assets');
+            Route::get('/{oeuvre:uuid}/files/{mediaFile:uuid}/consult/{asset}', ConsultationAssetController::class)
+                ->middleware(['signed', EnsureConsultationAccess::class])
+                ->name('files.consult.asset');
+            // The decrypted ORIGINAL of a pdf / docx / video / audio file,
+            // inline, for the browser to render. Same gate as the asset
+            // route plus a delivery-mode check; scoped binding makes a file
+            // of another oeuvre a 404. See ConsultOriginalController.
+            Route::get('/{oeuvre:uuid}/files/{mediaFile:uuid}/original', ConsultOriginalController::class)
+                ->middleware(['signed', EnsureConsultationAccess::class])
+                ->name('files.consult.original');
+        });
     });
 
     /**

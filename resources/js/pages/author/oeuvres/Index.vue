@@ -22,7 +22,7 @@ import {
     Video,
 } from '@lucide/vue';
 import { useEventListener } from '@vueuse/core';
-import { computed, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { oeuvreLabel } from '@/components/oeuvre/label';
 import OeuvreDeleteDialog from '@/components/oeuvre/OeuvreDeleteDialog.vue';
@@ -31,6 +31,7 @@ import { ActionButton } from '@/components/ui/action';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { CountUp } from '@/components/ui/count-up';
 import {
     DataTable,
     DataTableToolbar,
@@ -41,6 +42,7 @@ import {
     DataTablePagination,
     DataTableEmpty,
 } from '@/components/ui/data-table';
+import { useListFilters } from '@/composables/useListFilters';
 import { create, index, show } from '@/routes/oeuvres';
 
 /** What the row may offer. Mirrors OeuvrePolicy; the server re-checks. */
@@ -112,60 +114,29 @@ const labelledOeuvres = computed(() =>
 
 defineOptions({
     layout: {
-        breadcrumbs: [{ title: 'Works', href: index() }],
+        breadcrumbs: [{ title: 'sidebar.nav.oeuvres', href: index() }],
     },
 });
 
 // --- Controls & filters. Server-driven: the page holds one page of rows,
 // so filtering it in the browser would only ever filter what is already
-// visible. Each control pushes the query string and Inertia re-renders
-// just this page's props.
-const searchQuery = ref(props.filters.search);
-const selectedStatus = ref(props.filters.status);
-const selectedSort = ref(props.filters.sort);
+// visible. The controls live in useListFilters (re-synced from
+// `props.filters`, debounced search, silent partial reload); the rows are
+// always read straight from `props.oeuvres`.
+const list = useListFilters({
+    url: () => index().url,
+    filters: () => props.filters,
+    defaults: { search: '', status: '', sort: 'newest' },
+    only: ['oeuvres', 'counts'],
+});
+const { values: filterValues, isActive: hasFilters, loading: filtering } = list;
+
 // The table is the default view — this is a registry, and a registry is
 // read in rows. The card grid stays available behind the toggle.
 const viewMode = ref<'list' | 'grid'>('list');
 const copiedUuid = ref<string | null>(null);
 
-const applyFilters = (page?: number) => {
-    router.get(
-        index().url,
-        {
-            ...(searchQuery.value.trim() !== ''
-                ? { search: searchQuery.value.trim() }
-                : {}),
-            ...(selectedStatus.value !== ''
-                ? { status: selectedStatus.value }
-                : {}),
-            ...(selectedSort.value !== 'newest'
-                ? { sort: selectedSort.value }
-                : {}),
-            ...(page && page > 1 ? { page } : {}),
-        },
-        {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-            only: ['oeuvres', 'filters', 'counts'],
-        },
-    );
-};
-
-// Debounced so a search does not fire a request per keystroke. Filters and
-// sort apply immediately — those are single deliberate clicks.
-let searchTimer: ReturnType<typeof setTimeout> | undefined;
-
-watch(searchQuery, () => {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => applyFilters(), 350);
-});
-
-watch([selectedStatus, selectedSort], () => applyFilters());
-
-const setStatus = (status: string) => {
-    selectedStatus.value = status;
-};
+const setStatus = (status: string) => list.set({ status });
 
 // --- Row actions. `deleting` and `submitting` hold the row a dialog is
 // open for; both are confirmed, because both surprise people — see the
@@ -376,29 +347,27 @@ const formatDate = (dateString: string) => {
 // pagination footer.
 const visibleOeuvres = labelledOeuvres;
 
-const hasFilters = computed(
-    () =>
-        searchQuery.value.trim() !== '' ||
-        selectedStatus.value !== '' ||
-        selectedSort.value !== 'newest',
-);
-
 const activeFilters = computed(() => {
     const pills: { key: string; label: string; value: string }[] = [];
 
-    if (searchQuery.value && searchQuery.value.trim() !== '') {
+    if (filterValues.search.trim() !== '') {
         pills.push({
             key: 'search',
             label: t('oeuvres.index.searchPlaceholder') || 'Recherche',
-            value: `"${searchQuery.value.trim()}"`,
+            value: `"${filterValues.search.trim()}"`,
         });
     }
 
-    if (selectedStatus.value !== '') {
+    if (filterValues.status !== '') {
         pills.push({
             key: 'status',
             label: t('oeuvres.table.colStatus') || 'Statut',
-            value: getStatusMeta(selectedStatus.value).label,
+            // `pending` is a filter (submitted + under review, the
+            // dashboard's "awaiting decision" card), not a status a row has.
+            value:
+                filterValues.status === 'pending'
+                    ? t('oeuvres.index.filterPending')
+                    : getStatusMeta(filterValues.status).label,
         });
     }
 
@@ -406,18 +375,12 @@ const activeFilters = computed(() => {
 });
 
 const removeFilter = (key: string) => {
-    if (key === 'search') {
-        searchQuery.value = '';
-    } else if (key === 'status') {
-        selectedStatus.value = '';
+    if (key === 'search' || key === 'status') {
+        list.set({ [key]: '' });
     }
 };
 
-const resetFilters = () => {
-    searchQuery.value = '';
-    selectedStatus.value = '';
-    selectedSort.value = 'newest';
-};
+const resetFilters = () => list.clear();
 </script>
 
 <template>
@@ -519,7 +482,7 @@ const resetFilters = () => {
                         <span
                             class="text-2xl font-black tracking-tight text-foreground sm:text-3xl"
                         >
-                            {{ totalOeuvresCount }}
+                            <CountUp :value="totalOeuvresCount" />
                         </span>
                         <span class="text-xs text-muted-foreground">
                             {{
@@ -551,7 +514,7 @@ const resetFilters = () => {
                         <span
                             class="text-2xl font-black tracking-tight text-emerald-600 sm:text-3xl dark:text-emerald-400"
                         >
-                            {{ registeredCount }}
+                            <CountUp :value="registeredCount" />
                         </span>
                         <span class="text-xs text-muted-foreground">
                             / {{ totalOeuvresCount }}
@@ -579,7 +542,7 @@ const resetFilters = () => {
                         <span
                             class="text-2xl font-black tracking-tight text-amber-600 sm:text-3xl dark:text-amber-400"
                         >
-                            {{ underReviewCount }}
+                            <CountUp :value="underReviewCount" />
                         </span>
                         <span class="text-xs text-muted-foreground">
                             {{
@@ -611,7 +574,7 @@ const resetFilters = () => {
                         <span
                             class="text-2xl font-black tracking-tight text-onda-teal-600 sm:text-3xl dark:text-onda-teal-400"
                         >
-                            {{ totalFilesCount }}
+                            <CountUp :value="totalFilesCount" />
                         </span>
                         <span class="text-xs text-muted-foreground">
                             {{ t('oeuvres.index.statFiles') }}
@@ -623,7 +586,7 @@ const resetFilters = () => {
 
         <!-- 3. Zero Works State (No Works at all in account) -->
         <div
-            v-if="props.oeuvres.total === 0 && !hasFilters"
+            v-if="props.oeuvres.total === 0 && (props.counts.all ?? 0) === 0"
             class="relative overflow-hidden rounded-3xl border border-dashed border-border/90 bg-card/60 p-8 text-center backdrop-blur-xs sm:p-14"
         >
             <div
@@ -664,7 +627,7 @@ const resetFilters = () => {
         </div>
 
         <!-- 4. Sovereign Data Table & Views -->
-        <DataTable v-else>
+        <DataTable v-else :loading="filtering" data-test="oeuvres-list">
             <template #toolbar>
                 <DataTableToolbar
                     :title="t('oeuvres.index.title')"
@@ -672,9 +635,13 @@ const resetFilters = () => {
                 >
                     <template #search>
                         <DataTableSearch
-                            v-model="searchQuery"
+                            v-model="filterValues.search"
                             :placeholder="t('oeuvres.index.searchPlaceholder')"
+                            :debounce="0"
+                            :loading="filtering"
                             class="w-full sm:w-64"
+                            @submit="list.apply()"
+                            @clear="list.apply()"
                         />
                     </template>
 
@@ -685,7 +652,7 @@ const resetFilters = () => {
                                 class="pointer-events-none absolute start-3 size-3.5 text-muted-foreground"
                             />
                             <select
-                                v-model="selectedSort"
+                                v-model="filterValues.sort"
                                 class="input-premium h-9 cursor-pointer appearance-none rounded-lg bg-background ps-8 pe-8 text-xs font-medium text-foreground focus:outline-none"
                             >
                                 <option value="newest">
@@ -746,7 +713,7 @@ const resetFilters = () => {
                                 type="button"
                                 :class="[
                                     'cursor-pointer rounded-md px-3 py-1.5 font-medium whitespace-nowrap transition-all',
-                                    selectedStatus === ''
+                                    filterValues.status === ''
                                         ? 'bg-background font-semibold text-foreground shadow-xs'
                                         : 'text-muted-foreground hover:text-foreground',
                                 ]"
@@ -761,7 +728,7 @@ const resetFilters = () => {
                                 type="button"
                                 :class="[
                                     'cursor-pointer rounded-md px-3 py-1.5 font-medium whitespace-nowrap transition-all',
-                                    selectedStatus === 'draft'
+                                    filterValues.status === 'draft'
                                         ? 'bg-background font-semibold text-foreground shadow-xs'
                                         : 'text-muted-foreground hover:text-foreground',
                                 ]"
@@ -776,7 +743,7 @@ const resetFilters = () => {
                                 type="button"
                                 :class="[
                                     'cursor-pointer rounded-md px-3 py-1.5 font-medium whitespace-nowrap transition-all',
-                                    selectedStatus === 'submitted'
+                                    filterValues.status === 'submitted'
                                         ? 'bg-background font-semibold text-amber-600 shadow-xs dark:text-amber-400'
                                         : 'text-muted-foreground hover:text-foreground',
                                 ]"
@@ -791,7 +758,7 @@ const resetFilters = () => {
                                 type="button"
                                 :class="[
                                     'cursor-pointer rounded-md px-3 py-1.5 font-medium whitespace-nowrap transition-all',
-                                    selectedStatus === 'under_review'
+                                    filterValues.status === 'under_review'
                                         ? 'bg-background font-semibold text-sky-600 shadow-xs dark:text-sky-400'
                                         : 'text-muted-foreground hover:text-foreground',
                                 ]"
@@ -806,7 +773,7 @@ const resetFilters = () => {
                                 type="button"
                                 :class="[
                                     'cursor-pointer rounded-md px-3 py-1.5 font-medium whitespace-nowrap transition-all',
-                                    selectedStatus === 'registered'
+                                    filterValues.status === 'registered'
                                         ? 'bg-background font-semibold text-emerald-600 shadow-xs dark:text-emerald-400'
                                         : 'text-muted-foreground hover:text-foreground',
                                 ]"
@@ -821,7 +788,7 @@ const resetFilters = () => {
                                 type="button"
                                 :class="[
                                     'cursor-pointer rounded-md px-3 py-1.5 font-medium whitespace-nowrap transition-all',
-                                    selectedStatus === 'rejected'
+                                    filterValues.status === 'rejected'
                                         ? 'bg-background font-semibold text-rose-600 shadow-xs dark:text-rose-400'
                                         : rejectedCount > 0
                                           ? 'text-rose-600 hover:text-rose-700 dark:text-rose-400'
@@ -850,8 +817,12 @@ const resetFilters = () => {
             <!-- A. No Search / Filter Results State -->
             <DataTableEmpty
                 v-if="visibleOeuvres.length === 0"
-                :title="t('oeuvres.index.noSearchResults')"
-                :description="t('oeuvres.index.searchPlaceholder')"
+                :title="
+                    hasFilters
+                        ? t('oeuvres.index.noFilterResults')
+                        : t('oeuvres.index.noSearchResults')
+                "
+                :description="t('common.noResultsDescription')"
                 :has-active-filters="hasFilters"
                 @clear-filters="resetFilters"
             />
@@ -862,9 +833,10 @@ const resetFilters = () => {
                 class="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:p-5 lg:grid-cols-3"
             >
                 <div
-                    v-for="oeuvre in visibleOeuvres"
+                    v-for="(oeuvre, i) in visibleOeuvres"
                     :key="oeuvre.uuid"
-                    class="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-onda-blue-500/40 hover:shadow-xl hover:shadow-onda-blue-600/5 dark:bg-card/90 dark:hover:border-onda-blue-400/40"
+                    :style="{ '--motion-index': i }"
+                    class="group motion-fade-up relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card p-5 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-onda-blue-500/40 hover:shadow-xl hover:shadow-onda-blue-600/5 dark:bg-card/90 dark:hover:border-onda-blue-400/40"
                 >
                     <!-- Top Card Bar: Category & Status Badge -->
                     <div>
@@ -1075,7 +1047,7 @@ const resetFilters = () => {
                             {{ (props.oeuvres.from ?? 1) + index }}
                         </td>
 
-                        <!-- Œuvre display label & UUID -->
+                        <!-- Oeuvre display label & UUID -->
                         <td
                             :class="[
                                 'px-4 py-3.5',

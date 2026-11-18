@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
 import { AlertTriangle, Info, Plus } from '@lucide/vue';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import CreateDialog from '@/components/admin/CreateDialog.vue';
 import EmptyState from '@/components/admin/EmptyState.vue';
@@ -12,25 +12,15 @@ import LockedField from '@/components/admin/LockedField.vue';
 import Pagination from '@/components/admin/Pagination.vue';
 import ReferentielShell from '@/components/admin/ReferentielShell.vue';
 import { ActionButton } from '@/components/ui/action';
+import { AppCombobox } from '@/components/ui/app-combobox';
+import type { ComboboxOption } from '@/components/ui/app-combobox';
+import { AppDialog } from '@/components/ui/app-dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { TableScroll } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { useListFilters } from '@/composables/useListFilters';
 import { documents as documentsRoute } from '@/routes/admin/referentiel';
 import { impact, store, update } from '@/routes/admin/referentiel/documents';
 
@@ -68,6 +58,24 @@ const props = defineProps<{
     /** The file-format registry, grouped by category. Server-owned. */
     formats: FormatGroup[];
 }>();
+
+// The controls of this tab's list (search in the shell, selects below);
+// the rows are read straight from `props.rows`.
+const list = useListFilters({
+    url: () => documentsRoute().url,
+    filters: () => props.filters,
+    defaults: { search: '', college: '', needs_review: '' },
+    only: ['rows'],
+});
+const { values: filterValues } = list;
+
+// Colleges are a long list: a searchable combobox, not a plain select.
+const collegeOptions = computed<ComboboxOption[]>(() =>
+    props.colleges.map((college) => ({
+        value: college.uuid,
+        label: college.name,
+    })),
+);
 
 const { t } = useI18n();
 
@@ -223,32 +231,10 @@ const create = () => {
         },
     );
 };
-
-const applyFilter = (key: 'college' | 'needs_review', value: string) => {
-    router.get(
-        documentsRoute().url,
-        {
-            ...(props.filters.search ? { search: props.filters.search } : {}),
-            ...(props.filters.college && key !== 'college'
-                ? { college: props.filters.college }
-                : {}),
-            ...(props.filters.needs_review && key !== 'needs_review'
-                ? { needs_review: 1 }
-                : {}),
-            ...(value !== 'all' && value !== '0' ? { [key]: value } : {}),
-        },
-        { preserveState: true, preserveScroll: true, replace: true },
-    );
-};
 </script>
 
 <template>
-    <ReferentielShell
-        :tabs="tabs"
-        active="documents"
-        :index-url="documentsRoute().url"
-        :search="filters.search"
-    >
+    <ReferentielShell :tabs="tabs" active="documents" :list="list">
         <template #actions>
             <Button class="cursor-pointer" @click="openCreate">
                 <Plus class="size-4" />
@@ -257,37 +243,29 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
         </template>
 
         <template #filters>
-            <Select
-                :model-value="String(filters.college ?? 'all')"
-                @update:model-value="applyFilter('college', String($event))"
-            >
-                <SelectTrigger class="h-9 w-56 text-sm">
-                    <SelectValue
-                        :placeholder="t('admin.referentiel.allColleges')"
-                    />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="all">{{
-                        t('admin.referentiel.allColleges')
-                    }}</SelectItem>
-                    <SelectItem
-                        v-for="college in colleges"
-                        :key="college.uuid"
-                        :value="college.uuid"
-                        >{{ college.name }}</SelectItem
-                    >
-                </SelectContent>
-            </Select>
+            <div class="w-64">
+                <AppCombobox
+                    size="sm"
+                    :model-value="filterValues.college || null"
+                    :options="collegeOptions"
+                    :placeholder="t('admin.referentiel.allColleges')"
+                    @update:model-value="
+                        (value) =>
+                            list.set({
+                                college: value === null ? '' : String(value),
+                            })
+                    "
+                />
+            </div>
 
             <Button
                 size="sm"
-                :variant="filters.needs_review ? 'default' : 'outline'"
+                :variant="filterValues.needs_review ? 'default' : 'outline'"
                 class="h-9 cursor-pointer gap-1.5 text-xs"
                 @click="
-                    applyFilter(
-                        'needs_review',
-                        filters.needs_review ? '0' : '1',
-                    )
+                    list.set({
+                        needs_review: filterValues.needs_review ? '' : '1',
+                    })
                 "
             >
                 <AlertTriangle class="size-3.5" />
@@ -296,16 +274,28 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
         </template>
 
         <EmptyState
+            data-test="list-empty"
             v-if="rows.data.length === 0"
             :title="t('admin.referentiel.empty')"
             :description="t('admin.referentiel.emptyDescription')"
-        />
+        >
+            <Button
+                v-if="list.isActive.value"
+                variant="outline"
+                size="sm"
+                class="h-8 cursor-pointer text-xs"
+                data-test="list-empty-clear"
+                @click="list.clear()"
+            >
+                {{ t('common.clearFilters') }}
+            </Button>
+        </EmptyState>
 
         <div
             v-else
             class="overflow-hidden rounded-lg border border-border bg-card"
         >
-            <div class="overflow-x-auto">
+            <TableScroll>
                 <table class="w-full border-collapse text-xs">
                     <thead>
                         <tr
@@ -360,7 +350,7 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                             <td
                                 class="px-3 py-2 font-mono text-[11px] whitespace-nowrap text-muted-foreground"
                             >
-                                <bdi>{{ row.document_key }}</bdi>
+                                <bdi dir="ltr">{{ row.document_key }}</bdi>
                             </td>
                             <td class="max-w-[16rem] px-3 py-2">
                                 <bdi class="block truncate font-medium">{{
@@ -399,7 +389,7 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                                 <div class="flex flex-wrap items-center gap-1">
                                     <span
                                         v-if="row.is_required"
-                                        class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+                                        class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary-text"
                                         >{{
                                             t('admin.referentiel.col.required')
                                         }}</span
@@ -450,7 +440,7 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                         </tr>
                     </tbody>
                 </table>
-            </div>
+            </TableScroll>
 
             <div class="px-3 pb-3">
                 <Pagination
@@ -463,20 +453,19 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
             </div>
         </div>
 
-        <Dialog
+        <AppDialog
             :open="editing !== null"
             @update:open="(o) => !o && (editing = null)"
+            size="lg"
+            :busy="saving"
         >
-            <DialogContent class="sm:max-w-xl">
-                <DialogHeader>
-                    <DialogTitle>{{
-                        t('admin.referentiel.editDocument')
-                    }}</DialogTitle>
-                    <DialogDescription>
-                        <bdi>{{ editing?.title }}</bdi>
-                    </DialogDescription>
-                </DialogHeader>
-
+            <template #title>{{
+                t('admin.referentiel.editDocument')
+            }}</template>
+            <template #description
+                ><bdi>{{ editing?.title }}</bdi></template
+            >
+            <div class="grid gap-4">
                 <div class="grid gap-4 sm:grid-cols-2">
                     <LockedField
                         :label="t('admin.referentiel.col.key')"
@@ -613,24 +602,23 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                 >
                     {{ t('admin.referentiel.needsReviewClears') }}
                 </p>
-
-                <DialogFooter class="gap-2 sm:gap-2">
-                    <Button
-                        variant="outline"
-                        class="cursor-pointer"
-                        :disabled="saving"
-                        @click="editing = null"
-                        >{{ t('admin.referentiel.cancel') }}</Button
-                    >
-                    <Button
-                        class="cursor-pointer"
-                        :disabled="saving"
-                        @click="save"
-                        >{{ t('admin.referentiel.save') }}</Button
-                    >
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            </div>
+            <template #footer
+                ><Button
+                    variant="outline"
+                    class="cursor-pointer"
+                    :disabled="saving"
+                    @click="editing = null"
+                    >{{ t('admin.referentiel.cancel') }}</Button
+                >
+                <Button
+                    class="cursor-pointer"
+                    :disabled="saving"
+                    @click="save"
+                    >{{ t('admin.referentiel.save') }}</Button
+                ></template
+            >
+        </AppDialog>
 
         <!-- Create — without this a new college could never be enabled. -->
         <CreateDialog
@@ -644,22 +632,17 @@ const applyFilter = (key: 'college' | 'needs_review', value: string) => {
                 <Label for="new_doc_college" class="text-xs">{{
                     t('admin.referentiel.form.parentCollege')
                 }}</Label>
-                <select
+                <AppCombobox
                     id="new_doc_college"
-                    v-model="createForm.college"
-                    class="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-                >
-                    <option value="" disabled>
-                        {{ t('admin.referentiel.form.choose') }}
-                    </option>
-                    <option
-                        v-for="college in colleges"
-                        :key="college.uuid"
-                        :value="college.uuid"
-                    >
-                        {{ college.name }}
-                    </option>
-                </select>
+                    size="sm"
+                    :model-value="createForm.college || null"
+                    :options="collegeOptions"
+                    :placeholder="t('admin.referentiel.form.choose')"
+                    :clearable="false"
+                    @update:model-value="
+                        (value) => (createForm.college = String(value ?? ''))
+                    "
+                />
                 <FieldError :error="errors.college" />
             </div>
 

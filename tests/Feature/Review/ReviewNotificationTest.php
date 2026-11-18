@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\MediaFile\ReviewStatusEnum;
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\MediaFile;
 use App\Models\Oeuvre;
 use App\Models\User;
@@ -31,7 +33,7 @@ function notifyAuthor(): User
     return $user;
 }
 
-function notifyOeuvre(User $author, string $status = OeuvreStatus::DRAFT, ?User $holder = null): Oeuvre
+function notifyOeuvre(User $author, OeuvreStatus $status = OeuvreStatus::DRAFT, ?User $holder = null): Oeuvre
 {
     $oeuvre = Oeuvre::factory()->create([
         'author_id' => $author->id,
@@ -44,7 +46,9 @@ function notifyOeuvre(User $author, string $status = OeuvreStatus::DRAFT, ?User 
     MediaFile::factory()->create([
         'oeuvre_id' => $oeuvre->id,
         'uploaded_by' => $author->id,
-        'status' => 'ready',
+        'status' => MediaFileStatus::READY,
+        // Reviewed by an officer: registration needs every file accepted.
+        'review_status' => ReviewStatusEnum::ACCEPTED,
     ]);
 
     return $oeuvre;
@@ -87,7 +91,7 @@ test('a first submission and a resubmission are visibly different notifications'
     expect(notifyKeys($admin))->toBe(['notifications.oeuvre.submitted']);
 
     $this->actingAs($admin)->post(route('admin.oeuvres.review', $oeuvre));
-    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Scan illisible.']);
+    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Scan illisible, merci de le redéposer.']);
     $this->actingAs($author)->post(route('author.oeuvres.submit', $oeuvre));
 
     // Asserted as a set rather than "the newest one": both rows land in the
@@ -107,7 +111,9 @@ test('the submission notification carries label, author, college and file count'
     MediaFile::factory()->create([
         'oeuvre_id' => $oeuvre->id,
         'uploaded_by' => $author->id,
-        'status' => 'ready',
+        'status' => MediaFileStatus::READY,
+        // Reviewed by an officer: registration needs every file accepted.
+        'review_status' => ReviewStatusEnum::ACCEPTED,
     ]);
 
     $this->actingAs($author)->post(route('author.oeuvres.submit', $oeuvre));
@@ -208,7 +214,7 @@ test('the notifications endpoint returns only the reader\'s own rows', function 
     $admin = notifyAdmin();
     $oeuvre = notifyOeuvre($author, OeuvreStatus::UNDER_REVIEW, holder: $admin);
 
-    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Scan illisible.']);
+    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $oeuvre), ['reason' => 'Scan illisible, merci de le redéposer.']);
 
     $this->actingAs($author)
         ->getJson(route('notifications.index'))
@@ -230,7 +236,7 @@ test('marking one notification read leaves the others alone', function () {
     $first = notifyOeuvre($author, OeuvreStatus::UNDER_REVIEW, holder: $admin);
     $second = notifyOeuvre($author, OeuvreStatus::UNDER_REVIEW, holder: $admin);
 
-    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $first), ['reason' => 'Scan illisible.']);
+    $this->actingAs($admin)->post(route('admin.oeuvres.reject', $first), ['reason' => 'Scan illisible, merci de le redéposer.']);
     $this->actingAs($admin)->post(route('admin.oeuvres.approve', $second));
 
     $one = $author->notifications()->latest()->first();

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
 import { AlertTriangle, Plus } from '@lucide/vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import CreateDialog from '@/components/admin/CreateDialog.vue';
 import EmptyState from '@/components/admin/EmptyState.vue';
@@ -10,25 +10,15 @@ import LockedField from '@/components/admin/LockedField.vue';
 import Pagination from '@/components/admin/Pagination.vue';
 import ReferentielShell from '@/components/admin/ReferentielShell.vue';
 import { ActionButton } from '@/components/ui/action';
+import { AppCombobox } from '@/components/ui/app-combobox';
+import type { ComboboxOption } from '@/components/ui/app-combobox';
+import { AppDialog } from '@/components/ui/app-dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { TableScroll } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { useListFilters } from '@/composables/useListFilters';
 import { membres as membresRoute } from '@/routes/admin/referentiel';
 import { store, update } from '@/routes/admin/referentiel/membres';
 
@@ -42,7 +32,7 @@ interface MemberRow {
     code_qlt: string | null;
     college: string | null;
     code_college: string | null;
-    status: number;
+    status: 'active' | 'inactive';
     is_disabled: boolean;
     available_in_registration: boolean;
 }
@@ -61,6 +51,24 @@ const props = defineProps<{
     colleges: Array<{ uuid: string; name: string }>;
 }>();
 
+// The controls of this tab's list (search in the shell, selects below);
+// the rows are read straight from `props.rows`.
+const list = useListFilters({
+    url: () => membresRoute().url,
+    filters: () => props.filters,
+    defaults: { search: '', college: '' },
+    only: ['rows'],
+});
+const { values: filterValues } = list;
+
+// Colleges are a long list: a searchable combobox, not a plain select.
+const collegeOptions = computed<ComboboxOption[]>(() =>
+    props.colleges.map((college) => ({
+        value: college.uuid,
+        label: college.name,
+    })),
+);
+
 const { t } = useI18n();
 
 const editing = ref<MemberRow | null>(null);
@@ -70,7 +78,7 @@ const form = ref({
     name: '',
     name_ar: '',
     name_en: '',
-    status: 1,
+    status: 'active',
     is_disabled: false,
     available_in_registration: true,
 });
@@ -125,7 +133,7 @@ const createForm = ref({
     name_en: '',
     code_qlt: '',
     available_in_registration: true,
-    status: 1,
+    status: 'active',
 });
 
 const openCreate = () => {
@@ -136,7 +144,7 @@ const openCreate = () => {
         name_en: '',
         code_qlt: '',
         available_in_registration: true,
-        status: 1,
+        status: 'active',
     };
     errors.value = {};
     creating.value = true;
@@ -172,28 +180,16 @@ const hidesMember = () =>
     editing.value !== null &&
     editing.value.oeuvres_count > 0 &&
     ((form.value.is_disabled && !editing.value.is_disabled) ||
-        (form.value.status !== 1 && editing.value.status === 1) ||
+        (form.value.status !== 'active' && editing.value.status === 'active') ||
         (!form.value.available_in_registration &&
             editing.value.available_in_registration));
-
-const applyCollege = (value: string) => {
-    router.get(
-        membresRoute().url,
-        {
-            ...(props.filters.search ? { search: props.filters.search } : {}),
-            ...(value !== 'all' ? { college: value } : {}),
-        },
-        { preserveState: true, preserveScroll: true, replace: true },
-    );
-};
 </script>
 
 <template>
     <ReferentielShell
         :tabs="tabs"
         active="membres"
-        :index-url="membresRoute().url"
-        :search="filters.search"
+        :list="list"
         :legend="['status', 'is_disabled', 'available_in_registration']"
     >
         <template #actions>
@@ -204,40 +200,45 @@ const applyCollege = (value: string) => {
         </template>
 
         <template #filters>
-            <Select
-                :model-value="String(filters.college ?? 'all')"
-                @update:model-value="applyCollege(String($event))"
-            >
-                <SelectTrigger class="h-9 w-56 text-sm">
-                    <SelectValue
-                        :placeholder="t('admin.referentiel.allColleges')"
-                    />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="all">{{
-                        t('admin.referentiel.allColleges')
-                    }}</SelectItem>
-                    <SelectItem
-                        v-for="college in colleges"
-                        :key="college.uuid"
-                        :value="college.uuid"
-                        >{{ college.name }}</SelectItem
-                    >
-                </SelectContent>
-            </Select>
+            <div class="w-64">
+                <AppCombobox
+                    size="sm"
+                    :model-value="filterValues.college || null"
+                    :options="collegeOptions"
+                    :placeholder="t('admin.referentiel.allColleges')"
+                    @update:model-value="
+                        (value) =>
+                            list.set({
+                                college: value === null ? '' : String(value),
+                            })
+                    "
+                />
+            </div>
         </template>
 
         <EmptyState
+            data-test="list-empty"
             v-if="rows.data.length === 0"
             :title="t('admin.referentiel.empty')"
             :description="t('admin.referentiel.emptyDescription')"
-        />
+        >
+            <Button
+                v-if="list.isActive.value"
+                variant="outline"
+                size="sm"
+                class="h-8 cursor-pointer text-xs"
+                data-test="list-empty-clear"
+                @click="list.clear()"
+            >
+                {{ t('common.clearFilters') }}
+            </Button>
+        </EmptyState>
 
         <div
             v-else
             class="overflow-hidden rounded-lg border border-border bg-card"
         >
-            <div class="overflow-x-auto">
+            <TableScroll>
                 <table class="w-full border-collapse text-xs">
                     <thead>
                         <tr
@@ -286,7 +287,7 @@ const applyCollege = (value: string) => {
                             <td
                                 class="px-3 py-2 font-mono text-[11px] whitespace-nowrap text-muted-foreground"
                             >
-                                <bdi>{{ row.code_qlt ?? '—' }}</bdi>
+                                <bdi dir="ltr">{{ row.code_qlt ?? '—' }}</bdi>
                             </td>
                             <td
                                 class="hidden max-w-[14rem] px-3 py-2 lg:table-cell"
@@ -301,12 +302,12 @@ const applyCollege = (value: string) => {
                                     <span
                                         :class="[
                                             'rounded px-1.5 py-0.5 text-[10px] font-medium',
-                                            row.status === 1
+                                            row.status === 'active'
                                                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                                                 : 'bg-muted text-muted-foreground',
                                         ]"
                                         >{{
-                                            row.status === 1
+                                            row.status === 'active'
                                                 ? t(
                                                       'admin.referentiel.flags.statusOn',
                                                   )
@@ -324,7 +325,7 @@ const applyCollege = (value: string) => {
                                     >
                                     <span
                                         v-if="!row.is_system"
-                                        class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+                                        class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary-text"
                                         >{{
                                             t('admin.referentiel.badge.custom')
                                         }}</span
@@ -351,7 +352,7 @@ const applyCollege = (value: string) => {
                         </tr>
                     </tbody>
                 </table>
-            </div>
+            </TableScroll>
 
             <div class="px-3 pb-3">
                 <Pagination
@@ -364,20 +365,17 @@ const applyCollege = (value: string) => {
             </div>
         </div>
 
-        <Dialog
+        <AppDialog
             :open="editing !== null"
             @update:open="(o) => !o && (editing = null)"
+            size="md"
+            :busy="saving"
         >
-            <DialogContent class="sm:max-w-lg">
-                <DialogHeader>
-                    <DialogTitle>{{
-                        t('admin.referentiel.editMember')
-                    }}</DialogTitle>
-                    <DialogDescription>
-                        <bdi>{{ editing?.name }}</bdi>
-                    </DialogDescription>
-                </DialogHeader>
-
+            <template #title>{{ t('admin.referentiel.editMember') }}</template>
+            <template #description
+                ><bdi>{{ editing?.name }}</bdi></template
+            >
+            <div class="grid gap-4">
                 <div class="grid gap-4 sm:grid-cols-2">
                     <LockedField
                         :label="t('admin.referentiel.col.codeQlt')"
@@ -438,8 +436,10 @@ const applyCollege = (value: string) => {
                 <div class="space-y-3 rounded-lg border border-border/80 p-3">
                     <label class="flex items-start gap-2.5 text-xs">
                         <Checkbox
-                            :model-value="form.status === 1"
-                            @update:model-value="form.status = $event ? 1 : 0"
+                            :model-value="form.status === 'active'"
+                            @update:model-value="
+                                form.status = $event ? 'active' : 'inactive'
+                            "
                         />
                         <span>
                             <span class="block font-medium">{{
@@ -502,24 +502,23 @@ const applyCollege = (value: string) => {
                         {{ t('admin.referentiel.blast.safe') }}
                     </p>
                 </div>
-
-                <DialogFooter class="gap-2 sm:gap-2">
-                    <Button
-                        variant="outline"
-                        class="cursor-pointer"
-                        :disabled="saving"
-                        @click="editing = null"
-                        >{{ t('admin.referentiel.cancel') }}</Button
-                    >
-                    <Button
-                        class="cursor-pointer"
-                        :disabled="saving"
-                        @click="save"
-                        >{{ t('admin.referentiel.save') }}</Button
-                    >
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            </div>
+            <template #footer
+                ><Button
+                    variant="outline"
+                    class="cursor-pointer"
+                    :disabled="saving"
+                    @click="editing = null"
+                    >{{ t('admin.referentiel.cancel') }}</Button
+                >
+                <Button
+                    class="cursor-pointer"
+                    :disabled="saving"
+                    @click="save"
+                    >{{ t('admin.referentiel.save') }}</Button
+                ></template
+            >
+        </AppDialog>
 
         <!-- Create -->
         <CreateDialog
@@ -532,22 +531,17 @@ const applyCollege = (value: string) => {
                 <Label for="new_member_college" class="text-xs">{{
                     t('admin.referentiel.form.parentCollege')
                 }}</Label>
-                <select
+                <AppCombobox
                     id="new_member_college"
-                    v-model="createForm.college"
-                    class="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-                >
-                    <option value="" disabled>
-                        {{ t('admin.referentiel.form.choose') }}
-                    </option>
-                    <option
-                        v-for="college in colleges"
-                        :key="college.uuid"
-                        :value="college.uuid"
-                    >
-                        {{ college.name }}
-                    </option>
-                </select>
+                    size="sm"
+                    :model-value="createForm.college || null"
+                    :options="collegeOptions"
+                    :placeholder="t('admin.referentiel.form.choose')"
+                    :clearable="false"
+                    @update:model-value="
+                        (value) => (createForm.college = String(value ?? ''))
+                    "
+                />
                 <FieldError :error="errors.college" />
             </div>
 
@@ -608,8 +602,10 @@ const applyCollege = (value: string) => {
             <div class="space-y-3 rounded-lg border border-border/80 p-3">
                 <label class="flex items-start gap-2.5 text-xs">
                     <Checkbox
-                        :model-value="createForm.status === 1"
-                        @update:model-value="createForm.status = $event ? 1 : 0"
+                        :model-value="createForm.status === 'active'"
+                        @update:model-value="
+                            createForm.status = $event ? 'active' : 'inactive'
+                        "
                     />
                     <span>
                         <span class="block font-medium">{{

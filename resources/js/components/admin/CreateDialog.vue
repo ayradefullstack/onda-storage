@@ -1,14 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
+import { AppDialog } from '@/components/ui/app-dialog';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 
 /**
  * The frame of every referentiel "create" form: title, the fields (slot) and
@@ -31,35 +24,32 @@ const { t } = useI18n();
 </script>
 
 <template>
-    <Dialog :open="open" @update:open="(o) => emit('update:open', o)">
-        <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-xl">
-            <DialogHeader>
-                <DialogTitle>{{ title }}</DialogTitle>
-                <DialogDescription v-if="description">{{
-                    description
-                }}</DialogDescription>
-            </DialogHeader>
+    <AppDialog
+        :open="open"
+        :title="title"
+        :description="description"
+        :busy="saving"
+        size="lg"
+        form
+        @update:open="(o) => emit('update:open', o)"
+        @submit="emit('submit')"
+    >
+        <div class="space-y-4">
+            <slot />
+        </div>
 
-            <form class="space-y-4" @submit.prevent="emit('submit')">
-                <slot />
-
-                <DialogFooter class="gap-2 sm:gap-2">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        class="cursor-pointer"
-                        :disabled="saving"
-                        @click="emit('update:open', false)"
-                        >{{ t('admin.referentiel.cancel') }}</Button
-                    >
-                    <Button
-                        type="submit"
-                        class="cursor-pointer"
-                        :disabled="saving"
-                        >{{ t('admin.referentiel.createSubmit') }}</Button
-                    >
-                </DialogFooter>
-            </form>
-        </DialogContent>
-    </Dialog>
+        <template #footer>
+            <Button
+                type="button"
+                variant="outline"
+                class="cursor-pointer"
+                :disabled="saving"
+                @click="emit('update:open', false)"
+                >{{ t('admin.referentiel.cancel') }}</Button
+            >
+            <Button type="submit" class="cursor-pointer" :disabled="saving">{{
+                t('admin.referentiel.createSubmit')
+            }}</Button>
+        </template>
+    </AppDialog>
 </template>

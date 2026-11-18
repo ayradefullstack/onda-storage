@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Concerns\HasUuidColumn;
-use App\Domain\Deposit\OeuvreStatus;
+use App\Enums\Referentiel\StatusEnum as ReferentielStatus;
+use App\Enums\TypeGestion\TypeGestionEnum;
+use App\Models\Concerns\SerializesEnumsAsKeys;
 use Database\Factories\RegisterTypeCollegeFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -27,8 +29,8 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string|null $name_ar
  * @property string|null $name_en
- * @property int $status
- * @property int $type_gestion
+ * @property ReferentielStatus $status
+ * @property TypeGestionEnum $type_gestion
  * @property string|null $code_dv
  * @property bool $adhesion
  * @property bool $is_disabled
@@ -41,9 +43,7 @@ use Illuminate\Support\Carbon;
 class RegisterTypeCollege extends Model
 {
     /** @use HasFactory<RegisterTypeCollegeFactory> */
-    use HasFactory, HasUuidColumn, SoftDeletes;
-
-    public const STATUS_ACTIVE = 1;
+    use HasFactory, HasUuidColumn, SerializesEnumsAsKeys, SoftDeletes;
 
     /**
      * Technical college ONDA keeps for internal qualities (foreign works,
@@ -84,8 +84,8 @@ class RegisterTypeCollege extends Model
     protected function casts(): array
     {
         return [
-            'status' => 'integer',
-            'type_gestion' => 'integer',
+            'type_gestion' => TypeGestionEnum::class,
+            'status' => ReferentielStatus::class,
             'adhesion' => 'boolean',
             'is_disabled' => 'boolean',
             'is_system' => 'boolean',
@@ -150,7 +150,7 @@ class RegisterTypeCollege extends Model
      */
     public function isReachable(): bool
     {
-        return $this->status === self::STATUS_ACTIVE
+        return $this->status === ReferentielStatus::ACTIVE
             && ! $this->is_disabled
             && ! in_array($this->code_college, self::CODES_HIDDEN_FROM_REGISTRATION, true);
     }
@@ -169,27 +169,12 @@ class RegisterTypeCollege extends Model
     }
 
     /**
-     * Deposits still in flight under this college — an author is filling
-     * one in, or an officer is reading one. Disabling the college does NOT
-     * break them (existing oeuvres keep their classification and stay
-     * reviewable), but whoever disables it should be told the number
-     * first. `registered` is excluded: those are finished and untouchable.
-     *
-     * @var list<string>
-     */
-    public const IN_FLIGHT_OEUVRE_STATUSES = [
-        OeuvreStatus::DRAFT,
-        OeuvreStatus::SUBMITTED,
-        OeuvreStatus::UNDER_REVIEW,
-    ];
-
-    /**
      * @param  Builder<RegisterTypeCollege>  $query
      * @return Builder<RegisterTypeCollege>
      */
     public function scopeActive(Builder $query): Builder
     {
-        return $query->where('status', self::STATUS_ACTIVE);
+        return $query->where('status', ReferentielStatus::ACTIVE);
     }
 
     /**
@@ -210,7 +195,7 @@ class RegisterTypeCollege extends Model
      * @param  Builder<RegisterTypeCollege>  $query
      * @return Builder<RegisterTypeCollege>
      */
-    public function scopeForGestion(Builder $query, int $typeGestion): Builder
+    public function scopeForGestion(Builder $query, TypeGestionEnum $typeGestion): Builder
     {
         return $query->where('type_gestion', $typeGestion);
     }

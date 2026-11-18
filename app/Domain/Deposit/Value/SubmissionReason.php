@@ -25,6 +25,9 @@ final class SubmissionReason
 
     public const FILE_QUARANTINED = 'file_quarantined';
 
+    /** A file the ONDA rejected, still on a deposit returned to its author. */
+    public const FILE_REJECTED = 'file_rejected';
+
     public const SLOT_EMPTY = 'slot_empty';
 
     public const SLOT_EMPTY_CONDITIONAL = 'slot_empty_conditional';
@@ -51,6 +54,7 @@ final class SubmissionReason
             self::FILE_IN_PIPELINE => "\"{$name}\" is still being processed ({$this->params['status']}). Wait for it to finish.",
             self::FILE_FAILED => "\"{$name}\" failed to process. Remove it or upload it again.",
             self::FILE_QUARANTINED => "\"{$name}\" was quarantined by the malware scan. Remove it.",
+            self::FILE_REJECTED => "\"{$name}\" was rejected by the ONDA. Remove it and upload a compliant file.",
             self::SLOT_EMPTY => "The required document \"{$name}\" has no file yet.",
             self::SLOT_EMPTY_CONDITIONAL => "The document \"{$name}\" is empty; it may not apply to this work.",
             default => $this->code,

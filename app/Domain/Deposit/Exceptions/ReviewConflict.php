@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Deposit\Exceptions;
 
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\User;
 
 /**
@@ -16,7 +17,7 @@ final class ReviewConflict extends DepositException
     private function __construct(
         string $message,
         public readonly ?User $holder = null,
-        public readonly ?string $currentStatus = null,
+        public readonly ?OeuvreStatus $currentStatus = null,
     ) {
         parent::__construct($message);
     }
@@ -29,10 +30,10 @@ final class ReviewConflict extends DepositException
         );
     }
 
-    public static function statusMoved(string $currentStatus): self
+    public static function statusMoved(OeuvreStatus $currentStatus): self
     {
         return new self(
-            "This deposit is now \"{$currentStatus}\". Reload before deciding on it.",
+            "This deposit is now \"{$currentStatus->key()}\". Reload before deciding on it.",
             currentStatus: $currentStatus,
         );
     }

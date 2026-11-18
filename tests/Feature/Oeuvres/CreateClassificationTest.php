@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Oeuvre\StatusEnum as OeuvreStatus;
 use App\Models\Oeuvre;
 use App\Models\RegisterType;
 use App\Models\RegisterTypeCollege;
@@ -180,7 +181,7 @@ test('a created oeuvre stores all five classification fields, including the snap
         ->and($oeuvre->register_type_college_id)->toBe(collegeNamed('MUSIQUE')->id)
         ->and($oeuvre->register_type_member_id)->toBe(memberOf('MUSIQUE', 'C')->id)
         ->and($oeuvre->code_college_snapshot)->toBe('MUSIQUE')
-        ->and($oeuvre->status)->toBe('draft')
+        ->and($oeuvre->status)->toBe(OeuvreStatus::DRAFT)
         ->and($oeuvre->title)->toBeNull();
 
     $response->assertSessionHasNoErrors()->assertRedirect(route('oeuvres.show', $oeuvre));

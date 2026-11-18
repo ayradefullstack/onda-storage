@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\TypeGestion\TypeGestionEnum;
 use App\Models\RegisterType;
 use App\Models\TypeGestion;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -19,7 +20,7 @@ class TypeGestionFactory extends Factory
     {
         return [
             'register_type_id' => RegisterType::factory(),
-            'type_gestion' => TypeGestion::COLLECTIVE,
+            'type_gestion' => TypeGestionEnum::COLLECTIVE,
             'name' => 'Gestion collective',
         ];
     }

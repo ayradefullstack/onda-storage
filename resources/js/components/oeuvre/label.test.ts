@@ -47,8 +47,8 @@ describe('oeuvreLabel', () => {
             oeuvreLabel(
                 { ...base, title: null, college_name: null },
                 'fr',
-                'Œuvre sans titre',
+                'Oeuvre sans titre',
             ),
-        ).toBe('Œuvre sans titre · 01a0a670');
+        ).toBe('Oeuvre sans titre · 01a0a670');
     });
 });

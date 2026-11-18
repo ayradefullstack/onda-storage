@@ -9,6 +9,7 @@ import StatCard from '@/components/admin/StatCard.vue';
 import StatusBadge from '@/components/admin/StatusBadge.vue';
 import { oeuvreLabel } from '@/components/oeuvre/label';
 import { Badge } from '@/components/ui/badge';
+import { TableScroll } from '@/components/ui/data-table';
 import {
     Select,
     SelectContent,
@@ -233,7 +234,7 @@ const hasOeuvres = computed(() => props.oeuvres.data.length > 0);
                 :description="t('admin.authors.noOeuvresDescription')"
             />
 
-            <div v-else class="overflow-x-auto rounded-lg border border-border">
+            <TableScroll v-else class="rounded-lg border border-border">
                 <table class="w-full text-sm">
                     <thead>
                         <tr
@@ -267,7 +268,7 @@ const hasOeuvres = computed(() => props.oeuvres.data.length > 0);
                                     :href="oeuvreShow(oeuvre.uuid)"
                                     class="font-medium hover:underline"
                                 >
-                                    <bdi>{{
+                                    <bdi dir="ltr">{{
                                         oeuvreLabel(
                                             oeuvre,
                                             locale,
@@ -298,7 +299,7 @@ const hasOeuvres = computed(() => props.oeuvres.data.length > 0);
                         </tr>
                     </tbody>
                 </table>
-            </div>
+            </TableScroll>
 
             <Pagination
                 :links="oeuvres.links"

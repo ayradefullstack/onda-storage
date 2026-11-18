@@ -10,3 +10,4 @@ export { default as DataTablePagination } from './DataTablePagination.vue';
 export type { PageLink } from './DataTablePagination.vue';
 export { default as DataTableEmpty } from './DataTableEmpty.vue';
 export { default as DataTableSkeleton } from './DataTableSkeleton.vue';
+export { default as TableScroll } from './TableScroll.vue';
