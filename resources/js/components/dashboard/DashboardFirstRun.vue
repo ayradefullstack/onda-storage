@@ -23,7 +23,7 @@ const STEPS = [
         data-testid="dashboard-first-run"
     >
         <span
-            class="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary"
+            class="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary-text"
         >
             <FilePlus2 class="size-6" />
         </span>

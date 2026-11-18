@@ -56,6 +56,10 @@ const props = withDefaults(
         /** `sm` matches the 36px inputs of toolbars and admin forms. */
         size?: 'default' | 'sm';
         clearable?: boolean;
+        /** Marks the trigger aria-invalid and tints its border (forms). */
+        invalid?: boolean;
+        /** Space-separated ids of the hint / message elements for the trigger. */
+        describedby?: string;
         /** Show the search field only from this many options up. */
         searchThreshold?: number;
     }>(),
@@ -72,6 +76,8 @@ const props = withDefaults(
         variant: 'blue',
         size: 'default',
         clearable: true,
+        invalid: false,
+        describedby: undefined,
         searchThreshold: 0,
     },
 );
@@ -163,6 +169,8 @@ function clear(): void {
                         role="combobox"
                         aria-haspopup="listbox"
                         :aria-expanded="open"
+                        :aria-invalid="invalid ? 'true' : undefined"
+                        :aria-describedby="describedby || undefined"
                         :tabindex="tabindex"
                         :disabled="disabled"
                         data-slot="app-combobox-trigger"
@@ -181,6 +189,7 @@ function clear(): void {
                                 ? 'input-premium-teal'
                                 : 'input-premium',
                             clearable && selected && !disabled ? 'pe-16' : '',
+                            invalid ? 'border-danger! ring-2 ring-danger/20' : '',
                         ]"
                     >
                         <span class="flex min-w-0 items-center gap-2.5">
@@ -291,7 +300,7 @@ function clear(): void {
                                     class="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-start text-xs outline-none select-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
                                     :class="
                                         isSelected(option)
-                                            ? 'font-semibold text-primary'
+                                            ? 'font-semibold text-primary-text'
                                             : 'text-foreground'
                                     "
                                     @select.prevent="choose(option)"
@@ -345,7 +354,7 @@ function clear(): void {
                                         </span>
                                         <Check
                                             v-if="isSelected(option)"
-                                            class="size-4 text-primary"
+                                            class="size-4 text-primary-text"
                                             data-slot="app-combobox-check"
                                         />
                                     </span>
@@ -367,7 +376,7 @@ function clear(): void {
                                 <button
                                     v-if="query !== ''"
                                     type="button"
-                                    class="cursor-pointer text-[11px] text-primary hover:underline"
+                                    class="cursor-pointer text-[11px] text-primary-text hover:underline"
                                     @click="query = ''"
                                 >
                                     {{ t('ui.combobox.reset') }}

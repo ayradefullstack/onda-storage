@@ -1,159 +1,162 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
-import { ArrowRight } from '@lucide/vue';
+import { Form, Head, Link } from '@inertiajs/vue3';
+import { Mail, User } from '@lucide/vue';
+import { onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import InputError from '@/components/InputError.vue';
+import AuthErrorSummary from '@/components/auth/AuthErrorSummary.vue';
+import AuthPasswordInput from '@/components/auth/AuthPasswordInput.vue';
+import AuthSubmitButton from '@/components/auth/AuthSubmitButton.vue';
+import AuthTextField from '@/components/auth/AuthTextField.vue';
 import PasskeyVerify from '@/components/PasskeyVerify.vue';
-import PasswordInput from '@/components/PasswordInput.vue';
-import TextLink from '@/components/TextLink.vue';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
+import {
+    emailRule,
+    requiredText,
+    useAuthForm,
+} from '@/composables/useAuthForm';
+import { useAuthStage } from '@/composables/useAuthStage';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 
-const { t } = useI18n();
-
+/**
+ * Presentation only. The form still posts `email`, `password` and `remember`
+ * to Fortify through the same wayfinder action, and every redirect is the
+ * server's. useAuthForm adds an earlier, localised message for empty
+ * fields, shows the server's errors (including `auth.failed`, which Fortify
+ * attaches to `email`) on the right field and in the alert, and refuses a
+ * second submit while one is in flight.
+ */
 defineProps<{
     status?: string;
     canResetPassword: boolean;
 }>();
+
+const { t } = useI18n();
+const { setStageState } = useAuthStage();
+
+const auth = useAuthForm(
+    [
+        {
+            name: 'email',
+            id: 'login-email',
+            label: () => t('auth.email'),
+            rule: emailRule,
+        },
+        {
+            name: 'password',
+            id: 'login-password',
+            label: () => t('auth.password'),
+            rule: requiredText,
+        },
+    ],
+    (key, params) => t(key, params ?? {}),
+);
+
+onMounted(() => auth.syncFromDom());
 </script>
 
 <template>
     <Head :title="t('auth.loginTitle')" />
 
-    <!-- Card Header -->
-    <div class="mb-8 space-y-2 text-center lg:text-start">
-        <h1
-            class="text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
-        >
+    <div class="auth-stagger">
+        <div>
+            <span class="auth-eyebrow">
+                <User class="size-3.5" aria-hidden="true" />
+                {{ t('authUi.eyebrowLogin') }}
+            </span>
+        </div>
+        <h1 class="auth-title" data-auth-title tabindex="-1">
             {{ t('auth.loginTitle') }}
         </h1>
-        <p class="text-xs leading-relaxed text-muted-foreground sm:text-sm">
-            {{ t('auth.loginDesc') }}
-        </p>
+        <p class="auth-sub">{{ t('auth.loginDesc') }}</p>
     </div>
 
-    <!-- Status Notice (e.g. after password reset) -->
-    <div
-        v-if="status"
-        class="mb-6 rounded-2xl border border-emerald-500/20 bg-emerald-50 p-4 text-center text-xs font-semibold text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-950/50 dark:text-emerald-300"
-    >
-        {{ status }}
-    </div>
+    <!-- Status notice (e.g. after a password reset) -->
+    <p v-if="status" role="status" class="auth-notice mb-5">{{ status }}</p>
 
-    <!-- Passkey Biometric Sign In -->
-    <PasskeyVerify
-        :label="t('auth.passkeyPrompt')"
-        :loading-label="t('auth.authenticating')"
-        :separator="t('auth.orEmail')"
-    />
-
-    <!-- Standard Email / Password Form -->
     <Form
         v-bind="store.form()"
+        novalidate
         :reset-on-success="['password']"
-        v-slot="{ errors, processing }"
-        class="flex flex-col gap-5"
+        class="auth-form auth-stagger"
+        v-slot="{ processing, wasSuccessful }"
+        @before="auth.begin"
+        @start="setStageState('busy')"
+        @success="setStageState('stamped')"
+        @error="
+            (errors) => {
+                setStageState('idle');
+                auth.setServerErrors(errors);
+            }
+        "
+        @finish="auth.finish"
     >
-        <div class="space-y-4">
-            <!-- Email Field -->
-            <div class="space-y-1.5 text-start">
-                <Label
-                    for="email"
-                    class="text-xs font-semibold text-foreground"
-                >
-                    {{ t('auth.email') }}
-                </Label>
-                <div class="relative">
-                    <Input
-                        id="email"
-                        type="email"
-                        name="email"
-                        required
-                        autofocus
-                        :tabindex="1"
-                        dir="ltr"
-                        autocomplete="email"
-                        placeholder="author@onda.dz"
-                        class="text-left"
-                    />
-                </div>
-                <InputError :message="errors.email" />
-            </div>
+        <AuthErrorSummary :message="auth.firstError.value" />
 
-            <!-- Password Field -->
-            <div class="space-y-1.5 text-start">
-                <div class="flex items-center justify-between">
-                    <Label
-                        for="password"
-                        class="text-xs font-semibold text-foreground"
-                    >
-                        {{ t('auth.password') }}
-                    </Label>
-                    <TextLink
-                        v-if="canResetPassword"
-                        :href="request()"
-                        class="text-xs font-medium text-onda-blue-600 hover:text-onda-blue-700 dark:text-onda-blue-400"
-                        :tabindex="5"
-                    >
-                        {{ t('auth.forgotPassword') }}
-                    </TextLink>
-                </div>
-                <PasswordInput
-                    id="password"
-                    name="password"
-                    required
-                    :tabindex="2"
-                    autocomplete="current-password"
-                    :placeholder="t('auth.passwordPlaceholder')"
-                />
-                <InputError :message="errors.password" />
-            </div>
-
-            <!-- Remember Me -->
-            <div class="flex items-center justify-between pt-1">
-                <label
-                    for="remember"
-                    class="flex cursor-pointer items-center gap-2.5 text-xs text-muted-foreground select-none"
-                >
-                    <Checkbox id="remember" name="remember" :tabindex="3" />
-                    <span>{{ t('auth.rememberMe') }}</span>
-                </label>
-            </div>
-
-            <!-- Submit Button (ONDA Royal Blue) -->
-            <Button
-                type="submit"
-                class="mt-3 h-10 w-full cursor-pointer rounded-lg text-sm font-semibold shadow-xs"
-                :tabindex="4"
-                :disabled="processing"
-                data-test="login-button"
-            >
-                <Spinner v-if="processing" />
-                <span v-else class="flex items-center justify-center gap-2">
-                    <span>{{ t('auth.signInBtn') }}</span>
-                    <ArrowRight class="size-4 rtl:rotate-180" />
-                </span>
-            </Button>
+        <!-- Passkey flow: the existing component, untouched. -->
+        <div class="auth-passkey">
+            <PasskeyVerify
+                :label="t('auth.passkeyPrompt')"
+                :loading-label="t('auth.authenticating')"
+                :separator="t('auth.orEmail')"
+            />
         </div>
 
-        <!-- Register Link -->
-        <div
-            class="mt-4 border-t border-border pt-5 text-center text-xs text-muted-foreground"
+        <AuthTextField
+            id="login-email"
+            name="email"
+            type="email"
+            dir="ltr"
+            :label="t('auth.email')"
+            :lead-icon="Mail"
+            autocomplete="username"
+            inputmode="email"
+            placeholder="exemple@domaine.com"
+            keyboard-hint="email"
+            required
+            autofocus
+            v-bind="auth.bind('email')"
+        />
+
+        <AuthPasswordInput
+            id="login-password"
+            name="password"
+            :label="t('auth.password')"
+            :show-label="t('authUi.showPw')"
+            :hide-label="t('authUi.hidePw')"
+            autocomplete="current-password"
+            placeholder="Mot de passe"
+            required
+            v-bind="auth.bind('password')"
         >
-            <span>{{ t('auth.noAccount') }}&nbsp;</span>
-            <TextLink
-                :href="register()"
-                class="font-semibold text-onda-teal-600 hover:text-onda-teal-700 dark:text-onda-teal-400"
-                :tabindex="6"
-            >
-                {{ t('auth.createAccount') }}
-            </TextLink>
-        </div>
+            <template v-if="canResetPassword" #label-extra>
+                <Link :href="request()" class="auth-link">
+                    {{ t('auth.forgotPassword') }}
+                </Link>
+            </template>
+        </AuthPasswordInput>
+
+        <label class="auth-check" for="remember">
+            <Checkbox id="remember" name="remember" class="size-5" />
+            <span>{{ t('auth.rememberMe') }}</span>
+        </label>
+
+        <AuthSubmitButton
+            :processing="processing"
+            :success="wasSuccessful"
+            :label="t('auth.signInBtn')"
+            :busy-label="t('authUi.verifying')"
+            :done-label="t('authUi.verified')"
+            data-test="login-button"
+        />
     </Form>
+
+    <p class="auth-foot">
+        <span>{{ t('auth.noAccount') }}</span>
+        &nbsp;
+        <Link :href="register()" class="auth-link">
+            {{ t('auth.createAccount') }}
+        </Link>
+    </p>
 </template>

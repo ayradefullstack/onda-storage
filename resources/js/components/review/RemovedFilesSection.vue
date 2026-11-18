@@ -107,7 +107,7 @@ const { t, locale } = useI18n();
                             <a
                                 v-if="!file.replaced_by.removed"
                                 :href="hrefFor(file.replaced_by.uuid)"
-                                class="font-medium text-primary hover:underline"
+                                class="font-medium text-primary-text hover:underline"
                                 data-testid="replaced-by-link"
                                 ><bdi dir="ltr">{{
                                     file.replaced_by.original_name

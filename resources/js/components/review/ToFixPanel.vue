@@ -116,7 +116,7 @@ function next(): void {
                 </div>
                 <button
                     type="button"
-                    class="shrink-0 cursor-pointer rounded text-xs font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/40"
+                    class="shrink-0 cursor-pointer rounded text-xs font-medium text-primary-text outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/40"
                     data-testid="to-fix-go"
                     @click="emit('go', item.target)"
                 >

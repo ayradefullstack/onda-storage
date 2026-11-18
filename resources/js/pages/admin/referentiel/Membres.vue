@@ -325,7 +325,7 @@ const hidesMember = () =>
                                     >
                                     <span
                                         v-if="!row.is_system"
-                                        class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+                                        class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary-text"
                                         >{{
                                             t('admin.referentiel.badge.custom')
                                         }}</span

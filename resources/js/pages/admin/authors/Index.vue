@@ -356,7 +356,7 @@ function clearFilters(): void {
                         <td class="px-4 py-3.5">
                             <Link
                                 :href="authorShow(author.uuid)"
-                                class="font-medium text-foreground transition-colors hover:text-primary"
+                                class="font-medium text-foreground transition-colors hover:text-primary-text"
                             >
                                 {{ author.name }}
                             </Link>

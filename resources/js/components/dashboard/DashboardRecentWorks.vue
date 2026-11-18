@@ -32,7 +32,7 @@ const label = (item: DashboardRecent): string =>
             </h2>
             <Link
                 :href="index()"
-                class="rounded text-xs font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                class="rounded text-xs font-medium text-primary-text outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
             >
                 {{ t('dashboard.recent.all') }}
             </Link>

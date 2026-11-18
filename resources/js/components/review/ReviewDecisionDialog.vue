@@ -444,7 +444,7 @@ function close(): void {
                 :class="
                     screen === 'reject'
                         ? 'border-destructive/20 bg-destructive/10 text-destructive'
-                        : 'border-primary/20 bg-primary/10 text-primary'
+                        : 'border-primary/20 bg-primary/10 text-primary-text'
                 "
             >
                 <Ban v-if="screen === 'reject'" class="size-5" />
@@ -601,7 +601,7 @@ function close(): void {
                     :href="oeuvreShow(summary.uuid).url"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/40"
+                    class="inline-flex items-center gap-1.5 text-sm font-medium text-primary-text underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/40"
                     data-testid="decision-open-oeuvre"
                 >
                     <ExternalLink class="size-3.5" />

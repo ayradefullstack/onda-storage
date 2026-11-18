@@ -83,7 +83,7 @@ const hasValue = computed(() => internalValue.value.length > 0);
             <Loader2
                 v-if="loading"
                 :stroke-width="1.75"
-                class="size-4 animate-spin text-primary"
+                class="size-4 animate-spin text-primary-text"
             />
             <Search
                 v-else

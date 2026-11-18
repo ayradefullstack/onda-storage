@@ -1,11 +1,13 @@
 @import 'tailwindcss';
 
 @import 'tw-animate-css';
+@import './onda-tokens.css';
+@import './auth.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
-@custom-variant dark (&:is(.dark *));
+/* The `dark:` variant (.dark on <html>) is declared in onda-tokens.css. */
 
 @theme inline {
     --font-sans: var(--font-sans-active);
@@ -65,7 +67,8 @@
     --color-popover: var(--popover);
     --color-popover-foreground: var(--popover-foreground);
 
-    --color-primary: var(--primary);
+    /* ONDA token adapters — see the block above `:root` below. */
+    --color-primary: var(--primary-solid);
     --color-primary-foreground: var(--primary-foreground);
 
     --color-secondary: var(--secondary);
@@ -74,7 +77,7 @@
     --color-muted: var(--muted);
     --color-muted-foreground: var(--muted-foreground);
 
-    --color-accent: var(--accent);
+    --color-accent: var(--accent-neutral);
     --color-accent-foreground: var(--accent-foreground);
 
     --color-destructive: var(--destructive);
@@ -90,7 +93,7 @@
     --color-info-foreground: var(--info-foreground);
 
     --color-border: var(--border);
-    --color-input: var(--input);
+    --color-input: var(--input-border);
     --color-ring: var(--ring);
 
     --color-chart-1: var(--chart-1);
@@ -136,97 +139,64 @@
         sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
     --font-sans-active: var(--font-sans-latin);
-
-    /* ONDA palette — Clean Technical Slate Surface (Light).
-       Every foreground/background pair is validated for WCAG AA compliance (>= 4.5:1 for body text). */
-    --background: #f8fafc;
-    --foreground: #0f172a;
-    --card: #ffffff;
-    --card-foreground: #0f172a;
-    --popover: #ffffff;
-    --popover-foreground: #0f172a;
-    --primary: #16517d;
-    --primary-foreground: #ffffff;
-    --secondary: #f1f5f9;
-    --secondary-foreground: #1e293b;
-    --muted: #f1f5f9;
-    --muted-foreground: #475569;
-    --accent: #f1f5f9;
-    --accent-foreground: #0f172a;
-    --destructive: #dc2626;
-    --destructive-foreground: #ffffff;
-    --success: #16a34a;
-    --success-foreground: #ffffff;
-    --warning: #d97706;
-    --warning-foreground: #ffffff;
-    --info: #0284c7;
-    --info-foreground: #ffffff;
-    --border: #e2e8f0;
-    --input: #e2e8f0;
-    --ring: #16517d;
-    --chart-1: #16517d;
-    --chart-2: #1c9976;
-    --chart-3: #0284c7;
-    --chart-4: #d97706;
-    --chart-5: #dc2626;
     --radius: 0.5rem;
-    --sidebar-background: #ffffff;
-    --sidebar-foreground: #0f172a;
-    --sidebar-primary: #16517d;
-    --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #f1f5f9;
-    --sidebar-accent-foreground: #0f172a;
-    --sidebar-border: #e2e8f0;
-    --sidebar-ring: #16517d;
-    --sidebar: #ffffff;
 }
 
 :root:lang(ar) {
     --font-sans-active: var(--font-sans-arabic);
 }
 
+/* ONDA token adapters
+   The palette lives in onda-tokens.css (light / dark / system). The names
+   below are how the rest of the app (shadcn-style utilities, sidebar
+   components) already refers to colours; they are pure aliases, so they
+   follow the active appearance with no per-mode duplication.
+
+   Three names mean something different in the token system, so their
+   Tailwind utilities are re-pointed in `@theme` above instead of renamed:
+     accent  → --accent-neutral (quiet hover fill). The token --accent is the
+               brand green: use `bg-brand-accent`, `text-accent-text`,
+               `bg-accent-soft`, `bg-accent-strong`.
+     input   → --input-border (`border-input`). The token --input is the
+               field background: use `bg-field`.
+     primary → --primary-solid (`bg-primary` = button fill, white text AA in
+               both modes). Blue TEXT is `text-primary-text`; the token
+               --primary (ring/outline blue) is `ring` / `border-ring`. */
+:root {
+    --card: var(--surface);
+    --card-foreground: var(--foreground);
+    --popover: var(--surface);
+    --popover-foreground: var(--foreground);
+    --secondary: var(--muted-surface);
+    --secondary-foreground: var(--foreground);
+    --muted: var(--muted-surface);
+    --accent-neutral: var(--primary-soft);
+    --accent-foreground: var(--foreground);
+    --destructive: var(--danger);
+    --destructive-foreground: var(--danger-foreground);
+
+    --chart-1: var(--primary);
+    --chart-2: var(--accent);
+    --chart-3: #0284c7;
+    --chart-4: #d97706;
+    --chart-5: #dc2626;
+
+    --sidebar: var(--surface);
+    --sidebar-background: var(--surface);
+    --sidebar-foreground: var(--foreground);
+    --sidebar-primary: var(--primary-solid);
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: var(--primary-soft);
+    --sidebar-accent-foreground: var(--foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--ring);
+}
+
 .dark {
-    /* ONDA palette — Technical Navy/Slate Dark Surface (Dark).
-       Calibrated for eye comfort and high clarity; avoids muddy brownish tones. */
-    --background: #0b0f19;
-    --foreground: #f8fafc;
-    --card: #111827;
-    --card-foreground: #f8fafc;
-    --popover: #111827;
-    --popover-foreground: #f8fafc;
-    --primary: #38bdf8;
-    --primary-foreground: #0b0f19;
-    --secondary: #1e293b;
-    --secondary-foreground: #f8fafc;
-    --muted: #1e293b;
-    --muted-foreground: #94a3b8;
-    --accent: #1e293b;
-    --accent-foreground: #f8fafc;
-    --destructive: #ef4444;
-    --destructive-foreground: #ffffff;
-    --success: #22c55e;
-    --success-foreground: #052e16;
-    --warning: #f59e0b;
-    --warning-foreground: #451a03;
-    --info: #38bdf8;
-    --info-foreground: #082f49;
-    --border: #1e293b;
-    --input: #1e293b;
-    --ring: #38bdf8;
-    --chart-1: #38bdf8;
-    --chart-2: #34d399;
+    /* Chart series 3-5 are not brand colours; unchanged from before. */
     --chart-3: #60a5fa;
     --chart-4: #fbbf24;
     --chart-5: #f87171;
-    --sidebar-background: #0e1422;
-    --sidebar-foreground: #f8fafc;
-    --sidebar-primary: #38bdf8;
-    --sidebar-primary-foreground: #0b0f19;
-    --sidebar-accent: #172238;
-    --sidebar-accent-foreground: #f8fafc;
-    --sidebar-border: #1e293b;
-    --sidebar-ring: #38bdf8;
-    --sidebar: #0e1422;
 }
 
 @layer base {

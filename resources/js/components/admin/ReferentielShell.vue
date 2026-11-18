@@ -100,7 +100,7 @@ const clearSearch = () => props.list.set({ search: '' });
                     :class="[
                         'rounded-full px-1.5 py-0.5 font-mono text-[10px]',
                         tab.key === active
-                            ? 'bg-primary/15 text-primary'
+                            ? 'bg-primary/15 text-primary-text'
                             : 'bg-muted text-muted-foreground',
                     ]"
                 >

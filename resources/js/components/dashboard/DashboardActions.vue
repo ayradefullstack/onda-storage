@@ -78,7 +78,7 @@ const ACTION_KEY = {
             <Link
                 v-if="actions.total > actions.items.length"
                 :href="index()"
-                class="rounded text-xs font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+                class="rounded text-xs font-medium text-primary-text outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
                 data-testid="actions-more"
             >
                 {{ t('dashboard.actions.more', { count: actions.total }) }}

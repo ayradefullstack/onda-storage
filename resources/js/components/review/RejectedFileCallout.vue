@@ -95,7 +95,7 @@ function confirm(): void {
                     <button
                         v-if="long"
                         type="button"
-                        class="mt-1 cursor-pointer rounded text-[11px] font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/40"
+                        class="mt-1 cursor-pointer rounded text-[11px] font-medium text-primary-text outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/40"
                         :aria-expanded="expanded"
                         data-testid="rejected-reason-toggle"
                         @click="expanded = !expanded"

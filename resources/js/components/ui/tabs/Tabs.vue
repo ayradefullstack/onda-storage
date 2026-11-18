@@ -197,7 +197,7 @@ const handleKeyDown = (event: KeyboardEvent, index: number) => {
                     cn(
                         'rounded-full px-1.5 py-0.5 text-[10px] font-medium tabular-nums',
                         modelValue === tab.value
-                            ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary'
+                            ? 'bg-primary/10 text-primary-text dark:bg-primary/20 dark:text-primary-text'
                             : 'bg-muted text-muted-foreground',
                     )
                 "

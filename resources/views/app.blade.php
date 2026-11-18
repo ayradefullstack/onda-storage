@@ -2,36 +2,50 @@
 @php
     $htmlLang = $locale ?? app()->getLocale();
 @endphp
-<html lang="{{ $htmlLang }}" dir="{{ $direction ?? 'ltr' }}" @class(['dark' => ($appearance ?? 'system') == 'dark'])>
+<html lang="{{ $htmlLang }}" dir="{{ $direction ?? 'ltr' }}" @class(['dark' => ($appearance ?? 'system') == 'dark', 'light' => ($appearance ?? 'system') == 'light'])>
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        {{-- Inline script to detect system dark mode preference and apply it immediately --}}
+        {{-- Applies the Light / Dark / System choice before first paint, so the
+             wrong theme never flashes. The server class (from the `appearance`
+             cookie) covers light and dark; this script resolves 'system' from
+             the OS and, when the saved preference (localStorage, the same key
+             useAppearance writes) disagrees with the cookie, follows the
+             saved one. Always leaves exactly one of `.light` / `.dark`. --}}
         <script>
             (function() {
-                const appearance = '{{ $appearance ?? "system" }}';
+                var appearance = '{{ $appearance ?? "system" }}';
 
-                if (appearance === 'system') {
-                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                try {
+                    var saved = localStorage.getItem('appearance');
 
-                    if (prefersDark) {
-                        document.documentElement.classList.add('dark');
+                    if (saved === 'light' || saved === 'dark' || saved === 'system') {
+                        appearance = saved;
                     }
-                }
+                } catch (e) {}
+
+                var dark = appearance === 'system'
+                    ? window.matchMedia('(prefers-color-scheme: dark)').matches
+                    : appearance === 'dark';
+                var root = document.documentElement;
+
+                root.classList.toggle('dark', dark);
+                root.classList.toggle('light', !dark);
             })();
         </script>
 
-        {{-- Inline style to set the HTML background color based on our theme in app.css
-             Values must match --background in resources/css/app.css exactly, in both
-             modes — this is the only thing painted before Tailwind's CSS loads. --}}
+        {{-- Inline style to set the HTML background color based on our theme in
+             resources/css/onda-tokens.css. Values must match --background there
+             exactly, in both modes — this is the only thing painted before
+             Tailwind's CSS loads. --}}
         <style>
             html {
-                background-color: #f1f3f5;
+                background-color: #F6F9FC;
             }
 
             html.dark {
-                background-color: #15130f;
+                background-color: #0B1522;
             }
         </style>
 

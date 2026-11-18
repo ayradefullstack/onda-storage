@@ -161,7 +161,7 @@ const homeHref = computed(() =>
                                 :is-active="item.active"
                                 :tooltip="item.title"
                                 :tooltip-side="isRtl ? 'left' : 'right'"
-                                class="group relative rounded-lg font-medium transition-colors duration-150 data-[active=true]:bg-primary/10 data-[active=true]:font-semibold data-[active=true]:text-primary dark:data-[active=true]:bg-primary/15 dark:data-[active=true]:text-primary"
+                                class="group relative rounded-lg font-medium transition-colors duration-150 data-[active=true]:bg-primary/10 data-[active=true]:font-semibold data-[active=true]:text-primary-text dark:data-[active=true]:bg-primary/15 dark:data-[active=true]:text-primary-text"
                             >
                                 <Link
                                     :href="item.href"
@@ -170,14 +170,14 @@ const homeHref = computed(() =>
                                     <component
                                         :is="item.icon"
                                         :stroke-width="1.75"
-                                        class="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground group-data-[active=true]:text-primary"
+                                        class="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground group-data-[active=true]:text-primary-text"
                                     />
                                     <span class="truncate">{{
                                         item.title
                                     }}</span>
                                     <span
                                         v-if="item.badge"
-                                        class="ms-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 px-1.5 font-mono text-[10px] font-bold text-primary dark:bg-primary/20 dark:text-primary"
+                                        class="ms-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 px-1.5 font-mono text-[10px] font-bold text-primary-text dark:bg-primary/20 dark:text-primary-text"
                                     >
                                         {{ item.badge }}
                                     </span>
@@ -206,7 +206,7 @@ const homeHref = computed(() =>
                             :is-active="item.active"
                             :tooltip="item.title"
                             :tooltip-side="isRtl ? 'left' : 'right'"
-                            class="group relative rounded-lg font-medium transition-colors duration-150 data-[active=true]:bg-primary/10 data-[active=true]:font-semibold data-[active=true]:text-primary dark:data-[active=true]:bg-primary/15 dark:data-[active=true]:text-primary"
+                            class="group relative rounded-lg font-medium transition-colors duration-150 data-[active=true]:bg-primary/10 data-[active=true]:font-semibold data-[active=true]:text-primary-text dark:data-[active=true]:bg-primary/15 dark:data-[active=true]:text-primary-text"
                         >
                             <Link
                                 :href="item.href"
@@ -215,7 +215,7 @@ const homeHref = computed(() =>
                                 <component
                                     :is="item.icon"
                                     :stroke-width="1.75"
-                                    class="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground group-data-[active=true]:text-primary"
+                                    class="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground group-data-[active=true]:text-primary-text"
                                 />
                                 <span class="truncate">{{ item.title }}</span>
                             </Link>
@@ -232,7 +232,7 @@ const homeHref = computed(() =>
                 >
                     <div class="mb-1.5 flex items-center gap-2">
                         <div
-                            class="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary"
+                            class="flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary-text dark:bg-primary/20 dark:text-primary-text"
                         >
                             <Headphones :stroke-width="1.75" class="size-3.5" />
                         </div>
@@ -242,7 +242,7 @@ const homeHref = computed(() =>
                     </div>
                     <a
                         :href="`tel:${t('sidebar.hotline.number').replace(/\s+/g, '')}`"
-                        class="dir-ltr block text-start font-mono text-xs font-semibold text-primary transition-colors hover:underline"
+                        class="dir-ltr block text-start font-mono text-xs font-semibold text-primary-text transition-colors hover:underline"
                     >
                         {{ t('sidebar.hotline.number') }}
                     </a>
@@ -279,7 +279,7 @@ const homeHref = computed(() =>
                                 <div class="flex items-center gap-2">
                                     <Headphones
                                         :stroke-width="1.75"
-                                        class="size-3.5 shrink-0 text-primary"
+                                        class="size-3.5 shrink-0 text-primary-text"
                                     />
                                     <span
                                         class="text-xs font-semibold text-foreground"
@@ -288,7 +288,7 @@ const homeHref = computed(() =>
                                     </span>
                                 </div>
                                 <p
-                                    class="dir-ltr text-start font-mono text-xs font-semibold text-primary"
+                                    class="dir-ltr text-start font-mono text-xs font-semibold text-primary-text"
                                 >
                                     {{ t('sidebar.hotline.number') }}
                                 </p>

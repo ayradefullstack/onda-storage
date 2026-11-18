@@ -31,7 +31,7 @@ defineProps<Props>();
                 <slot name="title">
                     <div
                         v-if="icon"
-                        class="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/80 bg-muted/30 text-primary"
+                        class="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/80 bg-muted/30 text-primary-text"
                     >
                         <component :is="icon" :stroke-width="1.75" class="size-4.5" />
                     </div>
@@ -42,7 +42,7 @@ defineProps<Props>();
                             </h2>
                             <span
                                 v-if="count !== undefined"
-                                class="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary"
+                                class="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary-text"
                             >
                                 {{ count }}
                             </span>

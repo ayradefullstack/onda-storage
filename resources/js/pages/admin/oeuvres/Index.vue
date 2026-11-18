@@ -208,7 +208,7 @@ function clearFilters(): void {
             <div class="space-y-1">
                 <div class="flex items-center gap-3">
                     <div
-                        class="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary shadow-2xs"
+                        class="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary-text shadow-2xs"
                     >
                         <FolderArchive class="size-5" />
                     </div>
@@ -274,7 +274,7 @@ function clearFilters(): void {
                     </div>
                     <span
                         v-if="hasActiveFilters"
-                        class="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary"
+                        class="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary-text"
                     >
                         {{ activeFilters.length }}
                     </span>
@@ -438,7 +438,7 @@ function clearFilters(): void {
             >
                 <div class="flex items-center gap-2.5">
                     <div
-                        class="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                        class="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary-text"
                     >
                         <FileText class="size-3.5" />
                     </div>
@@ -449,7 +449,7 @@ function clearFilters(): void {
                             {{ t('admin.oeuvres.tableTitle', 'قائمة الأعمال') }}
                         </h2>
                         <span
-                            class="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary tabular-nums"
+                            class="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary-text tabular-nums"
                         >
                             <bdi dir="ltr">{{ oeuvres.total }}</bdi>
                         </span>
@@ -598,7 +598,7 @@ function clearFilters(): void {
                                         <TooltipTrigger as-child>
                                             <Link
                                                 :href="oeuvreShow(oeuvre.uuid)"
-                                                class="block max-w-xs truncate font-medium text-foreground transition-colors hover:text-primary md:max-w-sm"
+                                                class="block max-w-xs truncate font-medium text-foreground transition-colors hover:text-primary-text md:max-w-sm"
                                             >
                                                 <bdi dir="ltr">{{
                                                     oeuvreLabel(
@@ -637,7 +637,7 @@ function clearFilters(): void {
                                 <Link
                                     v-if="oeuvre.author"
                                     :href="authorShow(oeuvre.author.uuid)"
-                                    class="font-medium text-foreground/85 transition-colors hover:text-primary hover:underline"
+                                    class="font-medium text-foreground/85 transition-colors hover:text-primary-text hover:underline"
                                 >
                                     <bdi>{{ oeuvre.author.name }}</bdi>
                                 </Link>

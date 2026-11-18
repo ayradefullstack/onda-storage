@@ -39,7 +39,7 @@ const { t } = useI18n();
             <PopoverTrigger as-child>
                 <button
                     type="button"
-                    class="inline-flex cursor-pointer items-center gap-1 rounded text-xs font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/40"
+                    class="inline-flex cursor-pointer items-center gap-1 rounded text-xs font-medium text-primary-text outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/40"
                     data-testid="previous-reason-trigger"
                 >
                     <MessageSquareWarning class="size-3.5" aria-hidden="true" />

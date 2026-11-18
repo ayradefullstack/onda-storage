@@ -1,0 +1,262 @@
+/* ==========================================================================
+   ONDA — Brand colour system (Light / Dark / System)
+   Source of truth: the official ONDA logo  →  Blue #1B669D · Green #1C9976
+   Origin: docs/onda-redesign/design-system/onda-tokens.css (every spec and
+   derived colour value is unchanged; see "Differences" below).
+
+   Imported by resources/css/app.css, which maps the shadcn-style utility
+   names (card, muted, destructive, sidebar-*, …) onto these tokens and
+   adapts the three names that mean something different here (`accent`,
+   `input`, `primary`). Read the "ONDA token adapters" block there.
+
+   Appearance model (JS: composables/useAppearance.ts, inline script in
+   resources/views/app.blade.php)
+   - <html class="light"> → forced light
+   - <html class="dark">  → forced dark
+   - neither class        → follows the OS (prefers-color-scheme); only the
+                            pre-JS fallback, the scripts always set a class
+   'system' is a stored preference; it resolves to .light or .dark on <html>
+   so Tailwind's `dark:` variant works.
+
+   Rule of use
+   - Blue is THE interactive colour: buttons, links, focus, selection.
+   - Green is a restrained supporting accent: success, "certified/protected"
+     states, small highlights, data series #2. Never the main CTA.
+   - (spec) = approved palette value. (derived) = exists only because the
+     spec value cannot meet WCAG 2.2 AA in that role; it is the nearest
+     compliant step of the same hue.
+
+   Differences from the design-system file (no colour value changed)
+   - Added derived tokens (ratios in the comments below):
+       --muted-surface, --danger-foreground, --success-foreground,
+       --warning-foreground, --info-foreground
+   - --shadow-sm/md/lg renamed --onda-shadow-sm/md/lg and not registered in
+     @theme: the original `--shadow-sm: var(--shadow-sm)` was a
+     self-reference, and re-pointing Tailwind's own shadow utilities would
+     restyle every shadow in the app.
+   - The @theme block only registers names that do not already exist in
+     app.css; --font-sans and the radii were dropped (the app already sets
+     them: Arabic font switch and --radius).
+   ========================================================================== */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------- Brand constants: never change with the theme ----------------- */
+:root {
+    --onda-blue: #1b669d;
+    --onda-green: #1c9976;
+}
+
+/* ---------- Light (default) ---------------------------------------------- */
+:root,
+.light {
+    color-scheme: light;
+
+    --background: #f6f9fc; /* (spec) */
+    --surface: #ffffff; /* (spec) cards, dialogs, sidebar */
+    --surface-sunken: #eef3f8; /* (derived) table headers, wells */
+    --muted-surface: #f6f9fc; /* (derived) = background. Quiet fill for the shadcn `muted`/`secondary` roles: muted-foreground is 4.50:1 here but only 4.26:1 on surface-sunken */
+    --input: #ffffff; /* field background: inputs sit on white */
+    --foreground: #14283d; /* (spec) 14.99:1 on surface */
+    --muted-foreground: #64748b; /* (spec) 4.76:1 surface · 4.50:1 background */
+    --border: #e1eaf1; /* (spec) decorative dividers only */
+    --input-border: #788a9d; /* (derived) 3.55:1 — WCAG 1.4.11 for field edges */
+
+    --primary: #1b669d; /* (spec) rings, active indicators, outlines */
+    --primary-solid: #1b669d; /* button fill — white text 6.12:1 */
+    --primary-solid-hover: #155583; /* (derived) 7.90:1 */
+    --primary-foreground: #ffffff;
+    --primary-text: #1b669d; /* links & blue text — 6.12:1 */
+    --primary-soft: #eaf2f9; /* selected rows, active nav bg — blue text 5.41:1 */
+
+    --accent: #1c9976; /* (spec) icons, dots, chart series, large shapes — 3.58:1 (non-text) */
+    --accent-text: #147a5e; /* (derived) green text — 5.28:1 */
+    --accent-strong: #147a5e; /* (derived) green fill with white text — 5.28:1 */
+    --accent-strong-foreground: #ffffff;
+    --accent-soft: #e8f5f0; /* green tint bg — accent-text 4.72:1 */
+
+    --ring: #1b669d;
+    --danger: #b42318;
+    --danger-soft: #fef0ee; /* 6.57:1 */
+    --warning: #b54708;
+    --warning-soft: #fff5e6; /* 5.43:1 */
+    --success: var(--accent-text);
+    --success-soft: var(--accent-soft);
+    --info: var(--primary-text);
+    --info-soft: var(--primary-soft);
+    /* Text on a solid status fill (derived). White on: danger 6.57:1, warning
+     5.43:1, success 5.28:1, info 6.12:1. */
+    --danger-foreground: #ffffff;
+    --warning-foreground: #ffffff;
+    --success-foreground: #ffffff;
+    --info-foreground: #ffffff;
+
+    --overlay: rgba(20, 40, 61, 0.45);
+    --onda-shadow-sm: 0 1px 2px rgba(20, 40, 61, 0.06);
+    --onda-shadow-md:
+        0 1px 2px rgba(20, 40, 61, 0.05),
+        0 8px 24px -12px rgba(20, 40, 61, 0.14);
+    --onda-shadow-lg:
+        0 2px 4px rgba(20, 40, 61, 0.05),
+        0 24px 56px -24px rgba(20, 40, 61, 0.28);
+
+    /* Brand panel (auth hero, sidebar header): deep navy from the foreground hue,
+     low-saturation — no neon gradients. */
+    --brand-panel: linear-gradient(
+        160deg,
+        #14283d 0%,
+        #173a5a 60%,
+        #16324c 100%
+    );
+    --brand-panel-glow: rgba(28, 153, 118, 0.14);
+    --brand-panel-foreground: #f1f6fb;
+    --brand-panel-muted: #b3c3d3;
+}
+
+/* ---------- Dark ---------------------------------------------------------- */
+.dark {
+    color-scheme: dark;
+
+    --background: #0b1522; /* (spec) — deep navy, never pure black */
+    --surface: #111f30; /* (spec) */
+    --surface-sunken: #0e1a29; /* (derived) */
+    --muted-surface: #0e1a29; /* (derived) = surface-sunken; muted-foreground 7.77:1 */
+    --input: #172a3d; /* (spec) Input Surface */
+    --foreground: #f1f6fb; /* (spec) 15.30:1 on surface */
+    --muted-foreground: #9bafc3; /* (spec) 7.38:1 surface · 6.49:1 input */
+    --border: #30465b; /* (spec) decorative dividers only */
+    --input-border: #61798f; /* (derived) 3.23:1 on input surface */
+
+    --primary: #347fb8; /* (spec) rings, active indicators, outlines — 3.86:1 (non-text) */
+    --primary-solid: #2c6ea2; /* (derived) button fill — white text 5.44:1 (spec #347FB8 gives 4.31:1) */
+    --primary-solid-hover: #3274aa; /* (derived) white text 4.98:1 */
+    --primary-foreground: #ffffff;
+    --primary-text: #7eb4e2; /* (derived) links & blue text — 7.54:1 (spec #347FB8 gives 3.86:1) */
+    --primary-soft: #1a3550; /* selected/active bg — primary-text 5.70:1 */
+
+    --accent: #8dd9bd; /* (spec) 10.13:1 — safe as text too */
+    --accent-text: #8dd9bd;
+    --accent-strong: #8dd9bd;
+    --accent-strong-foreground: #0b1522; /* 11.18:1 */
+    --accent-soft: rgba(141, 217, 189, 0.12);
+
+    --ring: #347fb8;
+    --danger: #ff9a8f;
+    --danger-soft: rgba(255, 154, 143, 0.1); /* 8.14:1 */
+    --warning: #f5c26b;
+    --warning-soft: rgba(245, 194, 107, 0.1); /* 10.15:1 */
+    --success: var(--accent-text);
+    --success-soft: var(--accent-soft);
+    --info: var(--primary-text);
+    --info-soft: var(--primary-soft);
+    /* Dark label (#0B1522) on: danger 8.97:1, warning 11.19:1, success 11.18:1, info 8.31:1. */
+    --danger-foreground: #0b1522;
+    --warning-foreground: #0b1522;
+    --success-foreground: #0b1522;
+    --info-foreground: #0b1522;
+
+    --overlay: rgba(4, 10, 18, 0.62);
+    --onda-shadow-sm: 0 1px 2px rgba(2, 8, 16, 0.4);
+    --onda-shadow-md:
+        0 1px 0 rgba(255, 255, 255, 0.03) inset,
+        0 10px 28px -14px rgba(2, 8, 16, 0.7);
+    --onda-shadow-lg:
+        0 1px 0 rgba(255, 255, 255, 0.04) inset,
+        0 28px 64px -28px rgba(2, 8, 16, 0.85);
+
+    --brand-panel: linear-gradient(
+        160deg,
+        #13253a 0%,
+        #112236 60%,
+        #0f1e30 100%
+    );
+    --brand-panel-glow: rgba(141, 217, 189, 0.08);
+    --brand-panel-foreground: #f1f6fb;
+    --brand-panel-muted: #9bafc3;
+}
+
+/* ---------- System: OS dark when no explicit class ------------------------ */
+/* Keep in step with .dark above (onda-tokens.test.ts fails on drift). */
+@media (prefers-color-scheme: dark) {
+    :root:not(.light):not(.dark) {
+        color-scheme: dark;
+        --background: #0b1522;
+        --surface: #111f30;
+        --surface-sunken: #0e1a29;
+        --muted-surface: #0e1a29;
+        --input: #172a3d;
+        --foreground: #f1f6fb;
+        --muted-foreground: #9bafc3;
+        --border: #30465b;
+        --input-border: #61798f;
+        --primary: #347fb8;
+        --primary-solid: #2c6ea2;
+        --primary-solid-hover: #3274aa;
+        --primary-foreground: #ffffff;
+        --primary-text: #7eb4e2;
+        --primary-soft: #1a3550;
+        --accent: #8dd9bd;
+        --accent-text: #8dd9bd;
+        --accent-strong: #8dd9bd;
+        --accent-strong-foreground: #0b1522;
+        --accent-soft: rgba(141, 217, 189, 0.12);
+        --ring: #347fb8;
+        --danger: #ff9a8f;
+        --danger-soft: rgba(255, 154, 143, 0.1);
+        --warning: #f5c26b;
+        --warning-soft: rgba(245, 194, 107, 0.1);
+        --danger-foreground: #0b1522;
+        --warning-foreground: #0b1522;
+        --success-foreground: #0b1522;
+        --info-foreground: #0b1522;
+        --overlay: rgba(4, 10, 18, 0.62);
+        --onda-shadow-sm: 0 1px 2px rgba(2, 8, 16, 0.4);
+        --onda-shadow-md:
+            0 1px 0 rgba(255, 255, 255, 0.03) inset,
+            0 10px 28px -14px rgba(2, 8, 16, 0.7);
+        --onda-shadow-lg:
+            0 1px 0 rgba(255, 255, 255, 0.04) inset,
+            0 28px 64px -28px rgba(2, 8, 16, 0.85);
+        --brand-panel: linear-gradient(
+            160deg,
+            #13253a 0%,
+            #112236 60%,
+            #0f1e30 100%
+        );
+        --brand-panel-glow: rgba(141, 217, 189, 0.08);
+        --brand-panel-foreground: #f1f6fb;
+        --brand-panel-muted: #9bafc3;
+    }
+}
+
+/* ---------- Tailwind v4: names that exist ONLY in the token system -------- */
+/* Names shared with the shadcn vocabulary (background, foreground, border,
+   ring, muted-foreground, success, …) are registered in app.css. */
+@theme inline {
+    --color-onda-blue: var(--onda-blue);
+    --color-onda-green: var(--onda-green);
+
+    --color-surface: var(--surface);
+    --color-surface-sunken: var(--surface-sunken);
+    --color-muted-surface: var(--muted-surface);
+    --color-field: var(--input);
+    --color-input-border: var(--input-border);
+
+    --color-primary-solid: var(--primary-solid);
+    --color-primary-solid-hover: var(--primary-solid-hover);
+    --color-primary-text: var(--primary-text);
+    --color-primary-soft: var(--primary-soft);
+
+    --color-brand-accent: var(--accent);
+    --color-accent-text: var(--accent-text);
+    --color-accent-strong: var(--accent-strong);
+    --color-accent-strong-foreground: var(--accent-strong-foreground);
+    --color-accent-soft: var(--accent-soft);
+
+    --color-danger: var(--danger);
+    --color-danger-soft: var(--danger-soft);
+    --color-danger-foreground: var(--danger-foreground);
+    --color-warning-soft: var(--warning-soft);
+    --color-success-soft: var(--success-soft);
+    --color-info-soft: var(--info-soft);
+}

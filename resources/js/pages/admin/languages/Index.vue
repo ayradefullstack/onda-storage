@@ -193,7 +193,7 @@ const toggle = (row: LanguageRow) =>
                             <td class="space-x-1 px-3 py-2 rtl:space-x-reverse">
                                 <span
                                     v-if="row.is_default"
-                                    class="rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary"
+                                    class="rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary-text"
                                     >{{ t('admin.languages.default') }}</span
                                 >
                                 <span

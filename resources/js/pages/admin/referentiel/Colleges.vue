@@ -462,7 +462,7 @@ const setFilter = (key: 'type' | 'gestion', value: string) =>
                                     >
                                     <span
                                         v-if="!row.is_system"
-                                        class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+                                        class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary-text"
                                         >{{
                                             t('admin.referentiel.badge.custom')
                                         }}</span
@@ -629,7 +629,7 @@ const setFilter = (key: 'type' | 'gestion', value: string) =>
                     <Link
                         v-if="documentsLink"
                         :href="documentsLink"
-                        class="font-medium text-primary underline underline-offset-2"
+                        class="font-medium text-primary-text underline underline-offset-2"
                     >
                         {{ t('admin.referentiel.enable.goToDocuments') }}
                     </Link>
