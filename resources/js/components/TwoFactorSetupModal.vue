@@ -3,6 +3,7 @@ import { Form } from '@inertiajs/vue3';
 import { Check, Copy, ScanLine } from '@lucide/vue';
 import { useClipboard } from '@vueuse/core';
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import AlertError from '@/components/AlertError.vue';
 import InputError from '@/components/InputError.vue';
 import { AppDialog } from '@/components/ui/app-dialog';
@@ -17,6 +18,8 @@ import { useAppearance } from '@/composables/useAppearance';
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
 import { confirm } from '@/routes/two-factor';
 import type { TwoFactorConfigContent } from '@/types';
+
+const { t } = useI18n();
 
 type Props = {
     requiresConfirmation: boolean;
@@ -40,26 +43,24 @@ const pinInputContainerRef = useTemplateRef('pinInputContainerRef');
 const modalConfig = computed<TwoFactorConfigContent>(() => {
     if (props.twoFactorEnabled) {
         return {
-            title: 'Two-factor authentication enabled',
-            description:
-                'Two-factor authentication is now enabled. Scan the QR code or enter the setup key in your authenticator app.',
-            buttonText: 'Close',
+            title: t('settings.twoFactor.modal.enabledTitle'),
+            description: t('settings.twoFactor.modal.enabledDesc'),
+            buttonText: t('ui.close'),
         };
     }
 
     if (showVerificationStep.value) {
         return {
-            title: 'Verify authentication code',
-            description: 'Enter the 6-digit code from your authenticator app',
-            buttonText: 'Continue',
+            title: t('settings.twoFactor.modal.verifyTitle'),
+            description: t('settings.twoFactor.modal.verifyDesc'),
+            buttonText: t('common.continue'),
         };
     }
 
     return {
-        title: 'Enable two-factor authentication',
-        description:
-            'To finish enabling two-factor authentication, scan the QR code or enter the setup key in your authenticator app',
-        buttonText: 'Continue',
+        title: t('settings.twoFactor.modal.setupTitle'),
+        description: t('settings.twoFactor.modal.setupDesc'),
+        buttonText: t('common.continue'),
     };
 });
 
@@ -184,9 +185,9 @@ watch(
                         <div
                             class="absolute inset-0 top-1/2 h-px w-full bg-border"
                         />
-                        <span class="relative bg-card px-2 py-1"
-                            >or, enter the code manually</span
-                        >
+                        <span class="relative bg-card px-2 py-1">{{
+                            t('settings.twoFactor.modal.manual')
+                        }}</span>
                     </div>
 
                     <div
@@ -267,14 +268,14 @@ watch(
                                 @click="showVerificationStep = false"
                                 :disabled="processing"
                             >
-                                Back
+                                {{ t('common.back') }}
                             </Button>
                             <Button
                                 type="submit"
                                 class="w-auto flex-1"
                                 :disabled="processing || code.length < 6"
                             >
-                                Confirm
+                                {{ t('common.confirm') }}
                             </Button>
                         </div>
                     </div>

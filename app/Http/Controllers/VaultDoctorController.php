@@ -34,7 +34,7 @@ final class VaultDoctorController extends Controller
                 $user = $request->user();
 
                 if (! $user || ! $user->hasRole('admin')) {
-                    throw new HttpException(403, 'Forbidden.');
+                    throw new HttpException(403, __('errors.forbidden'));
                 }
             }
 

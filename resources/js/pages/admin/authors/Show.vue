@@ -72,8 +72,8 @@ const { t, locale } = useI18n();
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Admin', href: dashboard() },
-            { title: 'Authors', href: authorsIndex() },
+            { title: 'common.admin', href: dashboard() },
+            { title: 'admin.authors.title', href: authorsIndex() },
         ],
     },
 });

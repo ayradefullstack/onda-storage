@@ -70,8 +70,8 @@ final class ReplacementGuard
         return new HttpResponseException(response()->json([
             'error' => $error,
             'message' => $error === self::OEUVRE_DECIDED
-                ? 'This deposit has been decided; the file was not added.'
-                : 'This deposit has been submitted; the file was not added.',
+                ? __('upload_runtime.oeuvre_decided')
+                : __('upload_runtime.oeuvre_submitted'),
         ], 409));
     }
 }

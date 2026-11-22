@@ -154,7 +154,7 @@ const rejectedCount = computed(
                     class="space-y-2 rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 text-xs"
                 >
                     <p class="font-semibold text-amber-800 dark:text-amber-300">
-                        Éléments requis avant de pouvoir soumettre :
+                        {{ t('oeuvres.submit.requiredBefore') }}
                     </p>
                     <ul class="space-y-2">
                         <li

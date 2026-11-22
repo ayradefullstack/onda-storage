@@ -60,8 +60,8 @@ final class StoreDocumentRequest extends FormRequest
     {
         return [
             'document_key.regex' => 'admin.referentiel.errors.keyShape',
-            'extensions.*.regex' => 'Each extension must be lowercase letters or digits only — no dot, no MIME type, no spaces.',
-            'extensions.*.in' => 'That format is not one this application can accept. Executable and script formats are deliberately absent from the registry.',
+            'extensions.*.regex' => __('referentiel.extension_shape'),
+            'extensions.*.in' => __('referentiel.extension_not_accepted'),
         ];
     }
 
@@ -85,7 +85,7 @@ final class StoreDocumentRequest extends FormRequest
                 $bare = array_filter($extensions, 'is_string');
 
                 if (count($bare) !== count(array_unique($bare))) {
-                    $validator->errors()->add('extensions', 'The same extension is listed more than once.');
+                    $validator->errors()->add('extensions', __('referentiel.extension_duplicate'));
                 }
             }
         });

@@ -167,7 +167,7 @@ const mayNotApply = computed(
                                 v-if="requirement.max_size_kb !== null"
                                 class="inline-flex items-center rounded-md border border-border/70 bg-muted/30 px-2 py-0.5 font-mono text-[11px] text-muted-foreground"
                             >
-                                Max
+                                {{ t('oeuvres.step2.maxLabel') }}
                                 <bdi dir="ltr">{{
                                     formatBytes(
                                         requirement.max_size_kb * 1024,

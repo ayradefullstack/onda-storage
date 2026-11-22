@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Services\Auth\EmailChangeService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,19 +29,15 @@ class ProfileController extends Controller
     /**
      * Update the user's profile information.
      */
-    public function update(ProfileUpdateRequest $request): RedirectResponse
+    public function update(ProfileUpdateRequest $request, EmailChangeService $emailChange): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $emailChanged = $emailChange->update($request->user(), $request->validated());
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
-        }
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('toast.profile_updated')]);
 
-        $request->user()->save();
-
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
-
-        return to_route('profile.edit');
+        // `status` is what Profile.vue reads to say a link was sent.
+        return to_route('profile.edit')
+            ->with($emailChanged ? ['status' => 'verification-link-sent'] : []);
     }
 
     /**

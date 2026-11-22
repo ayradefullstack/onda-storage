@@ -207,7 +207,7 @@ final class OeuvreController extends Controller
             throw ValidationException::withMessages(['oeuvre' => [$e->getMessage()]]);
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('The work has been deleted.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('deposit.toast_deleted')]);
 
         return to_route('oeuvres.index');
     }

@@ -247,7 +247,8 @@ const homeHref = computed(() =>
                         {{ t('sidebar.hotline.number') }}
                     </a>
                     <p class="mt-0.5 text-[10px] text-muted-foreground">
-                        Dimanche – Jeudi (08:30 - 16:30)
+                        {{ t('sidebar.hotline.days') }}
+                        (<bdi dir="ltr">08:30 - 16:30</bdi>)
                     </p>
                 </div>
 
@@ -295,7 +296,8 @@ const homeHref = computed(() =>
                                 <p
                                     class="text-[10px] whitespace-nowrap text-muted-foreground"
                                 >
-                                    Dimanche – Jeudi (08:30 - 16:30)
+                                    {{ t('sidebar.hotline.days') }}
+                                    (<bdi dir="ltr">08:30 - 16:30</bdi>)
                                 </p>
                             </div>
                         </TooltipContent>

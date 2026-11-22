@@ -247,7 +247,7 @@ final class OeuvreReviewController extends Controller
                 $request->user(),
                 (bool) ($validated['take_over'] ?? false),
             ),
-            __('The deposit has been registered.'),
+            __('review.toast_registered'),
         );
     }
 
@@ -276,7 +276,7 @@ final class OeuvreReviewController extends Controller
                 $validated['reason'],
                 (bool) ($validated['take_over'] ?? false),
             ),
-            __('The author has been told why this deposit was rejected.'),
+            __('review.toast_rejected'),
         );
     }
 
@@ -311,7 +311,7 @@ final class OeuvreReviewController extends Controller
 
             throw ValidationException::withMessages(['approval' => $e->verdict->blockerMessages()]);
         } catch (FilesNotAccepted $e) {
-            $messages = array_map(fn (array $file): string => "{$file['name']} ({$file['reviewStatus']})", $e->files);
+            $messages = array_map(fn (array $file): string => __('review.file_with_decision', ['name' => $file['name'], 'decision' => $this->decisionLabel($file['reviewStatus'])]), $e->files);
 
             if ($request->wantsJson()) {
                 return response()->json([
@@ -320,7 +320,7 @@ final class OeuvreReviewController extends Controller
                     'problems' => array_map(fn (array $file): array => [
                         'code' => 'file_not_accepted',
                         'params' => ['name' => $file['name'], 'reviewStatus' => $file['reviewStatus']],
-                        'message' => "{$file['name']} has not been accepted.",
+                        'message' => __('review.file_not_accepted', ['name' => $file['name']]),
                     ], $e->files),
                     'filesNotAccepted' => $e->files,
                 ], 422);
@@ -380,7 +380,7 @@ final class OeuvreReviewController extends Controller
             $isDecided = in_array($current->status, [OeuvreStatus::REGISTERED, OeuvreStatus::REJECTED], true);
 
             if ($isDecided && $decider !== null && ! $decidedByOfficer) {
-                $this->conflict($request, "{$decider->name} has already decided on this deposit.", [
+                $this->conflict($request, __('review.already_decided', ['name' => $decider->name]), [
                     'kind' => 'decided',
                     'by' => $decider->name,
                     'at' => $decidedAt?->toIso8601String(),
@@ -413,6 +413,12 @@ final class OeuvreReviewController extends Controller
         }
 
         return [$oeuvre->reviewer()->withTrashed()->first(), $oeuvre->reviewed_at];
+    }
+
+    /** A file's review status key as the officer's language shows it. */
+    private function decisionLabel(string $key): string
+    {
+        return ReviewStatusEnum::fromKey($key)?->label() ?? $key;
     }
 
     /**

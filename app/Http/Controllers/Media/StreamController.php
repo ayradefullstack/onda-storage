@@ -44,10 +44,10 @@ final class StreamController extends Controller
         abort_unless(
             $user !== null && (int) $request->query('u') === $user->id,
             403,
-            'This link was issued to a different session.',
+            __('errors.link_other_session'),
         );
 
-        abort_unless(config('vault.download.owner_enabled'), 403, 'Downloading originals is disabled.');
+        abort_unless(config('vault.download.owner_enabled'), 403, __('errors.downloads_disabled'));
 
         Gate::forUser($user)->authorize('streamOriginal', $mediaFile);
 
@@ -71,7 +71,7 @@ final class StreamController extends Controller
                 $request->header('Range'),
             );
 
-            abort(500, 'This deposit failed an integrity check and could not be read.');
+            abort(500, __('errors.integrity_failed'));
         }
 
         $contentLength = $range?->length() ?? $mediaFile->size_bytes;

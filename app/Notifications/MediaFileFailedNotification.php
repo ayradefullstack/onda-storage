@@ -18,7 +18,12 @@ final class MediaFileFailedNotification extends Notification
 {
     public function __construct(
         private readonly MediaFile $mediaFile,
-    ) {}
+        ?string $locale = null,
+    ) {
+        // Captured at dispatch: the mail renders in this locale, whatever
+        // the worker's own locale is when it runs.
+        $this->locale = $locale ?? app()->getLocale();
+    }
 
     /**
      * @return list<string>
@@ -30,11 +35,22 @@ final class MediaFileFailedNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        $locale = (string) $this->locale;
+        $t = static fn (string $k, array $r = []): string => __('mail.file_failed.'.$k, $r, $locale);
+
         return (new MailMessage)
-            ->subject('Échec du traitement de votre dépôt — ONDA')
-            ->greeting('Bonjour,')
-            ->line("Le traitement de votre fichier \"{$this->mediaFile->original_name}\" a échoué.")
-            ->line('Notre équipe technique a été notifiée. Vous n\'avez pas besoin de redéposer ce fichier pour le moment.')
-            ->line('Nous vous contacterons si une action de votre part est nécessaire.');
+            ->subject($t('subject'))
+            ->view('mail.corporate', [
+                'subject' => $t('subject'),
+                'locale' => $locale,
+                'title' => $t('title'),
+                'greeting' => $t('greeting'),
+                'introLines' => [
+                    $t('line_failed', ['file' => $this->mediaFile->original_name]),
+                    $t('line_team'),
+                    $t('line_contact'),
+                ],
+                'showWarning' => false,
+            ]);
     }
 }

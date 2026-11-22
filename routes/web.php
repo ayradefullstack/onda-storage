@@ -80,6 +80,7 @@ Route::get('/_vault-doctor', VaultDoctorController::class)
 if (app()->environment('local')) {
     Route::get('/mail/preview', function () {
         return view('mail.corporate', [
+            'locale' => app()->getLocale(),
             'subject' => 'Vérification de votre compte auteur — ONDA',
             'title' => 'Vérification de votre adresse email',
             'greeting' => 'Bonjour Mohamed Benali / مرحباً محمد بن علي,',
@@ -97,6 +98,7 @@ if (app()->environment('local')) {
             'feature3Desc' => 'Vos données et fichiers sont hébergés sur des serveurs sécurisés en Algérie.',
             'actionText' => 'Activer et vérifier mon compte',
             'actionUrl' => url('/email/verify/sample-token'),
+            'subcopy' => __('verification.subcopy', ['action' => 'Activer et vérifier mon compte']),
             'warningTitle' => 'Avis de Sécurité / تنبيه أمني',
             'warningText' => 'Si vous n\'avez pas créé de compte sur le portail ONDA, veuillez ignorer cet email. Ne communiquez jamais vos identifiants ou liens de vérification.',
             'outroLines' => [

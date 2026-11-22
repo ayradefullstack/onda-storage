@@ -47,7 +47,7 @@ final class OeuvreSubmissionController extends Controller
             ]);
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Your work has been submitted for review.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('deposit.toast_submitted')]);
 
         return to_route('oeuvres.show', $oeuvre);
     }

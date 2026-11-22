@@ -69,7 +69,7 @@ const { t } = useI18n();
                         :tabindex="1"
                         dir="ltr"
                         autocomplete="email"
-                        placeholder="author@onda.dz"
+                        :placeholder="t('auth.emailPlaceholder')"
                         class="text-left"
                     />
                 </div>

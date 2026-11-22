@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
 import { LogOut, Settings } from '@lucide/vue';
+import { useI18n } from 'vue-i18n';
 import {
     DropdownMenuGroup,
     DropdownMenuItem,
@@ -11,6 +12,8 @@ import UserInfo from '@/components/UserInfo.vue';
 import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
 import type { User } from '@/types';
+
+const { t } = useI18n();
 
 type Props = {
     user: User;
@@ -37,7 +40,7 @@ const handleLogout = () => {
         <DropdownMenuItem :as-child="true">
             <Link class="block w-full cursor-pointer" :href="edit()" prefetch>
                 <Settings class="mr-2 h-4 w-4" />
-                Settings
+                {{ t('common.settings') }}
             </Link>
         </DropdownMenuItem>
     </DropdownMenuGroup>
@@ -51,7 +54,7 @@ const handleLogout = () => {
             data-test="logout-button"
         >
             <LogOut class="mr-2 h-4 w-4" />
-            Log out
+            {{ t('auth.logOut') }}
         </Link>
     </DropdownMenuItem>
 </template>

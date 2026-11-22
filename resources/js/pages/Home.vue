@@ -35,36 +35,36 @@ const sampleRepertoireWorks = [
         title: 'Kassaman (نشيد قسما)',
         author: 'Moufdi Zakaria / Mohamed Fawzi',
         category: 'music',
-        categoryName: 'Musique / النشيد الوطني',
+        categoryKey: 'repertoire.filterMusic',
         ref: 'DZ-ONDA-0001-PAT',
-        status: 'Patrimoine National',
+        statusKey: 'repertoire.statusHeritage',
     },
     {
         id: 2,
         title: 'Nedjma (نجمة)',
         author: 'Kateb Yacine (كاتب ياسين)',
         category: 'literature',
-        categoryName: 'Littérature',
+        categoryKey: 'repertoire.filterLiterature',
         ref: 'DZ-ONDA-1956-LIT',
-        status: 'Protégé',
+        statusKey: 'repertoire.statusProtected',
     },
     {
         id: 3,
         title: "La Bataille d'Alger (معركة الجزائر)",
         author: 'Yacef Saâdi / Gillo Pontecorvo',
         category: 'cinema',
-        categoryName: 'Audiovisuel',
+        categoryKey: 'repertoire.filterCinema',
         ref: 'DZ-ONDA-1966-AV',
-        status: 'Protégé',
+        statusKey: 'repertoire.statusProtected',
     },
     {
         id: 4,
         title: "Femmes d'Alger dans leur appartement",
         author: 'Assia Djebar (آسيا جبار)',
         category: 'literature',
-        categoryName: 'Littérature',
+        categoryKey: 'repertoire.filterLiterature',
         ref: 'DZ-ONDA-1980-LIT',
-        status: 'Protégé',
+        statusKey: 'repertoire.statusProtected',
     },
 ];
 
@@ -91,22 +91,22 @@ const categories = [
     {
         key: 'deposit.categories.text',
         Icon: FileText,
-        desc: 'Romans, poésies, scénarios, articles',
+        descKey: 'deposit.categories.textDesc',
     },
     {
         key: 'deposit.categories.audio',
         Icon: Music,
-        desc: 'Compositions musicales, arrangements, albums',
+        descKey: 'deposit.categories.audioDesc',
     },
     {
         key: 'deposit.categories.video',
         Icon: Video,
-        desc: 'Films, documentaires, séries, clips vidéo',
+        descKey: 'deposit.categories.videoDesc',
     },
     {
         key: 'deposit.categories.software',
         Icon: Code,
-        desc: 'Codes sources, architectures, applications',
+        descKey: 'deposit.categories.softwareDesc',
     },
 ];
 
@@ -685,7 +685,7 @@ const guarantees = [
                                     <span>•</span>
                                     <span
                                         class="font-mono text-[11px] text-onda-blue-600 dark:text-onda-blue-400"
-                                        >{{ work.categoryName }}</span
+                                        >{{ t(work.categoryKey) }}</span
                                     >
                                 </div>
                             </div>
@@ -699,7 +699,7 @@ const guarantees = [
                                 <span
                                     class="rounded-md bg-onda-teal-50 px-2 py-0.5 text-[11px] font-semibold text-onda-teal-600 dark:bg-onda-teal-950 dark:text-onda-teal-300"
                                 >
-                                    {{ work.status }}
+                                    {{ t(work.statusKey) }}
                                 </span>
                             </div>
                         </div>
@@ -708,8 +708,7 @@ const guarantees = [
                             v-if="filteredWorks.length === 0"
                             class="p-8 text-center text-xs text-muted-foreground"
                         >
-                            Aucun résultat ne correspond à votre recherche dans
-                            le répertoire national.
+                            {{ t('repertoire.noResults') }}
                         </div>
                     </div>
 
@@ -895,7 +894,7 @@ const guarantees = [
                         <p
                             class="text-xs leading-relaxed text-muted-foreground"
                         >
-                            {{ category.desc }}
+                            {{ t(category.descKey) }}
                         </p>
                     </div>
                 </div>

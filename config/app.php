@@ -67,6 +67,9 @@ return [
 
     'timezone' => 'UTC',
 
+    // Zone shown to people in mails (stored instants stay UTC).
+    'display_timezone' => 'Africa/Algiers',
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

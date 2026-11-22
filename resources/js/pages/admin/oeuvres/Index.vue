@@ -150,7 +150,7 @@ const activeFilters = computed(() => {
     if (filterValues.search.trim()) {
         pills.push({
             key: 'search',
-            label: t('common.search', 'Recherche'),
+            label: t('common.search'),
             value: `"${filterValues.search.trim()}"`,
         });
     }
@@ -158,7 +158,7 @@ const activeFilters = computed(() => {
     if (filterValues.author.trim()) {
         pills.push({
             key: 'author',
-            label: t('admin.oeuvres.colAuthor', 'Auteur'),
+            label: t('admin.oeuvres.colAuthor'),
             value: filterValues.author.trim(),
         });
     }
@@ -166,7 +166,7 @@ const activeFilters = computed(() => {
     if (filterValues.status) {
         pills.push({
             key: 'status',
-            label: t('admin.oeuvres.colStatus', 'Statut'),
+            label: t('admin.oeuvres.colStatus'),
             value: t(`oeuvres.status.${filterValues.status}`),
         });
     }
@@ -174,7 +174,7 @@ const activeFilters = computed(() => {
     if (filterValues.from || filterValues.to) {
         pills.push({
             key: 'date',
-            label: t('common.date', 'Date'),
+            label: t('common.date'),
             value: `${filterValues.from || '...'} → ${filterValues.to || '...'}`,
         });
     }
@@ -254,7 +254,7 @@ function clearFilters(): void {
 
         <!-- CARD 1: FILTERS CARD -->
         <section
-            aria-label="Filtres"
+            :aria-label="t('admin.oeuvres.filtersTitle')"
             class="space-y-4 rounded-xl border border-border/75 bg-card p-4 shadow-2xs transition-shadow duration-150 sm:p-5"
         >
             <!-- Card Header: Title + Queue Chip + Clear -->
@@ -269,7 +269,7 @@ function clearFilters(): void {
                         <h2
                             class="text-sm font-semibold tracking-tight text-foreground"
                         >
-                            {{ t('admin.oeuvres.filtersTitle', 'تصفية وبحث') }}
+                            {{ t('admin.oeuvres.filtersTitle') }}
                         </h2>
                     </div>
                     <span
@@ -429,7 +429,7 @@ function clearFilters(): void {
 
         <!-- CARD 2: WORKS TABLE CARD -->
         <section
-            aria-label="Tableau des oeuvres"
+            :aria-label="t('admin.oeuvres.tableTitle')"
             class="relative overflow-hidden rounded-xl border border-border/75 bg-card shadow-2xs transition-shadow duration-150"
         >
             <!-- Card Header / Table Toolbar -->
@@ -446,7 +446,7 @@ function clearFilters(): void {
                         <h2
                             class="text-sm font-semibold tracking-tight text-foreground sm:text-base"
                         >
-                            {{ t('admin.oeuvres.tableTitle', 'قائمة الأعمال') }}
+                            {{ t('admin.oeuvres.tableTitle') }}
                         </h2>
                         <span
                             class="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary-text tabular-nums"

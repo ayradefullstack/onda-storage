@@ -6,9 +6,11 @@ import {
     Clock,
     FileCheck2,
     Info,
+    LogIn,
     RefreshCcw,
     SearchCheck,
     ShieldCheck,
+    UserPlus,
 } from '@lucide/vue';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import type { Component } from 'vue';
@@ -49,10 +51,13 @@ interface NotificationData {
     i18n_key?: string;
     params?: Record<string, string | number | null>;
     label_source?: LabelSource;
+    occurred_at?: string;
     reason?: string;
     url?: string;
     /** On a file notification: the file the row is about. */
     file_uuid?: string;
+    /** On an account_login notification: how the user signed in. */
+    method?: string;
 }
 
 interface NotificationRow {
@@ -180,9 +185,50 @@ function open(item: NotificationRow): void {
 function title(item: NotificationRow): string {
     const source = item.data.label_source;
 
-    return source
-        ? oeuvreLabel(source, locale.value, t('oeuvres.untitled'))
-        : t('notifications.generic');
+    if (source) {
+        return oeuvreLabel(source, locale.value, t('oeuvres.untitled'));
+    }
+
+    const type = item.data.type;
+
+    if (type && te(`notifications.title.${type}`)) {
+        return t(`notifications.title.${type}`);
+    }
+
+    return t('notifications.generic');
+}
+
+/**
+ * The moment an account notification is about, in Algiers time with Latin
+ * digits; falls back to the row's creation time, then to ''. Never throws.
+ */
+function accountTime(item: NotificationRow): string {
+    for (const candidate of [item.data.occurred_at, item.created_at]) {
+        if (!candidate) {
+            continue;
+        }
+
+        const date = new Date(candidate);
+
+        if (Number.isNaN(date.getTime())) {
+            continue;
+        }
+
+        try {
+            return new Intl.DateTimeFormat(locale.value, {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+                timeZone: 'Africa/Algiers',
+                numberingSystem: 'latn',
+            } as Intl.DateTimeFormatOptions)
+                .format(date)
+                .replace(/[\u200e\u200f\u061c]/g, '');
+        } catch {
+            continue;
+        }
+    }
+
+    return '';
 }
 
 function message(item: NotificationRow): string {
@@ -198,6 +244,16 @@ function message(item: NotificationRow): string {
         params[name] = value === null ? '' : String(value);
     }
 
+    if (key.startsWith('notifications.account.')) {
+        const time = accountTime(item);
+
+        if (time === '' && te(`${key}_notime`)) {
+            return t(`${key}_notime`, params);
+        }
+
+        params.time = time;
+    }
+
     return t(key, params);
 }
 
@@ -205,6 +261,10 @@ const kind = (item: NotificationRow): string =>
     (item.data.i18n_key ?? '').split('.').pop() ?? '';
 
 function icon(item: NotificationRow): Component {
+    if (kind(item).startsWith('login_')) {
+        return LogIn;
+    }
+
     switch (kind(item)) {
         case 'registered':
             return ShieldCheck;
@@ -217,6 +277,8 @@ function icon(item: NotificationRow): Component {
             return FileCheck2;
         case 'replacement':
             return RefreshCcw;
+        case 'created':
+            return UserPlus;
         default:
             return Info;
     }
@@ -230,6 +292,7 @@ function iconColor(item: NotificationRow): string {
             return 'bg-destructive/10 text-destructive';
         case 'under_review':
         case 'replacement':
+        case 'login_recovery_code':
             return 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400';
         default:
             return 'bg-onda-blue-500/10 text-onda-blue-600 dark:bg-onda-blue-500/20 dark:text-onda-blue-400';

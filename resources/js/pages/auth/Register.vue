@@ -316,13 +316,16 @@ onMounted(() => auth.syncFromDom());
         novalidate
         :reset-on-success="['password', 'password_confirmation']"
         class="auth-form auth-stagger"
-        v-slot="{ processing, wasSuccessful }"
+        v-slot="{ processing, wasSuccessful, errors }"
         @before="auth.begin"
         @start="setStageState('busy')"
         @success="setStageState('stamped')"
         @error="onError"
         @finish="auth.finish"
     >
+        <!-- Form-level error (e.g. registration unavailable), not a field error. -->
+        <AuthErrorSummary :message="errors.registration ?? ''" />
+
         <AuthErrorSummary :items="auth.summary.value" />
 
         <p class="auth-note">{{ t('authUi.reqNote') }}</p>
@@ -342,7 +345,7 @@ onMounted(() => auth.syncFromDom());
                     :label="t('auth.firstName')"
                     autocomplete="given-name"
                     autocapitalize="words"
-                    placeholder="Ex : Mohamed"
+                    :placeholder="t('auth.firstNamePlaceholder')"
                     required
                     v-bind="auth.bind('first_name')"
                 />
@@ -353,7 +356,7 @@ onMounted(() => auth.syncFromDom());
                     :label="t('auth.lastName')"
                     autocomplete="family-name"
                     autocapitalize="words"
-                    placeholder="Ex : Benali"
+                    :placeholder="t('auth.lastNamePlaceholder')"
                     required
                     v-bind="auth.bind('last_name')"
                 />
@@ -367,7 +370,7 @@ onMounted(() => auth.syncFromDom());
                     :label="t('auth.firstNameAr')"
                     :tag="t('auth.arabicOnlyNotice')"
                     autocomplete="off"
-                    placeholder="مثال: محمد"
+                    :placeholder="t('auth.firstNameArPlaceholder')"
                     required
                     v-bind="auth.bind('first_name_ar')"
                 />
@@ -379,7 +382,7 @@ onMounted(() => auth.syncFromDom());
                     :label="t('auth.lastNameAr')"
                     :tag="t('auth.arabicOnlyNotice')"
                     autocomplete="off"
-                    placeholder="مثال: بن علي"
+                    :placeholder="t('auth.lastNameArPlaceholder')"
                     required
                     v-bind="auth.bind('last_name_ar')"
                 />
@@ -514,7 +517,7 @@ onMounted(() => auth.syncFromDom());
                 :icon="Mail"
                 autocomplete="email"
                 inputmode="email"
-                placeholder="exemple@domaine.com"
+                :placeholder="t('auth.emailPlaceholder')"
                 keyboard-hint="email"
                 required
                 v-bind="auth.bind('email')"
@@ -537,7 +540,7 @@ onMounted(() => auth.syncFromDom());
                     :show-label="t('authUi.showPw')"
                     :hide-label="t('authUi.hidePw')"
                     autocomplete="new-password"
-                    placeholder="Mot de passe"
+                    :placeholder="t('auth.passwordPlaceholder')"
                     strength
                     required
                     v-bind="auth.bind('password')"
@@ -550,7 +553,7 @@ onMounted(() => auth.syncFromDom());
                     :show-label="t('authUi.showPwConfirm')"
                     :hide-label="t('authUi.hidePwConfirm')"
                     autocomplete="new-password"
-                    placeholder="Mot de passe"
+                    :placeholder="t('auth.passwordPlaceholder')"
                     required
                     :success="
                         auth.values.password_confirmation &&

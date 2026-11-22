@@ -67,8 +67,8 @@ const { t, locale } = useI18n();
 defineOptions({
     layout: {
         breadcrumbs: [
-            { title: 'Admin', href: dashboard() },
-            { title: 'Authors', href: authorsIndex() },
+            { title: 'common.admin', href: dashboard() },
+            { title: 'admin.authors.title', href: authorsIndex() },
         ],
     },
 });
@@ -132,7 +132,7 @@ const activeFilters = computed(() => {
     if (filterValues.search.trim()) {
         pills.push({
             key: 'search',
-            label: t('common.search', 'Recherche'),
+            label: t('common.search'),
             value: `"${filterValues.search.trim()}"`,
         });
     }
@@ -141,7 +141,7 @@ const activeFilters = computed(() => {
         const found = props.wilayas.find((w) => w.uuid === filterValues.wilaya);
         pills.push({
             key: 'wilaya',
-            label: t('admin.authors.colWilaya', 'Wilaya'),
+            label: t('admin.authors.colWilaya'),
             value: found ? wilayaLabel(found) : filterValues.wilaya,
         });
     }

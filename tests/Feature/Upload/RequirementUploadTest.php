@@ -168,13 +168,24 @@ test('an extension outside the slot list is rejected at init, naming the accepte
     $author = slotAuthor();
     $oeuvre = slotOeuvre($author, 'MUSIQUE');
 
-    $this->actingAs($author);
+    $this->actingAs($author)->withCredentials()->withUnencryptedCookie('locale', 'en');
     slotInit($oeuvre, slotRequirement('MUSIQUE', 'paroles')->id, 'paroles.mp3', 100)
         ->assertUnprocessable()
-        ->assertJsonPath('errors.filename.0', 'The file type ".mp3" is not accepted for this document. Accepted formats: PDF.');
+        ->assertJsonPath('errors.filename.0', 'The file type ".mp3" is not accepted for this document. Accepted formats: PDF, MP4, MOV.');
 
     expect(UploadSession::count())->toBe(0);
 });
+
+// Init admission only: the owner approved exactly pdf, mp4 and mov for MUSIQUE / paroles.
+test('the MUSIQUE paroles slot admits pdf, mp4 and mov at init', function (string $filename) {
+    $author = slotAuthor();
+    $oeuvre = slotOeuvre($author, 'MUSIQUE');
+
+    $this->actingAs($author);
+    slotInit($oeuvre, slotRequirement('MUSIQUE', 'paroles')->id, $filename, 100)->assertCreated();
+
+    expect(UploadSession::count())->toBe(1);
+})->with(['paroles.pdf', 'paroles.mp4', 'paroles.mov']);
 
 test('the same extension in uppercase is accepted', function () {
     $author = slotAuthor();

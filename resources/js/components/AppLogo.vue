@@ -1,11 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 
-const { locale } = useI18n();
-
-const isArabic = computed(() => locale.value === 'ar');
+const { t } = useI18n();
 </script>
 
 <template>
@@ -32,7 +29,7 @@ const isArabic = computed(() => locale.value === 'ar');
             <span
                 class="truncate text-[10px] font-medium text-muted-foreground"
             >
-                {{ isArabic ? 'ديوان حقوق المؤلف' : 'Droits d’Auteur' }}
+                {{ t('brand.tagline') }}
             </span>
         </div>
     </div>

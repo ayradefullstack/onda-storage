@@ -18,6 +18,6 @@ final class ApprovalRefused extends RuntimeException
     public function __construct(
         public readonly SubmissionVerdict $verdict,
     ) {
-        parent::__construct('This deposit cannot be registered yet.');
+        parent::__construct(__('review.approval_refused'));
     }
 }

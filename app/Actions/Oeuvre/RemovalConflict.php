@@ -28,16 +28,16 @@ final class RemovalConflict extends RuntimeException
 
     public static function noLongerRejected(): self
     {
-        return new self('This file is no longer rejected; it can no longer be removed.', self::NO_LONGER_REJECTED);
+        return new self(__('deposit.removal_no_longer_rejected'), self::NO_LONGER_REJECTED);
     }
 
     public static function notRemovable(): self
     {
-        return new self('This file has just been accepted by the ONDA; it can no longer be removed.', self::NOT_REMOVABLE);
+        return new self(__('deposit.removal_not_removable'), self::NOT_REMOVABLE);
     }
 
     public static function oeuvreDecided(): self
     {
-        return new self('This deposit has been decided; its files can no longer be changed.', self::OEUVRE_DECIDED);
+        return new self(__('deposit.removal_oeuvre_decided'), self::OEUVRE_DECIDED);
     }
 }

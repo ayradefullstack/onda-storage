@@ -51,7 +51,7 @@ touching a populated database.
 | Key | Local | Production | Notes |
 |---|---|---|---|
 | `QUEUE_CONNECTION` | `database` | `database` | Redis is optional and must never become required. |
-| `DB_QUEUE_RETRY_AFTER` | `3600` (default) | `3600` | **Not in `.env.example`** — the value comes from the default in `config/queue.php`. See below. |
+| `DB_QUEUE_RETRY_AFTER` | `3600` (default) | `3600` | In `.env.example` at `3600`; `config/queue.php` also defaults to `3600`. Must stay `3600` or higher. See below. |
 
 ### `retry_after = 3600`
 
@@ -137,9 +137,9 @@ it survives `config:cache`.
 
 | Key | Value | Why this value |
 |---|---|---|
-| `VAULT_CHUNK_SIZE` | `8388608` (8 MiB) | Divisible by 16, so every chunk begins on an AES block boundary. Changing it breaks resumption of in-flight uploads and must match what the browser client uses. |
+| `vault.chunk_size` (code constant, not an env key) | `8388608` (8 MiB) | Defined in `config/vault.php`. Divisible by 16, so every chunk begins on an AES block boundary. Changing it breaks existing ciphertext and in-flight uploads, and it must match the browser client. Do not change it. |
 | `VAULT_MAX_FILE_SIZE` | `5368709120` (5 GiB) | The per-file ceiling from `CLAUDE.md`. |
-| `VAULT_MAC_SEGMENT_SIZE` | `1048576` (1 MiB) | AES-CTR is unauthenticated, so ciphertext is HMAC'd per segment into a `{uuid}.mac` sidecar. Smaller segments mean more digests; larger ones mean a Range read must verify more data than it returns. |
+| `vault.mac_segment_size` (code constant, not an env key) | `1048576` (1 MiB) | Defined in `config/vault.php`. AES-CTR is unauthenticated, so ciphertext is HMAC'd per segment into a `{uuid}.mac` sidecar. Changing it makes every existing `.mac` sidecar unverifiable. Do not change it. |
 | `VAULT_RETENTION_DAYS` | `30` | Days a soft-deleted file's bytes survive before the purge job frees them. Until then they still count against quota. |
 | `VAULT_TEMP_TTL_MINUTES` | `120` | How long an in-progress upload session and its `incoming` temp file may live. Also the cutoff used by the hourly `vault:purge-temp` scheduled sweep of `work/`. |
 
@@ -218,6 +218,21 @@ it — the right local default.
 
 ---
 
+## Authentication security
+
+Read in `config/auth-security.php` and `config/trustedproxy.php`. Whole numbers only; an empty, non-numeric or out-of-range value falls back to the default (never to "off") and the key name is logged on each login attempt.
+
+| Key | Default | Range | Notes |
+|---|---|---|---|
+| `AUTH_LOGIN_MAX_FAILURES` | `3` | 1-100 | Password failures within the window that lock the email + IP pair. |
+| `AUTH_LOGIN_FAILURE_WINDOW_SECONDS` | `900` | 1-86400 | Window in which failures are counted. |
+| `AUTH_LOGIN_LOCKOUT_SECONDS` | `1800` | 1-86400 | Lockout duration. |
+| `AUTH_LOGIN_IP_MAX_REQUESTS` | `20` | 1-10000 | Per-IP `POST /login` budget, whatever the email. |
+| `AUTH_LOGIN_IP_WINDOW_SECONDS` | `60` | 1-86400 | Window of the per-IP budget; over it: HTTP 429 with `Retry-After`. |
+| `AUTH_TRUSTED_PROXIES` | empty | IPs / CIDRs | Production only, behind a reverse proxy: its real address(es), comma separated. Empty trusts no proxy. `*` and `**` are refused. |
+
+---
+
 ## Keys used by the framework but absent from `.env.example`
 
 These are read somewhere in `config/` but never appear in the example file. All
@@ -226,7 +241,6 @@ rather than a surprise.
 
 | Key | Where | Why it matters here |
 |---|---|---|
-| `DB_QUEUE_RETRY_AFTER` | `config/queue.php` | Controls the 3600 value `VaultDoctor` FAILs below. Defaulted correctly, but undocumented and settable. |
 | `PASSKEYS_USER_HANDLE_SECRET` | `config/fortify.php` | Falls back to `config('app.key')`. If set explicitly, it becomes a **third** secret to back up — passkey logins break without it. |
 | `APP_PREVIOUS_KEYS` | `config/app.php` | The only supported route for `APP_KEY` rotation. Relevant because `dek_wrapped` depends on `APP_KEY`. |
 

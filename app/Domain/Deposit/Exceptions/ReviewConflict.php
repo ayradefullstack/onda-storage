@@ -25,7 +25,7 @@ final class ReviewConflict extends DepositException
     public static function heldBy(User $holder): self
     {
         return new self(
-            "{$holder->name} is already reviewing this deposit. Take it over explicitly to decide on it.",
+            __('review.held_by', ['name' => $holder->name]),
             holder: $holder,
         );
     }
@@ -33,7 +33,7 @@ final class ReviewConflict extends DepositException
     public static function statusMoved(OeuvreStatus $currentStatus): self
     {
         return new self(
-            "This deposit is now \"{$currentStatus->key()}\". Reload before deciding on it.",
+            __('review.status_moved', ['status' => $currentStatus->label()]),
             currentStatus: $currentStatus,
         );
     }

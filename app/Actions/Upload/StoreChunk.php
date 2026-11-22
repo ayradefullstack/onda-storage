@@ -61,7 +61,7 @@ final class StoreChunk
 
         if ($contentType !== '' && str_starts_with($contentType, 'multipart/')) {
             throw new HttpResponseException(response()->json([
-                'message' => 'Chunk bodies must be sent as raw application/octet-stream, not multipart/form-data.',
+                'message' => __('upload_runtime.multipart_body'),
             ], 415));
         }
     }
@@ -70,13 +70,13 @@ final class StoreChunk
     {
         if ($session->expires_at->isPast()) {
             throw new HttpResponseException(response()->json([
-                'message' => 'This upload session has expired.',
+                'message' => __('upload_runtime.session_expired'),
             ], 410));
         }
 
         if ($session->status !== UploadSessionStatus::UPLOADING) {
             throw new HttpResponseException(response()->json([
-                'message' => "This upload session is not accepting chunks (status: {$session->status->key()}).",
+                'message' => __('upload_runtime.session_not_accepting', ['status' => $session->status->label()]),
             ], 409));
         }
     }
@@ -85,7 +85,7 @@ final class StoreChunk
     {
         if ($index < 0 || $index >= $session->total_chunks) {
             throw new HttpResponseException(response()->json([
-                'message' => "Chunk index {$index} is out of range for this upload (0..".($session->total_chunks - 1).').',
+                'message' => __('upload_runtime.chunk_out_of_range', ['index' => $index, 'max' => $session->total_chunks - 1]),
             ], 422));
         }
     }
@@ -96,7 +96,7 @@ final class StoreChunk
 
         if ($header === '') {
             throw new HttpResponseException(response()->json([
-                'message' => "Missing X-Chunk-CRC32 header for chunk {$index}.",
+                'message' => __('upload_runtime.crc_missing', ['index' => $index]),
                 'index' => $index,
             ], 422));
         }
@@ -108,7 +108,7 @@ final class StoreChunk
 
         if (! hash_equals($actual, $header)) {
             throw new HttpResponseException(response()->json([
-                'message' => "CRC32 mismatch for chunk {$index}; retry this chunk.",
+                'message' => __('upload_runtime.crc_mismatch', ['index' => $index]),
                 'index' => $index,
             ], 422));
         }
@@ -123,7 +123,7 @@ final class StoreChunk
 
         if (strlen($bytes) !== $expected) {
             throw new HttpResponseException(response()->json([
-                'message' => "Chunk {$index} must be exactly {$expected} bytes; received ".strlen($bytes).'.',
+                'message' => trans_choice('upload_runtime.chunk_length', $expected, ['index' => $index, 'expected' => $expected, 'received' => strlen($bytes)]),
                 'index' => $index,
             ], 422));
         }

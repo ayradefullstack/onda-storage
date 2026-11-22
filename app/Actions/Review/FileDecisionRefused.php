@@ -18,17 +18,17 @@ final class FileDecisionRefused extends RuntimeException
     public static function fileStatus(MediaFileStatus $status, ReviewStatusEnum $to): self
     {
         return new self($to === ReviewStatusEnum::ACCEPTED
-            ? "Only a ready file can be accepted; this file is \"{$status->key()}\"."
-            : "This file is still \"{$status->key()}\"; it can be decided once the pipeline has finished with it.");
+            ? __('review.file_accept_needs_ready', ['status' => $status->label()])
+            : __('review.file_decide_needs_finished', ['status' => $status->label()]));
     }
 
     public static function removed(): self
     {
-        return new self('This file was removed by the author; it can no longer be decided.');
+        return new self(__('review.file_removed'));
     }
 
     public static function foreignFile(): self
     {
-        return new self('This file does not belong to this deposit.');
+        return new self(__('review.file_foreign'));
     }
 }

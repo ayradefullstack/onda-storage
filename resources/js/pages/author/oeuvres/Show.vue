@@ -594,7 +594,7 @@ const statusBadge = computed(() => {
                             class="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
                         >
                             <ArrowLeft class="size-3.5 rtl:rotate-180" />
-                            <span>Retour au catalogue des oeuvres</span>
+                            <span>{{ t('oeuvres.show.backToCatalog') }}</span>
                         </Link>
 
                         <div class="flex items-center gap-2">
@@ -640,12 +640,14 @@ const statusBadge = computed(() => {
                                 v-else-if="oeuvre.college_name"
                                 class="text-xs text-muted-foreground"
                             >
-                                Discipline :
+                                {{ t('oeuvres.show.college') }}
                                 <span class="font-medium text-foreground">{{
                                     oeuvre.college_name
                                 }}</span>
-                                • Créée le
-                                {{ formatDate(oeuvre.created_at, locale) }}
+                                • {{ t('oeuvres.show.createdOn') }}
+                                <bdi dir="ltr">{{
+                                    formatDate(oeuvre.created_at, locale)
+                                }}</bdi>
                             </p>
                         </div>
 
@@ -737,7 +739,11 @@ const statusBadge = computed(() => {
                                     <span
                                         class="font-mono text-xs font-bold text-foreground"
                                     >
-                                        {{ progressPercent }}% validé
+                                        {{
+                                            t('oeuvres.show.validatedPercent', {
+                                                percent: progressPercent,
+                                            })
+                                        }}
                                     </span>
                                 </div>
 
@@ -812,7 +818,9 @@ const statusBadge = computed(() => {
                                             <HardDrive
                                                 class="size-4 text-onda-blue-600 dark:text-onda-blue-400"
                                             />
-                                            <span>Espace de stockage</span>
+                                            <span>{{
+                                                t('oeuvres.show.storage')
+                                            }}</span>
                                         </div>
                                         <span
                                             class="font-mono text-xs font-bold text-foreground"
@@ -866,18 +874,19 @@ const statusBadge = computed(() => {
                                         <Lock
                                             class="size-3.5 text-emerald-600 dark:text-emerald-400"
                                         />
-                                        <span
-                                            >Chiffrement au repos AES-256</span
-                                        >
+                                        <span>{{
+                                            t('oeuvres.show.encryptedAtRest')
+                                        }}</span>
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <ShieldCheck
                                             class="size-3.5 text-emerald-600 dark:text-emerald-400"
                                         />
-                                        <span
-                                            >Empreinte cryptographique
-                                            certifiée</span
-                                        >
+                                        <span>{{
+                                            t(
+                                                'oeuvres.show.certifiedFingerprint',
+                                            )
+                                        }}</span>
                                     </div>
                                 </div>
                             </CardContent>
@@ -901,13 +910,14 @@ const statusBadge = computed(() => {
                             <h2
                                 class="text-base font-bold tracking-tight text-foreground"
                             >
-                                Pièces exigées pour ce collège ({{
-                                    requirements.length
-                                }})
+                                {{
+                                    t('oeuvres.show.requiredDocs', {
+                                        count: requirements.length,
+                                    })
+                                }}
                             </h2>
                             <span class="text-xs text-muted-foreground">
-                                Déposez les pièces conformément aux
-                                spécifications
+                                {{ t('oeuvres.show.requiredDocsHint') }}
                             </span>
                         </div>
 

@@ -1,4 +1,5 @@
 import { createI18n } from 'vue-i18n';
+import { pluralRules } from '@/lib/i18nPlural';
 import type { Language } from '@/types/language';
 
 /**
@@ -67,6 +68,7 @@ export function createAppI18n(locale: string, languages: Language[]) {
         fallbackLocale: defaultLanguageCode(languages),
         messages: bundles,
         numberFormats: numberFormatsFor(languages),
+        pluralRules,
     });
 }
 

@@ -2,6 +2,7 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import { LayoutGrid, Menu, Search } from '@lucide/vue';
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import AppLogo from '@/components/AppLogo.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
@@ -33,6 +34,8 @@ import { getInitials } from '@/composables/useInitials';
 import { dashboard } from '@/routes/author';
 import type { BreadcrumbItem, NavItem } from '@/types';
 
+const { t } = useI18n();
+
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
 };
@@ -50,7 +53,7 @@ const activeItemStyles =
 
 const mainNavItems: NavItem[] = [
     {
-        title: 'Tableau de bord',
+        title: 'sidebar.nav.overview',
         href: dashboard(),
         icon: LayoutGrid,
     },
@@ -74,9 +77,9 @@ const mainNavItems: NavItem[] = [
                             </Button>
                         </SheetTrigger>
                         <SheetContent side="left" class="w-[300px] p-6">
-                            <SheetTitle class="sr-only"
-                                >Navigation menu</SheetTitle
-                            >
+                            <SheetTitle class="sr-only">{{
+                                t('common.navMenu')
+                            }}</SheetTitle>
                             <SheetHeader class="flex justify-start text-left">
                                 <AppLogoIcon
                                     class="size-6 fill-current text-black dark:text-white"
@@ -103,7 +106,7 @@ const mainNavItems: NavItem[] = [
                                             :is="item.icon"
                                             class="h-5 w-5"
                                         />
-                                        {{ item.title }}
+                                        {{ t(item.title) }}
                                     </Link>
                                 </nav>
                                 <div
@@ -148,7 +151,7 @@ const mainNavItems: NavItem[] = [
                                         :is="item.icon"
                                         class="mr-2 h-4 w-4"
                                     />
-                                    {{ item.title }}
+                                    {{ t(item.title) }}
                                 </Link>
                                 <div
                                     v-if="isCurrentUrl(item.href)"

@@ -114,8 +114,8 @@ const hasValue = computed(() => internalValue.value.length > 0);
             v-if="hasValue"
             type="button"
             class="absolute end-2 top-1/2 flex size-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            :title="t('common.clear', 'Effacer')"
-            :aria-label="t('common.clear', 'Effacer')"
+            :title="t('common.clear')"
+            :aria-label="t('common.clear')"
             @click="handleClear"
         >
             <X :stroke-width="2" class="size-3.5" />

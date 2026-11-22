@@ -185,7 +185,7 @@ const getOeuvreCategoryMeta = (title: string, description?: string | null) => {
         text.includes('غناء')
     ) {
         return {
-            label: 'Musique',
+            label: t('repertoire.filterMusic'),
             icon: Music,
             colorClass:
                 'text-sky-600 dark:text-sky-400 bg-sky-500/10 border-sky-500/20',
@@ -207,7 +207,7 @@ const getOeuvreCategoryMeta = (title: string, description?: string | null) => {
         text.includes('وثائقي')
     ) {
         return {
-            label: 'Audiovisuel',
+            label: t('repertoire.filterCinema'),
             icon: Video,
             colorClass:
                 'text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/20',
@@ -230,7 +230,7 @@ const getOeuvreCategoryMeta = (title: string, description?: string | null) => {
         text.includes('مخطوط')
     ) {
         return {
-            label: 'Littérature',
+            label: t('repertoire.filterLiterature'),
             icon: BookOpen,
             colorClass:
                 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20',
@@ -240,7 +240,7 @@ const getOeuvreCategoryMeta = (title: string, description?: string | null) => {
     }
 
     return {
-        label: 'Création',
+        label: t('oeuvres.index.categoryCreation'),
         icon: FolderArchive,
         colorClass:
             'text-onda-blue-600 dark:text-onda-blue-400 bg-onda-blue-500/10 border-onda-blue-500/20',

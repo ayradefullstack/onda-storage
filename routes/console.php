@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Auth\LoginLockout;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -45,3 +46,12 @@ Schedule::command('queue:work --stop-when-empty --max-time=3300 --timeout=3500 -
     ->everyMinute()
     ->withoutOverlapping(60)
     ->runInBackground();
+
+/**
+ * Housekeeping for the failed-password lockout table: deletes expired locks
+ * and ended failure windows (never an active lock, see
+ * LoginLockout::prunable()). Expired rows are inert anyway (the service
+ * deletes them the next time that scope is seen), so a missed run only
+ * leaves rows behind; it never changes a decision.
+ */
+Schedule::command('model:prune', ['--model' => LoginLockout::class])->hourly();

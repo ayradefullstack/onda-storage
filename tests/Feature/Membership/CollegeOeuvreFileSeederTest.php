@@ -118,7 +118,7 @@ test('the database rejects a second row with the same college and document_key',
 
 test('MUSIQUE matches §5.2', function () {
     expect(requiredDocumentsOf('MUSIQUE'))->toBe([
-        [1, 'paroles', 'Paroles', ['pdf']],
+        [1, 'paroles', 'Paroles', ['pdf', 'mp4', 'mov']],
         [2, 'enregistrement_oeuvre', "Enregistrement de l'oeuvre", ['mp3', 'wav', 'flac']],
         [3, 'justificatif_exploitation', "Justificatif d'exploitation (*)", ['pdf', 'jpg', 'jpeg', 'png']],
         [4, 'autorisation_sample', 'Autorisation du sample', ['png', 'jpg', 'pdf']],

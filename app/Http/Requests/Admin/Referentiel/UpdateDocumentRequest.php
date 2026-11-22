@@ -77,8 +77,8 @@ final class UpdateDocumentRequest extends FormRequest
             // The regex rejects dots, uppercase, slashes and spaces in one
             // go, so the message names all three shapes an officer is
             // likely to paste in: ".PDF", "application/pdf", "pdf, jpg".
-            'extensions.*.regex' => 'Each extension must be lowercase letters or digits only — no dot, no MIME type, no spaces (e.g. "pdf", not ".PDF" or "application/pdf").',
-            'extensions.*.in' => 'That format is not one this application can accept. Executable and script formats are deliberately absent from the registry.',
+            'extensions.*.regex' => __('referentiel.extension_shape_example'),
+            'extensions.*.in' => __('referentiel.extension_not_accepted'),
         ];
     }
 
@@ -97,7 +97,7 @@ final class UpdateDocumentRequest extends FormRequest
             $bare = array_filter($extensions, 'is_string');
 
             if (count($bare) !== count(array_unique($bare))) {
-                $validator->errors()->add('extensions', 'The same extension is listed more than once.');
+                $validator->errors()->add('extensions', __('referentiel.extension_duplicate'));
             }
         });
     }

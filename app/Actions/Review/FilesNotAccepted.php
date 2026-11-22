@@ -18,6 +18,6 @@ final class FilesNotAccepted extends RuntimeException
     public function __construct(
         public readonly array $files,
     ) {
-        parent::__construct('Every file must be accepted before this deposit can be registered.');
+        parent::__construct(__('review.files_not_accepted'));
     }
 }

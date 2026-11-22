@@ -243,13 +243,25 @@ test('a file of another oeuvre is a 404', function () {
 });
 
 test('accept needs a ready file; reject also takes a failed or quarantined one', function () {
+    // The refusal sentences are localized; this test pins English (the three
+    // locales are covered literally in tests/Feature/HttpErrorLocalizationTest.php).
+    app()->setLocale('en');
+    $this->withCredentials()->withUnencryptedCookie('locale', 'en');
+    $labels = [
+        MediaFileStatus::FAILED->value => 'Failed',
+        MediaFileStatus::QUARANTINED->value => 'Held for review',
+        MediaFileStatus::PROCESSING->value => 'Preparing',
+        MediaFileStatus::UPLOADING->value => 'Uploading',
+        MediaFileStatus::ASSEMBLING->value => 'Finishing up',
+        MediaFileStatus::SCANNING->value => 'Checking',
+    ];
     $admin = mfrAdmin();
     $oeuvre = mfrOeuvre($admin);
 
     foreach ([MediaFileStatus::FAILED, MediaFileStatus::QUARANTINED, MediaFileStatus::PROCESSING] as $status) {
         mfrDecide($admin, $oeuvre, mfrFile($oeuvre, $status), 'accepted')
             ->assertUnprocessable()
-            ->assertJsonPath('errors.decision.0', "Only a ready file can be accepted; this file is \"{$status->key()}\".");
+            ->assertJsonPath('errors.decision.0', "Only a ready file can be accepted; this file is \"{$labels[$status->value]}\".");
     }
 
     foreach ([MediaFileStatus::FAILED, MediaFileStatus::QUARANTINED] as $status) {
@@ -259,7 +271,7 @@ test('accept needs a ready file; reject also takes a failed or quarantined one',
     foreach ([MediaFileStatus::UPLOADING, MediaFileStatus::ASSEMBLING, MediaFileStatus::SCANNING, MediaFileStatus::PROCESSING] as $status) {
         mfrDecide($admin, $oeuvre, mfrFile($oeuvre, $status), 'rejected', MFR_REASON)
             ->assertUnprocessable()
-            ->assertJsonPath('errors.decision.0', "This file is still \"{$status->key()}\"; it can be decided once the pipeline has finished with it.");
+            ->assertJsonPath('errors.decision.0', "This file is still \"{$labels[$status->value]}\"; it can be decided once the pipeline has finished with it.");
     }
 
     expect(MediaFileReview::count())->toBe(2);

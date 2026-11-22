@@ -92,7 +92,7 @@ final class ConsultOriginalController extends Controller
         try {
             $firstStream = $vault->readRange($object, $first);
         } catch (MacVerificationFailed) {
-            abort(500, 'This deposit failed an integrity check and could not be read.');
+            abort(500, __('errors.integrity_failed'));
         }
 
         return response()->stream(

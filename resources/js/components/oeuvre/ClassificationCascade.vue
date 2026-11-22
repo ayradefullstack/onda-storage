@@ -193,8 +193,7 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                             </span>
                         </div>
                         <p class="text-xs text-muted-foreground">
-                            Sélectionnez la catégorie légale sous laquelle vous
-                            déposez votre oeuvre.
+                            {{ t('oeuvres.classification.typeHint') }}
                         </p>
                     </div>
                 </div>
@@ -214,7 +213,7 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                     :model-value="selection.register_type_id"
                     :options="typeOptions"
                     :placeholder="t('oeuvres.classification.typePlaceholder')"
-                    search-placeholder="Rechercher un type de déclarant..."
+                    :search-placeholder="t('oeuvres.classification.searchType')"
                     :clearable="true"
                     @update:model-value="onSelectType"
                 />
@@ -271,8 +270,7 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                                 </span>
                             </div>
                             <p class="text-xs text-muted-foreground">
-                                Déterminez le mode d'administration et de
-                                gestion des droits patrimoniaux.
+                                {{ t('oeuvres.classification.gestionHint') }}
                             </p>
                         </div>
                     </div>
@@ -303,7 +301,9 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                         :placeholder="
                             t('oeuvres.classification.gestionPlaceholder')
                         "
-                        search-placeholder="Rechercher un mode de gestion..."
+                        :search-placeholder="
+                            t('oeuvres.classification.searchGestion')
+                        "
                         :clearable="true"
                         @update:model-value="onSelectGestion"
                     />
@@ -363,8 +363,7 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                                 </span>
                             </div>
                             <p class="text-xs text-muted-foreground">
-                                Choisissez la discipline artistique ou le
-                                domaine spécifique de l'oeuvre.
+                                {{ t('oeuvres.classification.collegeHint') }}
                             </p>
                         </div>
                     </div>
@@ -392,7 +391,9 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                         :placeholder="
                             t('oeuvres.classification.collegePlaceholder')
                         "
-                        search-placeholder="Rechercher un collège ou code (ex. Musique, Dramatique...)..."
+                        :search-placeholder="
+                            t('oeuvres.classification.searchCollege')
+                        "
                         :clearable="true"
                         @update:model-value="onSelectCollege"
                     />
@@ -454,8 +455,7 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                                 </span>
                             </div>
                             <p class="text-xs text-muted-foreground">
-                                Précisez votre qualité d'intervention sur
-                                l'oeuvre (Auteur, Compositeur, etc.).
+                                {{ t('oeuvres.classification.memberHint') }}
                             </p>
                         </div>
                     </div>
@@ -488,7 +488,9 @@ function errorFor(field: keyof ClassificationSelection): string | undefined {
                         :placeholder="
                             t('oeuvres.classification.memberPlaceholder')
                         "
-                        search-placeholder="Rechercher une qualité (Auteur, Compositeur, Adaptateur...)..."
+                        :search-placeholder="
+                            t('oeuvres.classification.searchMember')
+                        "
                         :clearable="true"
                         @update:model-value="onSelectMember"
                     />

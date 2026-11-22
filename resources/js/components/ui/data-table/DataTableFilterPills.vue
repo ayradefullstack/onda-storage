@@ -40,7 +40,7 @@ const hasFilters = computed(() => props.filters && props.filters.length > 0);
         aria-label="Filtres actifs"
     >
         <span class="text-[11px] font-medium text-muted-foreground me-1 select-none">
-            {{ t('common.activeFilters', 'Filtres actifs') }}:
+            {{ t('common.activeFilters') }}:
         </span>
 
         <!-- Filter Pills -->
@@ -54,8 +54,8 @@ const hasFilters = computed(() => props.filters && props.filters.length > 0);
             <button
                 type="button"
                 class="ms-0.5 -me-0.5 flex size-3.5 cursor-pointer items-center justify-center rounded-sm text-muted-foreground/80 hover:bg-background/80 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                :title="t('common.removeFilter', 'Supprimer ce filtre')"
-                :aria-label="t('common.removeFilter', 'Supprimer ce filtre')"
+                :title="t('common.removeFilter')"
+                :aria-label="t('common.removeFilter')"
                 @click="emit('remove', filter.key)"
             >
                 <X :stroke-width="2" class="size-3" />
@@ -69,7 +69,7 @@ const hasFilters = computed(() => props.filters && props.filters.length > 0);
             @click="emit('clear'); emit('clear-all')"
         >
             <RotateCcw :stroke-width="1.75" class="size-3" />
-            <span>{{ t('common.clearAll', 'Tout effacer') }}</span>
+            <span>{{ t('common.clearAll') }}</span>
         </button>
     </div>
 </template>

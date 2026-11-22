@@ -48,7 +48,7 @@ final class EnsureConsultationAccess
         // routes, `u` on the owner's. A URL replayed in another session fails.
         $admin = $user->hasRole('admin');
 
-        abort_unless((int) $request->query($admin ? 'admin' : 'u') === $user->id, 403, 'This link was issued to a different session.');
+        abort_unless((int) $request->query($admin ? 'admin' : 'u') === $user->id, 403, __('errors.link_other_session'));
 
         $oeuvre = $request->route('oeuvre');
         $mediaFile = $request->route('mediaFile');
@@ -71,7 +71,7 @@ final class EnsureConsultationAccess
             ->where('status', ConsultationStatus::READY)
             ->exists();
 
-        abort_unless($ready, 403, 'This preview is not ready.');
+        abort_unless($ready, 403, __('errors.preview_not_ready'));
 
         return $next($request);
     }

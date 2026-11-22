@@ -5,10 +5,10 @@
 <td align="center" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; color: #64748b; line-height: 1.6; text-align: center;">
 <!-- Sovereign Algerian Credentials -->
 <p style="margin: 0 0 6px 0; font-size: 11px; color: #94a3b8; font-weight: 600; letter-spacing: 0.2px;">
-الجمهورية الجزائرية الديمقراطية الشعبية
+{{ __('mail.republic') }}
 </p>
 <p style="margin: 0 0 10px 0; font-size: 11px; color: #64748b;">
-Office National des Droits d'Auteur et Droits Voisins (ONDA) — Bologhine, Alger, Algérie.
+{{ __('mail.office_name') }} (ONDA) — <span dir="ltr" style="unicode-bidi: isolate;">{{ __('mail.address') }}</span>
 </p>
 
 <!-- Legal & Privacy Notice -->
@@ -17,7 +17,7 @@ Office National des Droits d'Auteur et Droits Voisins (ONDA) — Bologhine, Alge
 </p>
 
 <p style="margin: 0; font-size: 10px; color: #475569;">
-© {{ date('Y') }} ONDA Algérie. Tous droits réservés / جميع الحقوق محفوظة.
+{{ __('mail.copyright', ['year' => date('Y')]) }}
 </p>
 </td>
 </tr>

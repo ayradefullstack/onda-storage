@@ -121,7 +121,7 @@ const handlePageSizeChange = (val: unknown) => {
                 </i18n-t>
             </p>
             <p v-else>
-                0 {{ t('common.results', 'résultats') }}
+                0 {{ t('common.results') }}
             </p>
 
             <!-- Optional Page Size Selector (Flowbite PM Table style) -->
@@ -172,7 +172,7 @@ const handlePageSizeChange = (val: unknown) => {
                 :aria-disabled="!prevLink?.url"
             >
                 <ChevronLeft class="size-3.5 rtl:rotate-180" />
-                <span class="hidden sm:inline">{{ t('dashboard.table.prev', 'Précédent') }}</span>
+                <span class="hidden sm:inline">{{ t('dashboard.table.prev') }}</span>
             </component>
 
             <!-- Numeric Page Buttons -->
@@ -221,7 +221,7 @@ const handlePageSizeChange = (val: unknown) => {
                 "
                 :aria-disabled="!nextLink?.url"
             >
-                <span class="hidden sm:inline">{{ t('dashboard.table.next', 'Suivant') }}</span>
+                <span class="hidden sm:inline">{{ t('dashboard.table.next') }}</span>
                 <ChevronRight class="size-3.5 rtl:rotate-180" />
             </component>
         </div>

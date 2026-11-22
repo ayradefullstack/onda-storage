@@ -11,7 +11,7 @@ defineOptions({
     layout: {
         breadcrumbs: [
             {
-                title: 'Admin Dashboard',
+                title: 'admin.dashboard.title',
                 href: adminDashboard(),
             },
         ],
@@ -24,15 +24,17 @@ const user = computed(() => page.props.auth.user);
 </script>
 
 <template>
-    <Head title="Admin Dashboard" />
+    <Head :title="t('admin.dashboard.title')" />
 
     <div class="mx-auto w-full max-w-5xl space-y-6 p-4 md:p-6">
         <div>
             <h1 class="text-2xl font-semibold tracking-tight">
-                Admin Dashboard
+                {{ t('admin.dashboard.title') }}
             </h1>
             <p class="mt-1 text-sm text-muted-foreground">
-                Signed in as {{ user?.name }} ({{ user?.email }})
+                {{ t('admin.dashboard.signedInAs', { name: user?.name }) }}
+                (<bdi dir="ltr">{{ user?.email }}</bdi
+                >)
             </p>
         </div>
 

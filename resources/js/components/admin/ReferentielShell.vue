@@ -54,7 +54,7 @@ const activeFilters = computed<ActiveFilter[]>(() => {
     return [
         {
             key: 'search',
-            label: t('common.search', 'Recherche'),
+            label: t('common.search'),
             value: `"${search}"`,
         },
     ];

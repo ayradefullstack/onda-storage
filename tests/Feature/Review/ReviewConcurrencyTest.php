@@ -80,13 +80,14 @@ test('a second officer cannot decide on a deposit another officer holds', functi
 });
 
 test('the conflict names the officer who holds it', function () {
+    app()->setLocale('en');
     $amina = concurrencyAdmin('Amina');
     $karim = concurrencyAdmin('Karim');
     $oeuvre = concurrencyOeuvre(holder: $amina);
 
     expect(fn () => app(OeuvreStatusMachine::class)
         ->transition($oeuvre, OeuvreStatus::REGISTERED, $karim))
-        ->toThrow(ReviewConflict::class, 'Amina is already reviewing this deposit. Take it over explicitly to decide on it.');
+        ->toThrow(ReviewConflict::class, 'Amina is already reviewing this work. Take it over explicitly to decide on it.');
 });
 
 test('opening a deposit another officer holds is refused without an explicit take-over', function () {

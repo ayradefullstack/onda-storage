@@ -15,6 +15,8 @@ const props = defineProps<{
     label: string;
     busyLabel: string;
     doneLabel: string;
+    /** Submission is not allowed right now (e.g. a lockout), same treatment as processing. */
+    blocked?: boolean;
 }>();
 
 const state = computed(() =>
@@ -22,7 +24,8 @@ const state = computed(() =>
 );
 
 function guard(event: MouseEvent): void {
-    if (props.processing) {
+    // Also covers Enter-key implicit submission, which fires a click.
+    if (props.processing || props.blocked) {
         event.preventDefault();
     }
 }
@@ -33,7 +36,7 @@ function guard(event: MouseEvent): void {
         type="submit"
         class="auth-btn"
         :data-state="state"
-        :aria-disabled="processing ? 'true' : undefined"
+        :aria-disabled="processing || blocked ? 'true' : undefined"
         :aria-busy="processing ? 'true' : undefined"
         @click="guard"
     >

@@ -1,5 +1,6 @@
+@php $mailLocale = (string) ($locale ?? app()->getLocale()); $isRtl = app(\App\Domain\Localization\LanguageService::class)->direction((string) ($locale ?? app()->getLocale())) === \App\Enums\Language\DirectionEnum::RTL->key(); @endphp
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="{{ $locale ?? app()->getLocale() }}" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="{{ $locale ?? app()->getLocale() }}" dir="{{ $isRtl ? 'rtl' : 'ltr' }}" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
     <title>{{ $subject ?? config('app.name') }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -94,7 +95,7 @@
 
                         <!-- Main Content Body -->
                         <tr>
-                            <td class="content-padding" style="padding: 40px 40px 36px 40px;">
+                            <td class="content-padding" style="padding: 40px 40px 36px 40px; text-align: {{ $isRtl ? 'right' : 'left' }};">
                                 
                                 <!-- Greeting & Title -->
                                 <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
@@ -139,7 +140,7 @@
                                 <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin: 24px 0 28px 0;">
                                     <tr>
                                         <td style="padding-bottom: 12px; font-size: 13px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">
-                                            {{ $featuresTitle ?? 'Garanties et Services Officiels ONDA' }}
+                                            {{ $featuresTitle ?? __('mail.features_title', [], $mailLocale) }}
                                         </td>
                                     </tr>
                                     <tr>
@@ -158,10 +159,10 @@
                                                     </td>
                                                     <td style="padding: 14px 16px;">
                                                         <div style="font-size: 14px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
-                                                            {{ $feature1Title ?? 'Protection Juridique Immédiate' }}
+                                                            {{ $feature1Title ?? __('mail.feature1_title', [], $mailLocale) }}
                                                         </div>
                                                         <div style="font-size: 12px; color: #94a3b8; line-height: 1.4;">
-                                                            {{ $feature1Desc ?? 'Horodatage souverain et enregistrement légal de vos créations intellectuelles.' }}
+                                                            {{ $feature1Desc ?? __('mail.feature1_desc', [], $mailLocale) }}
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -181,10 +182,10 @@
                                                     </td>
                                                     <td style="padding: 14px 16px;">
                                                         <div style="font-size: 14px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
-                                                            {{ $feature2Title ?? 'Certificats & Déclarations Numériques' }}
+                                                            {{ $feature2Title ?? __('mail.feature2_title', [], $mailLocale) }}
                                                         </div>
                                                         <div style="font-size: 12px; color: #94a3b8; line-height: 1.4;">
-                                                            {{ $feature2Desc ?? 'Accès instantané à vos attestations de dépôt et suivi de vos droits financiers.' }}
+                                                            {{ $feature2Desc ?? __('mail.feature2_desc', [], $mailLocale) }}
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -204,10 +205,10 @@
                                                     </td>
                                                     <td style="padding: 14px 16px;">
                                                         <div style="font-size: 14px; font-weight: 600; color: #ffffff; margin-bottom: 2px;">
-                                                            {{ $feature3Title ?? 'Hébergement Souverain et Crypté' }}
+                                                            {{ $feature3Title ?? __('mail.feature3_title', [], $mailLocale) }}
                                                         </div>
                                                         <div style="font-size: 12px; color: #94a3b8; line-height: 1.4;">
-                                                            {{ $feature3Desc ?? 'Vos données et fichiers sont hébergés sur des serveurs sécurisés en Algérie.' }}
+                                                            {{ $feature3Desc ?? __('mail.feature3_desc', [], $mailLocale) }}
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -228,12 +229,12 @@
                                                         <!--[if mso]>
                                                         <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ $actionUrl }}" style="height:48px;v-text-anchor:middle;width:260px;" arcsize="20%" strokecolor="#1d4ed8" fillcolor="#1d4ed8">
                                                         <w:anchorlock/>
-                                                        <center style="color:#ffffff;font-family:sans-serif;font-size:15px;font-weight:bold;">{{ $actionText ?? 'Vérifier / Confirmer' }}</center>
+                                                        <center style="color:#ffffff;font-family:sans-serif;font-size:15px;font-weight:bold;">{{ $actionText ?? __('mail.action_default', [], $mailLocale) }}</center>
                                                         </v:roundrect>
                                                         <![endif]-->
                                                         <!--[if !mso]><!-->
                                                         <a href="{{ $actionUrl }}" target="_blank" style="background-color: #1d4ed8; border-radius: 12px; color: #ffffff !important; display: inline-block; font-size: 15px; font-weight: 700; letter-spacing: 0.2px; text-align: center; text-decoration: none; -webkit-text-size-adjust: none; padding: 14px 32px;">
-                                                            {{ $actionText ?? 'Confirmer mon adresse email' }}
+                                                            {{ $actionText ?? __('mail.action_default', [], $mailLocale) }}
                                                         </a>
                                                         <!--<![endif]-->
                                                     </td>
@@ -245,6 +246,7 @@
                                 @endif
 
                                 <!-- SAFETY & SECURITY WARNING CALLOUT BLOCK -->
+                                @if($showWarning ?? true)
                                 <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin: 20px 0 24px 0; border-collapse: separate;">
                                     <tr>
                                         <td style="background-color: #1e293b; border: 1px solid #334155; border-left: 4px solid #f97316; border-radius: 0 12px 12px 0; padding: 16px 20px;">
@@ -252,10 +254,10 @@
                                                 <tr>
                                                     <td>
                                                         <div style="font-size: 13px; font-weight: 700; color: #f97316; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px;">
-                                                            ⚠️ {{ $warningTitle ?? 'Avis de Sécurité / تنبيه أمني' }}
+                                                            ⚠️ {{ $warningTitle ?? __('mail.warning_title', [], $mailLocale) }}
                                                         </div>
                                                         <div style="font-size: 13px; color: #cbd5e1; line-height: 1.5;">
-                                                            {{ $warningText ?? 'Si vous n\'êtes pas à l\'origine de cette demande, aucune action n\'est requise. Ne transmettez jamais vos identifiants ou liens de sécurité.' }}
+                                                            {{ $warningText ?? __('mail.warning_text', [], $mailLocale) }}
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -263,6 +265,8 @@
                                         </td>
                                     </tr>
                                 </table>
+
+                                @endif
 
                                 <!-- Outro Lines -->
                                 @if(isset($outroLines) && is_array($outroLines))
@@ -281,9 +285,11 @@
                                 @if(isset($actionUrl))
                                 <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-top: 28px; border-top: 1px solid #1e293b; padding-top: 20px;">
                                     <tr>
-                                        <td style="font-size: 12px; color: #64748b; line-height: 1.5;">
-                                            Si vous éprouvez des difficultés en cliquant sur le bouton "{{ $actionText ?? 'Confirmer' }}", copiez et collez l'URL suivante dans votre navigateur web :
-                                            <div style="margin-top: 6px; word-break: break-all;">
+                                        <td style="font-size: 12px; color: #64748b; line-height: 1.5; text-align: {{ $isRtl ? 'right' : 'left' }};">
+                                            @if(isset($subcopy))
+                                            {{ $subcopy }}
+                                            @endif
+                                            <div dir="ltr" style="margin-top: 6px; word-break: break-all; text-align: left;">
                                                 <a href="{{ $actionUrl }}" target="_blank" style="color: #38bdf8; text-decoration: underline;">
                                                     {{ $actionUrl }}
                                                 </a>
@@ -307,13 +313,13 @@
                         <tr>
                             <td align="center" style="font-size: 11px; color: #64748b; line-height: 1.6; text-align: center;">
                                 <p style="margin: 0 0 6px 0; font-size: 11px; color: #94a3b8; font-weight: 600; letter-spacing: 0.2px;">
-                                    الجمهورية الجزائرية الديمقراطية الشعبية
+                                    {{ __('mail.republic', [], $mailLocale) }}
                                 </p>
                                 <p style="margin: 0 0 8px 0; font-size: 11px; color: #64748b;">
-                                    Office National des Droits d'Auteur et Droits Voisins (ONDA) — Rue du Grand Séminaire, Bologhine, Alger.
+                                    {{ __('mail.office_name', [], $mailLocale) }} (ONDA) — <span dir="ltr" style="unicode-bidi: isolate;">{{ __('mail.address', [], $mailLocale) }}</span>
                                 </p>
                                 <p style="margin: 0; font-size: 10px; color: #475569;">
-                                    © {{ date('Y') }} ONDA Algérie. Tous droits réservés / جميع الحقوق محفوظة.
+                                    {{ __('mail.copyright', ['year' => date('Y')], $mailLocale) }}
                                 </p>
                             </td>
                         </tr>

@@ -1,7 +1,8 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Auth\Notifications\VerifyEmail;
+use App\Notifications\Auth\AccountCreatedNotification;
+use App\Notifications\Auth\VerifyEmailAddress;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Fortify\Features;
 
@@ -21,7 +22,9 @@ test('sends verification notification', function () {
         ->post(route('verification.send'))
         ->assertRedirect('/');
 
-    Notification::assertSentTo($user, VerifyEmail::class);
+    Notification::assertSentTo($user, VerifyEmailAddress::class);
+    // A resend is the plain verification mail, never "account created".
+    Notification::assertNotSentTo($user, AccountCreatedNotification::class);
 });
 
 test('does not send verification notification if email is verified', function () {

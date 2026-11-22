@@ -33,7 +33,7 @@ final class RemovalRefused extends DepositException
     public static function midPipeline(string $fileName, MediaFileStatus $status): self
     {
         return new self(
-            "\"{$fileName}\" is still being processed ({$status->key()}). Wait for it to finish, then remove it.",
+            __('deposit.removal_mid_pipeline', ['name' => $fileName, 'status' => $status->label()]),
             self::MID_PIPELINE,
             $fileName,
         );
@@ -42,7 +42,7 @@ final class RemovalRefused extends DepositException
     public static function stillUploading(string $fileName): self
     {
         return new self(
-            "\"{$fileName}\" is still uploading. Cancel the upload instead of removing it.",
+            __('deposit.removal_still_uploading', ['name' => $fileName]),
             self::STILL_UPLOADING,
             $fileName,
         );

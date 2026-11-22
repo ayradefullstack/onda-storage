@@ -56,6 +56,7 @@ function freezePayload(Oeuvre $oeuvre): array
 test('InitUpload refuses an upload into a submitted oeuvre', function () {
     $author = freezeAuthor();
     $oeuvre = freezeOeuvre($author, OeuvreStatus::SUBMITTED);
+    app()->setLocale('en');
 
     expect(fn () => app(InitUpload::class)->handle($author, $oeuvre->id, 'deposit.mp4', 1024, 'video/mp4'))
         ->toThrow(ValidationException::class, 'This work has been submitted and can no longer receive files.');

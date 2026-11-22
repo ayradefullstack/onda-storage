@@ -233,6 +233,17 @@ export function useAuthForm(defs: AuthFieldDef[], translate: Translate) {
         focusFirstInvalid();
     }
 
+    /**
+     * Drops one server error without moving focus or touching `submitted`
+     * (used when a lockout ends and its message is no longer true).
+     */
+    function clearServerError(name: string): void {
+        const next = { ...serverErrors.value };
+
+        delete next[name];
+        serverErrors.value = next;
+    }
+
     /** True when every named field passes its rule (silent, no messages). */
     function isComplete(names: string[]): boolean {
         return names.every((name) => evaluate(name) === null);
@@ -281,6 +292,7 @@ export function useAuthForm(defs: AuthFieldDef[], translate: Translate) {
         revalidate,
         syncFromDom,
         setServerErrors,
+        clearServerError,
         isComplete,
     };
 }

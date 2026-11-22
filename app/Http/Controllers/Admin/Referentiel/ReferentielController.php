@@ -117,14 +117,14 @@ abstract class ReferentielController extends Controller
 
     protected function saved(): RedirectResponse
     {
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Reference data updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('toast.reference_updated')]);
 
         return back();
     }
 
     protected function created(): RedirectResponse
     {
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Reference data created.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('toast.reference_created')]);
 
         return back();
     }

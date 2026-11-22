@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Deposit\Value;
 
+use App\Enums\MediaFile\StatusEnum as MediaFileStatus;
+
 /**
  * One reason a submission is blocked, or one advisory note the officer
  * should see at review time.
@@ -50,15 +52,23 @@ final class SubmissionReason
         $name = (string) ($this->params['name'] ?? '');
 
         return match ($this->code) {
-            self::NO_FILES => 'This work has no files yet.',
-            self::FILE_IN_PIPELINE => "\"{$name}\" is still being processed ({$this->params['status']}). Wait for it to finish.",
-            self::FILE_FAILED => "\"{$name}\" failed to process. Remove it or upload it again.",
-            self::FILE_QUARANTINED => "\"{$name}\" was quarantined by the malware scan. Remove it.",
-            self::FILE_REJECTED => "\"{$name}\" was rejected by the ONDA. Remove it and upload a compliant file.",
-            self::SLOT_EMPTY => "The required document \"{$name}\" has no file yet.",
-            self::SLOT_EMPTY_CONDITIONAL => "The document \"{$name}\" is empty; it may not apply to this work.",
+            self::NO_FILES => __('deposit.no_files'),
+            self::FILE_IN_PIPELINE => __('deposit.file_in_pipeline', ['name' => $name, 'status' => $this->statusLabel()]),
+            self::FILE_FAILED => __('deposit.file_failed', ['name' => $name]),
+            self::FILE_QUARANTINED => __('deposit.file_quarantined', ['name' => $name]),
+            self::FILE_REJECTED => __('deposit.file_rejected', ['name' => $name]),
+            self::SLOT_EMPTY => __('deposit.slot_empty', ['name' => $name]),
+            self::SLOT_EMPTY_CONDITIONAL => __('deposit.slot_empty_conditional', ['name' => $name]),
             default => $this->code,
         };
+    }
+
+    /** The pipeline status param (a key) as the reader's language shows it. */
+    private function statusLabel(): string
+    {
+        $key = (string) ($this->params['status'] ?? '');
+
+        return MediaFileStatus::fromKey($key)?->label() ?? $key;
     }
 
     /**

@@ -13,6 +13,6 @@ final class ReasonRequired extends DepositException
 {
     public function __construct()
     {
-        parent::__construct('A rejection must carry a reason for the author.');
+        parent::__construct(__('review.reason_required'));
     }
 }

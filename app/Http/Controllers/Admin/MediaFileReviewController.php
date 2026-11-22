@@ -81,7 +81,7 @@ final class MediaFileReviewController extends Controller
         }
 
         if (! $result['replayed']) {
-            Inertia::flash('toast', ['type' => 'success', 'message' => __('The file decision has been recorded.')]);
+            Inertia::flash('toast', ['type' => 'success', 'message' => __('review.toast_file_decision')]);
         }
 
         return back();
@@ -118,7 +118,7 @@ final class MediaFileReviewController extends Controller
             $by = $decision->actor->name ?? $current->reviewer()->withTrashed()->first()?->name;
             $at = $decision->created_at ?? $current->reviewed_at;
 
-            $this->conflict($request, ($by ?? 'ONDA').' has already decided on this deposit.', [
+            $this->conflict($request, __('review.already_decided', ['name' => $by ?? 'ONDA']), [
                 'kind' => 'decided',
                 'by' => $by,
                 'at' => $at?->toIso8601String(),
@@ -126,7 +126,7 @@ final class MediaFileReviewController extends Controller
             ]);
         }
 
-        throw ValidationException::withMessages(['decision' => ['This deposit is not under review; open it for review before deciding on its files.']]);
+        throw ValidationException::withMessages(['decision' => [__('review.not_under_review')]]);
     }
 
     /**

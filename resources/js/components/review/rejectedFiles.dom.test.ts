@@ -619,7 +619,7 @@ describe('"Soumettre à nouveau"', () => {
 describe('the breadcrumb', () => {
     it.each([
         ['fr', 'Oeuvres'],
-        ['ar', 'الأعمال'],
+        ['ar', 'المصنفات'],
         ['en', 'Works'],
     ])('is localized (%s)', (locale, label) => {
         wrapper = mount(Breadcrumbs, {

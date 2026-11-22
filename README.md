@@ -480,6 +480,11 @@ teammate's machine. The old data is development data only.
 > `RoleAndUserSeeder` and `VaultDemoSeeder` and creates `test@example.com`,
 > all with the password `password`. On a reachable server, change or delete
 > those accounts right after step 3.
+>
+> **Production-safe roles only.** On a server, run `php artisan db:seed --class=RoleSeeder --force`
+> instead. It creates the `admin` and `author` roles on the `web` guard, is
+> idempotent, and creates no accounts. Registration answers "registration
+> unavailable" until it has been run.
 
 **From now on, every schema change is a new migration.** History was
 rewritten this one time, before production, and never will be again.

@@ -151,7 +151,7 @@ watch(locale, () => {
                     class="inline-flex items-center gap-2 rounded-full border border-onda-blue-500/20 bg-onda-blue-500/10 px-3 py-1 text-xs font-medium text-onda-blue-700 dark:text-onda-blue-300"
                 >
                     <Sparkles class="size-3.5" />
-                    <span>ONDA • Espace Auteur & Dépôt Légal</span>
+                    <span>{{ t('oeuvres.create.banner') }}</span>
                 </div>
 
                 <Link
@@ -159,7 +159,7 @@ watch(locale, () => {
                     class="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
                     <ArrowLeft class="size-3.5 rtl:rotate-180" />
-                    <span>Retour à la liste des oeuvres</span>
+                    <span>{{ t('oeuvres.create.backToList') }}</span>
                 </Link>
             </div>
 
@@ -181,10 +181,19 @@ watch(locale, () => {
                 <div class="mt-3 flex items-center gap-3 sm:mt-0">
                     <div class="text-end">
                         <span class="text-xs font-semibold text-foreground">
-                            {{ completedSteps }} / {{ totalSteps }} étapes
+                            {{
+                                t('oeuvres.create.stepsProgress', {
+                                    done: completedSteps,
+                                    total: totalSteps,
+                                })
+                            }}
                         </span>
                         <div class="text-[11px] text-muted-foreground">
-                            {{ complete ? 'Prêt pour le dépôt' : 'En cours' }}
+                            {{
+                                complete
+                                    ? t('oeuvres.create.readyForDeposit')
+                                    : t('oeuvres.create.inProgress')
+                            }}
                         </div>
                     </div>
                     <div
@@ -230,13 +239,10 @@ watch(locale, () => {
                                     class="mt-0.5 size-4 shrink-0 text-onda-blue-600 dark:text-onda-blue-400"
                                 />
                                 <div>
-                                    <span class="font-medium text-foreground"
-                                        >Garantie juridique ONDA :</span
-                                    >
-                                    Chaque choix détermine précisément les
-                                    pièces requises et garantit l'opposabilité
-                                    légale de votre certificat de dépôt sous
-                                    l'Ordonnance 03-05.
+                                    <span class="font-medium text-foreground">{{
+                                        t('oeuvres.create.guaranteeLabel')
+                                    }}</span>
+                                    {{ t('oeuvres.create.guaranteeBody') }}
                                 </div>
                             </div>
                         </form>
@@ -269,7 +275,7 @@ watch(locale, () => {
                                 class="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400"
                             >
                                 <Check class="size-3" />
-                                Complet
+                                {{ t('oeuvres.create.complete') }}
                             </span>
                             <span
                                 v-else
@@ -278,7 +284,7 @@ watch(locale, () => {
                                 <span
                                     class="size-1.5 animate-pulse rounded-full bg-amber-500"
                                 />
-                                En attente
+                                {{ t('oeuvres.create.pending') }}
                             </span>
                         </div>
                     </div>
@@ -309,7 +315,7 @@ watch(locale, () => {
                                 <span
                                     v-else
                                     class="text-muted-foreground/60 italic"
-                                    >Non sélectionné</span
+                                    >{{ t('oeuvres.create.notSelected') }}</span
                                 >
                             </div>
 
@@ -337,7 +343,7 @@ watch(locale, () => {
                                 <span
                                     v-else
                                     class="text-muted-foreground/60 italic"
-                                    >Non sélectionné</span
+                                    >{{ t('oeuvres.create.notSelected') }}</span
                                 >
                             </div>
 
@@ -375,7 +381,7 @@ watch(locale, () => {
                                 <span
                                     v-else
                                     class="text-muted-foreground/60 italic"
-                                    >Non sélectionné</span
+                                    >{{ t('oeuvres.create.notSelected') }}</span
                                 >
                             </div>
 
@@ -402,7 +408,7 @@ watch(locale, () => {
                                 <span
                                     v-else
                                     class="text-muted-foreground/60 italic"
-                                    >Non sélectionné</span
+                                    >{{ t('oeuvres.create.notSelected') }}</span
                                 >
                             </div>
                         </div>
@@ -417,15 +423,14 @@ watch(locale, () => {
                                 <FileUp
                                     class="size-4 text-onda-blue-600 dark:text-onda-blue-400"
                                 />
-                                <span>Étape suivante : Dépôt des fichiers</span>
+                                <span>{{
+                                    t('oeuvres.create.nextStepTitle')
+                                }}</span>
                             </div>
                             <p
                                 class="text-[11px] leading-relaxed text-muted-foreground"
                             >
-                                Les emplacements de téléversement (manuscrits,
-                                partitions, enregistrements audio...) seront
-                                générés automatiquement dès la validation de
-                                cette étape.
+                                {{ t('oeuvres.create.nextStepBody') }}
                             </p>
                         </div>
 
@@ -464,10 +469,9 @@ watch(locale, () => {
                                 <ShieldCheck
                                     class="size-3.5 text-emerald-600 dark:text-emerald-400"
                                 />
-                                <span
-                                    >Chiffrement et empreinte SHA-256
-                                    certifiée</span
-                                >
+                                <span>{{
+                                    t('oeuvres.create.encryptionNote')
+                                }}</span>
                             </div>
                         </div>
                     </CardContent>

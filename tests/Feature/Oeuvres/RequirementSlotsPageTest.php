@@ -78,7 +78,7 @@ test('a MUSIQUE oeuvre renders exactly its 6 requirement slots, in order', funct
     $this->withUnencryptedCookie('locale', 'fr')->get(route('oeuvres.show', $oeuvre))
         ->assertInertia(fn (Assert $page) => $page
             ->where('requirements.0.title', 'Paroles')
-            ->where('requirements.0.extensions', ['pdf'])
+            ->where('requirements.0.extensions', ['pdf', 'mp4', 'mov'])
             ->where('requirements.0.is_required', true)
             ->where('requirements.2.conditions', null)
         );

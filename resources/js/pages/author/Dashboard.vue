@@ -36,9 +36,8 @@ const props = defineProps<{
 
 defineOptions({
     layout: {
-        // Untranslated like every other page's: Breadcrumbs.vue prints the
-        // title as given, and defineOptions cannot reach vue-i18n.
-        breadcrumbs: [{ title: 'Dashboard', href: dashboard() }],
+        // An i18n key: Breadcrumbs.vue translates it in the reader's locale.
+        breadcrumbs: [{ title: 'dashboard.title', href: dashboard() }],
     },
 });
 

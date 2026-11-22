@@ -532,6 +532,11 @@ Seeded accounts, all with the password `password`:
 
 These are development fixtures. Do not seed them into anything reachable.
 
+**Production (roles only).** Do not use `--seed` on a server. Run
+`php artisan db:seed --class=RoleSeeder --force` instead: it creates the
+`admin` and `author` roles on the `web` guard, is idempotent, and creates no
+accounts. Registration returns "registration unavailable" until it has been run.
+
 **Verify**
 
 ```powershell

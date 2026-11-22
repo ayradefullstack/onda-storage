@@ -93,7 +93,7 @@ final class MediaFileController extends Controller
             return response()->json(['uuid' => $mediaFile->uuid, 'removed' => true]);
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('The file has been removed from this work.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('deposit.toast_file_removed')]);
 
         return back();
     }

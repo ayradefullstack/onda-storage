@@ -42,7 +42,7 @@ final class CompleteUpload
             ));
 
             throw new HttpResponseException(response()->json([
-                'message' => 'This upload is missing chunks and cannot be completed.',
+                'message' => __('upload_runtime.missing_chunks'),
                 'missing' => $missing,
             ], 409));
         }

@@ -22,7 +22,7 @@ final class StreamLinkController extends Controller
 {
     public function __invoke(Request $request, MediaFile $mediaFile, IssueStreamUrl $issue): JsonResponse
     {
-        abort_unless(config('vault.download.owner_enabled'), 403, 'Downloading originals is disabled.');
+        abort_unless(config('vault.download.owner_enabled'), 403, __('errors.downloads_disabled'));
 
         Gate::forUser($request->user())->authorize('streamOriginal', $mediaFile);
 

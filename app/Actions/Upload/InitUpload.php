@@ -75,7 +75,7 @@ final class InitUpload
         // Ownership first, so a stranger probing oeuvre ids learns nothing
         // about a work's status.
         if ($user->id !== $oeuvre->author_id) {
-            throw new AuthorizationException('This work does not belong to you.');
+            throw new AuthorizationException(__('upload.oeuvre_not_yours'));
         }
 
         // The freeze, enforced on the server. Once a deposit is submitted
@@ -91,12 +91,12 @@ final class InitUpload
 
         if (! $replacement && ! $oeuvre->status->isAuthorEditable()) {
             throw ValidationException::withMessages([
-                'oeuvre_id' => ['This work has been submitted and can no longer receive files.'],
+                'oeuvre_id' => [__('upload.oeuvre_submitted')],
             ]);
         }
 
         if (! $replacement && ! $user->can('update', $oeuvre)) {
-            throw new AuthorizationException('This work does not belong to you.');
+            throw new AuthorizationException(__('upload.oeuvre_not_yours'));
         }
 
         // Several files of one deposit are initialised at the same moment
@@ -123,7 +123,7 @@ final class InitUpload
 
                     if ($locked->status !== OeuvreStatus::UNDER_REVIEW) {
                         throw ValidationException::withMessages([
-                            'oeuvre_id' => ['This work has been decided and can no longer receive files.'],
+                            'oeuvre_id' => [__('upload.oeuvre_decided')],
                         ]);
                     }
 
@@ -135,7 +135,7 @@ final class InitUpload
             // tells the client to wait and retry by itself.
             throw new HttpResponseException(response()->json([
                 'error' => 'init_busy',
-                'message' => 'Another upload is being prepared for your account. Please retry in a moment.',
+                'message' => __('upload.init_busy'),
             ], 503, ['Retry-After' => '3']));
         }
     }
@@ -156,13 +156,13 @@ final class InitUpload
             // rejected file can still be removed, not replaced.
             if ($replacement) {
                 throw ValidationException::withMessages([
-                    'oeuvre_id' => ['This work has no collège: a rejected file can be removed but not replaced during review.'],
+                    'oeuvre_id' => [__('upload.no_college_replace')],
                 ]);
             }
 
             if ($collegeOeuvreFileId !== null) {
                 throw ValidationException::withMessages([
-                    'college_oeuvre_file_id' => ['This work has no collège, so it has no document requirements.'],
+                    'college_oeuvre_file_id' => [__('upload.no_college_no_requirements')],
                 ]);
             }
 
@@ -182,7 +182,7 @@ final class InitUpload
         if (! $this->quotaPolicy->canAccept($quota, $sizeBytes + $reserved)) {
             throw new HttpResponseException(response()->json([
                 'error' => 'quota_exceeded',
-                'message' => 'This upload would exceed your storage quota.',
+                'message' => __('upload.quota_exceeded'),
                 // Room left AFTER what the user's live uploads have reserved,
                 // and what this file needs, so the client can say both.
                 'remaining_bytes' => max(0, ($this->quotaPolicy->remainingBytes($quota) ?? 0) - $reserved),
@@ -264,7 +264,7 @@ final class InitUpload
 
         if (! in_array($extension, self::GLOBAL_EXTENSIONS, true)) {
             throw ValidationException::withMessages([
-                'filename' => ["The file type \".{$extension}\" is not an accepted deposit type."],
+                'filename' => [__('upload.global_type_not_accepted', ['extension' => $extension])],
             ]);
         }
 
@@ -279,7 +279,7 @@ final class InitUpload
 
         if ($mime !== '' && $mime !== 'application/octet-stream' && ! in_array($mime, $known, true)) {
             throw ValidationException::withMessages([
-                'filename' => ["The file type \".{$extension}\" (declared as \"{$mime}\") is not an accepted deposit type."],
+                'filename' => [__('upload.global_type_mime_mismatch', ['extension' => $extension, 'mime' => $mime])],
             ]);
         }
     }
@@ -293,7 +293,7 @@ final class InitUpload
     {
         if ($collegeOeuvreFileId === null) {
             throw ValidationException::withMessages([
-                'college_oeuvre_file_id' => ['Choose which required document this file is for.'],
+                'college_oeuvre_file_id' => [__('upload.requirement_required')],
             ]);
         }
 
@@ -304,7 +304,7 @@ final class InitUpload
 
         if ($requirement === null) {
             throw ValidationException::withMessages([
-                'college_oeuvre_file_id' => ["This document is not a requirement of this work's collège."],
+                'college_oeuvre_file_id' => [__('upload.requirement_not_in_college')],
             ]);
         }
 
@@ -323,7 +323,7 @@ final class InitUpload
             $formats = implode(', ', array_map(strtoupper(...), $accepted));
 
             throw ValidationException::withMessages([
-                'filename' => ["The file type \".{$extension}\" is not accepted for this document. Accepted formats: {$formats}."],
+                'filename' => [__('upload.extension_not_accepted', ['extension' => $extension, 'formats' => $formats])],
             ]);
         }
 
@@ -331,7 +331,7 @@ final class InitUpload
             $limit = round($requirement->max_size_kb / 1024, 1);
 
             throw ValidationException::withMessages([
-                'size_bytes' => ["This file exceeds the {$limit} MB limit for this document."],
+                'size_bytes' => [__('upload.size_exceeded', ['limit' => $limit])],
             ]);
         }
     }
@@ -353,7 +353,7 @@ final class InitUpload
             throw ValidationException::withMessages([
                 // The same key as the plain freeze when nothing is open on
                 // the whole deposit; the slot's key when another slot is.
-                self::unreservedReplacements($oeuvre->id, null, anySlot: true)->exists() ? 'college_oeuvre_file_id' : 'oeuvre_id' => ['This work is under review: a file can only be added to replace a rejected file you have removed.'],
+                self::unreservedReplacements($oeuvre->id, null, anySlot: true)->exists() ? 'college_oeuvre_file_id' : 'oeuvre_id' => [__('upload.under_review_replacement_only')],
             ]);
         }
 
@@ -400,7 +400,7 @@ final class InitUpload
 
         if ($occupied) {
             throw ValidationException::withMessages([
-                'college_oeuvre_file_id' => ['This document accepts a single file, and one is already deposited.'],
+                'college_oeuvre_file_id' => [__('upload.single_file_slot')],
             ]);
         }
     }

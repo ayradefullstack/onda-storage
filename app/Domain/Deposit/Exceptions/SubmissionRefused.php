@@ -15,6 +15,6 @@ final class SubmissionRefused extends DepositException
     public function __construct(
         public readonly SubmissionVerdict $verdict,
     ) {
-        parent::__construct('This work is not ready to be submitted.');
+        parent::__construct(__('deposit.submission_not_ready'));
     }
 }

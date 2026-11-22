@@ -17,16 +17,16 @@ final class IllegalTransition extends DepositException
 {
     public static function between(OeuvreStatus $from, OeuvreStatus $to): self
     {
-        return new self("An oeuvre cannot move from \"{$from->key()}\" to \"{$to->key()}\".");
+        return new self(__('deposit.illegal_between', ['from' => $from->label(), 'to' => $to->label()]));
     }
 
     public static function terminal(OeuvreStatus $from, OeuvreStatus $to): self
     {
-        return new self("This oeuvre is registered. A registered deposit is final and cannot move to \"{$to->key()}\".");
+        return new self(__('deposit.illegal_terminal', ['to' => $to->label()]));
     }
 
     public static function actor(OeuvreStatus $from, OeuvreStatus $to): self
     {
-        return new self("You are not allowed to move an oeuvre from \"{$from->key()}\" to \"{$to->key()}\".");
+        return new self(__('deposit.illegal_actor', ['from' => $from->label(), 'to' => $to->label()]));
     }
 }

@@ -13,8 +13,10 @@ class RoleAndUserSeeder extends Seeder
      */
     public function run(): void
     {
-        $admin = Role::firstOrCreate(['name' => 'admin']);
-        $author = Role::firstOrCreate(['name' => 'author']);
+        $this->call(RoleSeeder::class);
+
+        $admin = Role::findByName('admin', 'web');
+        $author = Role::findByName('author', 'web');
 
         $adminUser = User::firstOrCreate(
             ['email' => 'admin@gmail.com'],

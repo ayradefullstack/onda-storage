@@ -32,5 +32,11 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="AUTH_LOGIN_MAX_FAILURES" value="3"/>
+        <env name="AUTH_LOGIN_FAILURE_WINDOW_SECONDS" value="900"/>
+        <env name="AUTH_LOGIN_LOCKOUT_SECONDS" value="1800"/>
+        <env name="AUTH_LOGIN_IP_MAX_REQUESTS" value="20"/>
+        <env name="AUTH_LOGIN_IP_WINDOW_SECONDS" value="60"/>
+        <env name="AUTH_TRUSTED_PROXIES" value=""/>
     </php>
 </phpunit>

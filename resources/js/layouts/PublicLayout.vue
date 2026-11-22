@@ -77,7 +77,7 @@ const dashboard = computed(() =>
                     <a
                         href="tel:+21321741234"
                         class="flex items-center gap-1.5 text-xs text-onda-blue-100 transition-colors hover:text-white"
-                        title="Assistance Téléphonique"
+                        :title="t('nav.phoneSupport')"
                     >
                         <Phone class="size-3.5 text-onda-teal-400" />
                         <span>{{ t('announcement.hotline') }}</span>

@@ -48,7 +48,7 @@ const { t } = useI18n();
                 </i18n-t>
             </template>
             <template v-else>
-                {{ total }} {{ t('common.results', 'résultats') }}
+                {{ total }} {{ t('common.results') }}
             </template>
         </p>
 
